@@ -64,13 +64,13 @@ sudo nix-env --list-generations --profile /nix/var/nix/profiles/system
 Rollback to previous generation:
 
 ```sh
-sudo nixos-rebuild switch --flake ~/dotfiles/nix#nz --rollback
+sudo nixos-rebuild switch --flake ~/dotnix#nz --rollback
 ```
 
 Rollback to previous generation:
 
 ```sh
-sudo nixos-rebuild switch --flake ~/dotfiles/nix#nz --rollback
+sudo nixos-rebuild switch --flake ~/dotnix#nz --rollback
 ```
 
 Activate specific generation:
