@@ -159,6 +159,8 @@ in {
               log_type = "file";
               loglevel = 1;
               trusted_proxies = ["${cfg.hostAddress}"];
+              # TODO: make this dynamic, second entry for homepage
+              trusted_domains = ["${cfg.host}" "172.16.64.106"];
               default_phone_region = "US";
               enable_previews = true;
               maintenance_window_start = 4; # Run jobs at 4am UTC

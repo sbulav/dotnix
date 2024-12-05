@@ -13,6 +13,7 @@ in {
     host = mkOpt str "homepage.sbulav.ru" "The host to serve homepage on";
     hostAddress = mkOpt str "172.16.64.10" "With private network, which address to use on Host";
     localAddress = mkOpt str "172.16.64.101" "With privateNetwork, which address to use in container";
+    secret_file = mkOpt str "secrets/zanoza/default.yaml" "SOPS secret to get creds from";
   };
 
   imports = [
@@ -30,6 +31,11 @@ in {
       })
   ];
   config = mkIf cfg.enable {
+    sops.secrets = {
+      "homepage-env" = {
+        sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
+      };
+    };
     containers.homepage = {
       ephemeral = true;
       autoStart = true;
@@ -38,6 +44,12 @@ in {
       # Need to add 172.16.64.0/18 on router
       hostAddress = "${cfg.hostAddress}";
       localAddress = "${cfg.localAddress}";
+
+      bindMounts = {
+        "${config.sops.secrets."homepage-env".path}" = {
+          isReadOnly = true;
+        };
+      };
 
       config = {...}: {
         networking.hosts = {
@@ -51,9 +63,8 @@ in {
         };
 
         services.homepage-dashboard = {
+          environmentFile = config.sops.secrets.homepage-env.path;
           enable = true;
-          # TODO: Pass secrets via services.homepage-dashboard.environmentFile
-          # https://gethomepage.dev/installation/docker/#using-environment-secrets
           widgets = [
             {
               resources = {
@@ -97,7 +108,8 @@ in {
                     href = "https://${config.${namespace}.containers.nextcloud.host}";
                     widget = {
                       type = "nextcloud";
-                      url = "https://${config.${namespace}.containers.nextcloud.host}";
+                      key = "{{HOMEPAGE_VAR_NEXTCLOUD_API_KEY}}";
+                      url = "http://${config.${namespace}.containers.nextcloud.localAddress}:80";
                     };
                   };
                 }
@@ -108,7 +120,7 @@ in {
                     href = "https://${config.${namespace}.containers.jellyfin.host}";
                     widget = {
                       type = "jellyfin";
-                      key = "apikey";
+                      key = "{{HOMEPAGE_VAR_JELLYFIN_API_KEY}}";
                       url = "http://${config.${namespace}.containers.jellyfin.localAddress}:8196";
                       enableBlocks = true; # optional, defaults to false
                       enableNowPlaying = true; # optional, defaults to true
