@@ -46,7 +46,7 @@ in {
             "traefik.sbulav.ru"
             "adguard.sbulav.ru"
             "flood.sbulav.ru"
-            "jellyfin2.sbulav.ru"
+            "jellyfin.sbulav.ru"
           ];
         };
 
@@ -103,7 +103,7 @@ in {
                 }
 
                 {
-                  "jellyfin" = {
+                  "jellyfin" = mkIf config.${namespace}.containers.jellyfin.enable {
                     icon = "jellyfin";
                     href = "https://${config.${namespace}.containers.jellyfin.host}";
                     widget = {

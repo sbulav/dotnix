@@ -21,6 +21,7 @@ in {
     ./middleware_allow-lan.nix
     ./middleware_secure-headers.nix
     ./middleware_secure-headers-jellyfin.nix
+    ./middleware_nextcloud-redirect.nix
     (import ../shared/shared-adguard-dns-rewrite.nix
       {
         host = "traefik.${cfg.domain}";

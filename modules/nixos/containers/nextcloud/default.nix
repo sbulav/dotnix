@@ -20,12 +20,23 @@ in {
   };
 
   imports = [
+    # TODO: fix this workaround for accessing mobile devices
+    (import ../shared/shared-traefik-bypass-route.nix
+      {
+        app = "nextcloud";
+        host = "${cfg.host}";
+        url = "http://${cfg.localAddress}:80";
+        route_enabled = cfg.enable;
+        middleware = ["nextcloud-redirect"];
+        pathregexp = "/status.php|/remote.php/(dav|direct)/|/ocs/v2.php/|/index.php/|/core";
+      })
     (import ../shared/shared-traefik-route.nix
       {
         app = "nextcloud";
         host = "${cfg.host}";
         url = "http://${cfg.localAddress}:80";
         route_enabled = cfg.enable;
+        middleware = ["nextcloud-redirect" "secure-headers" "authelia"];
       })
     (import ../shared/shared-adguard-dns-rewrite.nix
       {
@@ -81,6 +92,14 @@ in {
         };
         "/var/lib/postgresql/" = {
           hostPath = "${cfg.dataPath}/postgresql/";
+          isReadOnly = false;
+        };
+        "/var/lib/nextcloud/data/photos" = {
+          hostPath = "/tank/photos/";
+          isReadOnly = false;
+        };
+        "/var/lib/nextcloud/data/video" = {
+          hostPath = "/tank/video/";
           isReadOnly = false;
         };
       };

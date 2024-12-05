@@ -184,7 +184,7 @@ in {
                       consent_mode = "implicit";
                       pkce_challenge_method = "S256";
                       public = "false";
-                      redirect_uris = ["https://jellyfin2.${cfg.domain}/sso/OID/redirect/authelia"];
+                      redirect_uris = ["https://jellyfin.${cfg.domain}/sso/OID/redirect/authelia"];
                       require_pkce = true;
                       token_endpoint_auth_method = "client_secret_post";
                     }
@@ -196,7 +196,7 @@ in {
                       consent_mode = "implicit";
                       pkce_challenge_method = "S256";
                       public = "false";
-                      redirect_uris = ["https://nextcloud2.${cfg.domain}/apps/oidc_login/oidc"];
+                      redirect_uris = ["https://nextcloud.${cfg.domain}/apps/oidc_login/oidc"];
                       require_pkce = true;
                       token_endpoint_auth_method = "client_secret_basic";
                       userinfo_signed_response_alg = "none";

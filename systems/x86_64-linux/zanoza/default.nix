@@ -38,6 +38,53 @@ in {
     podman.enable = false;
   };
 
+  custom.containers = {
+    traefik = {
+      enable = true;
+      cf_secret_file = "secrets/zanoza/default.yaml";
+      domain = "sbulav.ru";
+    };
+    homepage = {
+      enable = true;
+      host = "home.sbulav.ru";
+      hostAddress = "172.16.64.10";
+      localAddress = "172.16.64.101";
+    };
+    authelia = {
+      enable = true;
+      host = "authelia.sbulav.ru";
+      secret_file = "secrets/zanoza/default.yaml";
+      hostAddress = "172.16.64.10";
+      localAddress = "172.16.64.102";
+    };
+    adguard = {
+      enable = true;
+      host = "adguard.sbulav.ru";
+      rewriteAddress = "192.168.89.207";
+      hostAddress = "172.16.64.10";
+      localAddress = "172.16.64.104";
+    };
+    flood = {
+      enable = true;
+      host = "flood.sbulav.ru";
+      hostAddress = "172.16.64.10";
+      localAddress = "172.16.64.105";
+    };
+    nextcloud = {
+      enable = true;
+      host = "nextcloud.sbulav.ru";
+      secret_file = "secrets/zanoza/default.yaml";
+      hostAddress = "172.16.64.10";
+      localAddress = "172.16.64.106";
+    };
+    jellyfin = {
+      enable = false;
+      host = "jellyfin.sbulav.ru";
+      hostAddress = "172.16.64.10";
+      localAddress = "172.16.64.107";
+    };
+  };
+
   environment.systemPackages = with pkgs; [
     alejandra
     nixd # LSP for nix
