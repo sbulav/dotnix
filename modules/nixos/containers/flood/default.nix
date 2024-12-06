@@ -10,6 +10,7 @@ with lib.custom; let
 in {
   options.${namespace}.containers.flood = with types; {
     enable = mkBoolOpt false "Enable flood nixos-container with rtorrent;";
+    dataPath = mkOpt str "/tank/torrents" "Flood data path on host machine";
     host = mkOpt str "flood.sbulav.ru" "The host to serve flood on";
     hostAddress = mkOpt str "172.16.64.10" "With private network, which address to use on Host";
     localAddress = mkOpt str "172.16.64.105" "With privateNetwork, which address to use in container";
@@ -39,6 +40,17 @@ in {
       ephemeral = true;
       autoStart = true;
 
+      # Mounting Cloudflare creds(email and dns api token) as file
+      bindMounts = {
+        "/var/lib/torrents/logs/" = {
+          hostPath = "${cfg.dataPath}/logs/";
+          isReadOnly = false;
+        };
+        "/var/lib/torrents/" = {
+          hostPath = "${cfg.dataPath}/";
+          isReadOnly = false;
+        };
+      };
       privateNetwork = true;
       # Need to add 172.16.64.0/18 on router
       hostAddress = "${cfg.hostAddress}";

@@ -38,6 +38,11 @@ in {
     podman.enable = false;
   };
 
+  custom.services.logrotate = {
+    enable = true;
+    logFiles = ["/tank/traefik/logs/*.log" "/tank/authelia/logs/*.log"];
+  };
+
   custom.containers = {
     traefik = {
       enable = true;
