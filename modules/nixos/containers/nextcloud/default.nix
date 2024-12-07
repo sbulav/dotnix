@@ -119,6 +119,9 @@ in {
           "d /var/lib/postgresql 700 postgres postgres -"
         ];
 
+        networking.hosts = {
+          "${cfg.hostAddress}" = ["authelia.sbulav.ru"];
+        };
         services = {
           nextcloud = {
             enable = true;
@@ -226,9 +229,9 @@ in {
           };
           # Use systemd-resolved inside the container
           # Workaround for bug https://github.com/NixOS/nixpkgs/issues/162686
-          # useHostResolvConf = lib.mkForce false;
+          useHostResolvConf = lib.mkForce false;
         };
-        # services.resolved.enable = true;
+        services.resolved.enable = true;
         system.stateVersion = "24.11";
       };
     };

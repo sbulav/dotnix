@@ -42,7 +42,7 @@ in {
 
       # Mounting Cloudflare creds(email and dns api token) as file
       bindMounts = {
-        "/var/lib/torrents/logs/" = {
+        "/var/lib/torrents/log/" = {
           hostPath = "${cfg.dataPath}/logs/";
           isReadOnly = false;
         };
