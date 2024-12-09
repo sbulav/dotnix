@@ -102,6 +102,10 @@ in {
           hostPath = "/tank/video/";
           isReadOnly = false;
         };
+        "/var/lib/nextcloud/data/completed" = {
+          hostPath = "/tank/torrents/completed";
+          isReadOnly = false;
+        };
       };
       # Inherit inputs to use stable package in container
       specialArgs = {
