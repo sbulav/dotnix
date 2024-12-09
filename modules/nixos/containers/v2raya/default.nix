@@ -10,7 +10,7 @@ with lib.custom; let
 in {
   options.${namespace}.containers.v2raya = with types; {
     enable = mkBoolOpt false "Enable v2raya nixos-container;";
-    # dataPath = mkOpt str "/tank/torrents" "v2raya data path on host machine";
+    dataPath = mkOpt str "/tank/v2raya" "v2raya data path on host machine";
     host = mkOpt str "v2raya.sbulav.ru" "The host to serve flood on";
     hostAddress = mkOpt str "172.16.64.10" "With private network, which address to use on Host";
     localAddress = mkOpt str "172.16.64.108" "With privateNetwork, which address to use in container";
@@ -36,23 +36,26 @@ in {
       enable = true;
       internalInterfaces = ["ve-v2raya"];
       externalInterface = "ens3";
+      enableIPv6 = false;
     };
+
     containers.v2raya = {
       ephemeral = true;
       autoStart = true;
+      enableTun = true;
 
       # Mounting Cloudflare creds(email and dns api token) as file
-      # bindMounts = {
-      #   "/var/lib/torrents/logs/" = {
-      #     hostPath = "${cfg.dataPath}/logs/";
-      #     isReadOnly = false;
-      #   };
-      #   "/var/lib/torrents/" = {
-      #     hostPath = "${cfg.dataPath}/";
-      #     isReadOnly = false;
-      #   };
-      # };
-      privateNetwork = true;
+      bindMounts = {
+        "/var/log/v2raya/" = {
+          hostPath = "${cfg.dataPath}/logs/";
+          isReadOnly = false;
+        };
+        "/etc/v2raya" = {
+          hostPath = "${cfg.dataPath}/config";
+          isReadOnly = false;
+        };
+      };
+      privateNetwork = false;
       # Need to add 172.16.64.0/18 on router
       hostAddress = "${cfg.hostAddress}";
       localAddress = "${cfg.localAddress}";
@@ -61,18 +64,15 @@ in {
         services.v2raya = {
           enable = true;
         };
-
         networking = {
           firewall = {
             enable = true;
             allowedTCPPorts = [2017 20172];
-            # allowedUDPPorts = [137 138];
           };
           # Use systemd-resolved inside the container
           # Workaround for bug https://github.com/NixOS/nixpkgs/issues/162686
-          useHostResolvConf = lib.mkForce false;
+          useHostResolvConf = lib.mkForce true;
         };
-        services.resolved.enable = true;
         system.stateVersion = "24.11";
       };
     };

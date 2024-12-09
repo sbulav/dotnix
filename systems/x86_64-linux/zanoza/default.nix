@@ -88,6 +88,12 @@ in {
       hostAddress = "172.16.64.10";
       localAddress = "172.16.64.107";
     };
+    v2raya = {
+      enable = true;
+      host = "v2raya.sbulav.ru";
+      hostAddress = "172.16.64.10";
+      localAddress = "172.16.64.108";
+    };
   };
 
   environment.systemPackages = with pkgs; [
