@@ -2,6 +2,7 @@
   config,
   lib,
   namespace,
+  pkgs,
   ...
 }:
 with lib;
@@ -43,7 +44,7 @@ in {
       # Mounting Cloudflare creds(email and dns api token) as file
       bindMounts = {
         "/var/lib/torrents/log/" = {
-          hostPath = "${cfg.dataPath}/logs/";
+          hostPath = "${cfg.dataPath}/log/";
           isReadOnly = false;
         };
         "/var/lib/torrents/" = {
@@ -60,6 +61,11 @@ in {
         services.rtorrent = {
           enable = true;
           dataDir = "/var/lib/torrents";
+          package = pkgs.jesec-rtorrent;
+          # configText = ''
+          #   log.add_output = "rpc_events", "log"
+          #   log.add_output = "rpc_dump", "log"
+          # '';
         };
         services.flood = {
           enable = true;
@@ -68,6 +74,9 @@ in {
           extraArgs = [
             "--noauth"
             "--rtsocket=${config.services.rtorrent.rpcSocket}"
+            "--allowedpath=/var/lib/torrents/"
+            "--allowedpath=/var/lib/torrents/completed"
+            "--allowedpath=/var/lib/torrents/download"
           ];
         };
         systemd.services.flood = {
@@ -76,6 +85,8 @@ in {
           after = ["rtorrent.service"];
           serviceConfig = {
             User = "rtorrent";
+            SupplementaryGroups = ["rtorrent"];
+            ReadWritePaths = ["/var/lib/torrents/download" "/var/lib/torrents/completed"];
           };
         };
 

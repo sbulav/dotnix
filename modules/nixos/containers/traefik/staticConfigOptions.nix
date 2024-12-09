@@ -15,11 +15,11 @@
     addInternals = true;
     # Buffer logs in memory before writing to disk
     bufferingSize = 100;
-    # filters.statusCodes = [
-    #   "200-206"
-    #   "400-499"
-    #   "500-599"
-    # ];
+    filters.statusCodes = [
+      "200-206"
+      "400-499"
+      "500-599"
+    ];
   };
   entryPoints = {
     web = {
