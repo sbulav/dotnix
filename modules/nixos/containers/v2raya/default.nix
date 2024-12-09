@@ -36,7 +36,6 @@ in {
       enable = true;
       internalInterfaces = ["ve-v2raya"];
       externalInterface = "ens3";
-      enableIPv6 = false;
     };
 
     containers.v2raya = {
@@ -55,7 +54,7 @@ in {
           isReadOnly = false;
         };
       };
-      privateNetwork = false;
+      privateNetwork = true;
       # Need to add 172.16.64.0/18 on router
       hostAddress = "${cfg.hostAddress}";
       localAddress = "${cfg.localAddress}";
@@ -66,7 +65,7 @@ in {
         };
         networking = {
           firewall = {
-            enable = true;
+            enable = false;
             allowedTCPPorts = [2017 20172];
           };
           # Use systemd-resolved inside the container
