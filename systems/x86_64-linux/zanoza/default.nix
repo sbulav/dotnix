@@ -83,8 +83,9 @@ in {
       localAddress = "172.16.64.106";
     };
     jellyfin = {
-      enable = false;
+      enable = true;
       host = "jellyfin.sbulav.ru";
+      secret_file = "secrets/zanoza/default.yaml";
       hostAddress = "172.16.64.10";
       localAddress = "172.16.64.107";
     };

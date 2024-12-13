@@ -70,6 +70,10 @@ in {
           "hostPath" = "${cfg.dataPath}/log/";
           isReadOnly = false;
         };
+        "/var/lib/jellyfin/video/" = {
+          "hostPath" = "/tank/video/";
+          isReadOnly = false;
+        };
       };
 
       config = {pkgs, ...}: {
@@ -162,7 +166,7 @@ in {
           };
         in ''
           # Setting up SSO integration
-          mkdir -p /var/lib/jellyfin/plugins
+          mkdir -p /var/lib/jellyfin/plugins/configurations
           CLIENT_SECRET="$(cat ${config.sops.secrets."jellyfin/oidc_client_secret".path})"
           sed "s/CLIENT_SECRET_REPLACE/$CLIENT_SECRET/" ${ssoConfig} > /var/lib/jellyfin/plugins/configurations/SSO-Auth.xml
           cat ${brandingConfig} > /var/lib/jellyfin/config/branding.xml
