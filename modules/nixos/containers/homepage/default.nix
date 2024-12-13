@@ -121,7 +121,7 @@ in {
                     widget = {
                       type = "jellyfin";
                       key = "{{HOMEPAGE_VAR_JELLYFIN_API_KEY}}";
-                      url = "http://${config.${namespace}.containers.jellyfin.localAddress}:8196";
+                      url = "http://${config.${namespace}.containers.jellyfin.localAddress}:8096";
                       enableBlocks = true; # optional, defaults to false
                       enableNowPlaying = true; # optional, defaults to true
                       enableUser = true; # optional, defaults to false
