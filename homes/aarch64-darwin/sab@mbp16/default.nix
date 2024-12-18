@@ -27,6 +27,7 @@ with lib.custom; {
       git = enabled;
       gh = enabled;
       bat = enabled;
+      k9s = enabled;
     };
 
     desktop = {

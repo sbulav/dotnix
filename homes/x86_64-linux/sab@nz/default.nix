@@ -52,6 +52,7 @@ in {
       gh = enabled;
       git = enabled;
       direnv = disabled;
+      k9s = enabled;
     };
     security = {
       rbw = enabled;
