@@ -28,7 +28,13 @@ in {
           noto-fonts-cjk-sans
           noto-fonts-cjk-serif
           noto-fonts-emoji
-          (nerdfonts.override {fonts = ["JetBrainsMono" "CascadiaCode" "FiraCode"];})
+          # Nerd Fonts
+          nerd-fonts.caskaydia-cove
+          nerd-fonts.jetbrains-mono
+          nerd-fonts.fira-code
+          nerd-fonts.iosevka
+          nerd-fonts.monaspace
+          nerd-fonts.symbols-only
         ]
         ++ cfg.fonts;
     };
