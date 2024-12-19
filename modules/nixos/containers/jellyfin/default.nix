@@ -2,7 +2,6 @@
   config,
   lib,
   namespace,
-  pkgs,
   ...
 }:
 with lib;
@@ -18,6 +17,15 @@ in {
     secret_file = mkOpt str "secrets/serverz/default.yaml" "SOPS secret to get creds from";
   };
   imports = [
+    (import ../shared/shared-traefik-clientip-route.nix
+      {
+        app = "jellyfin";
+        host = "${cfg.host}";
+        url = "http://${cfg.localAddress}:8096";
+        route_enabled = cfg.enable;
+        middleware = ["secure-headers-jellyfin"];
+        clientips = "ClientIP(`172.16.64.0/24`) || ClientIP(`192.168.89.0/24`) || ClientIP(`192.168.88.0/24`)";
+      })
     (import ../shared/shared-traefik-route.nix
       {
         app = "jellyfin";
