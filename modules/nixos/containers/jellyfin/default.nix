@@ -23,7 +23,7 @@ in {
         host = "${cfg.host}";
         url = "http://${cfg.localAddress}:8096";
         route_enabled = cfg.enable;
-        middleware = ["secure-headers-jellyfin"];
+        middleware = ["secure-headers-jellyfin" "allow-lan"];
         clientips = "ClientIP(`172.16.64.0/24`) || ClientIP(`192.168.89.0/24`) || ClientIP(`192.168.88.0/24`)";
       })
     (import ../shared/shared-traefik-route.nix
@@ -61,6 +61,13 @@ in {
       # Need to add 172.16.64.0/18 on router
       hostAddress = "${cfg.hostAddress}";
       localAddress = "${cfg.localAddress}";
+      forwardPorts = [
+        {
+          containerPort = 8096;
+          hostPort = 8096;
+          protocol = "tcp";
+        }
+      ];
 
       bindMounts = {
         "${config.sops.secrets."jellyfin/oidc_client_secret".path}" = {
