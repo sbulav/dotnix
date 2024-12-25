@@ -59,6 +59,13 @@ in {
       hostAddress = "${cfg.hostAddress}";
       localAddress = "${cfg.localAddress}";
 
+      forwardPorts = [
+        {
+          containerPort = 20172;
+          hostPort = 20172;
+          protocol = "tcp";
+        }
+      ];
       config = {...}: {
         services.v2raya = {
           enable = true;
