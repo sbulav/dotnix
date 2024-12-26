@@ -144,7 +144,7 @@ in {
                   {
                     domain = "${cfg.domain}";
                     authelia_url = "https://${cfg.host}";
-                    default_redirection_url = "https://homepage.${cfg.domain}";
+                    default_redirection_url = "https://home.${cfg.domain}";
                     expiration = "12h";
                     inactivity = "4h";
                     remember_me = "1M";
@@ -198,6 +198,22 @@ in {
                       public = "false";
                       redirect_uris = ["https://nextcloud.${cfg.domain}/apps/oidc_login/oidc"];
                       require_pkce = true;
+                      token_endpoint_auth_method = "client_secret_basic";
+                      userinfo_signed_response_alg = "none";
+                    }
+                    {
+                      authorization_policy = "one_factor";
+                      client_id = "immich";
+                      client_name = "Immich";
+                      client_secret = "$pbkdf2-sha512$310000$JvS0PwAz3BIfHWAirUKiGg$eBr7wTY3GO2mQXp/U54Tmd4q.sv7qJdpiQzZgVD1V7YPk4VGGTBwhVhpKIF4S.0vu2pGw2KiI2yP37aelGKPaA";
+                      consent_mode = "implicit";
+                      public = "false";
+                      redirect_uris = [
+                        "https://immich.${cfg.domain}/apps/oidc_login/oidc"
+                        "https://immich.${cfg.domain}/auth/login"
+                        "https://immich.${cfg.domain}/user-settings"
+                        "app.immich:///oauth-callback"
+                      ];
                       token_endpoint_auth_method = "client_secret_basic";
                       userinfo_signed_response_alg = "none";
                     }

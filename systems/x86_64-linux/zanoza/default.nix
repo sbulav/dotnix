@@ -95,6 +95,13 @@ in {
       hostAddress = "172.16.64.10";
       localAddress = "172.16.64.108";
     };
+    immich = {
+      enable = true;
+      host = "immich.sbulav.ru";
+      hostAddress = "172.16.64.10";
+      localAddress = "172.16.64.109";
+      secret_file = "secrets/zanoza/default.yaml";
+    };
   };
 
   environment.systemPackages = with pkgs; [
