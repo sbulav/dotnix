@@ -69,7 +69,8 @@ in {
             {
               resources = {
                 cpu = true;
-                disk = "/";
+                cputemp = true;
+                disk = ["/"];
                 memory = true;
               };
             }
@@ -127,6 +128,18 @@ in {
                       enableUser = true; # optional, defaults to false
                       showEpisodeNumber = true; # optional, defaults to false
                       expandOneStreamToTwoRows = false; # optional, defaults to true
+                    };
+                  };
+                }
+                {
+                  "immich" = mkIf config.${namespace}.containers.immich.enable {
+                    icon = "immich";
+                    href = "https://${config.${namespace}.containers.immich.host}";
+                    version = 2;
+                    widget = {
+                      type = "immich";
+                      key = "{{HOMEPAGE_VAR_IMMICH_API_KEY}}";
+                      url = "http://${config.${namespace}.containers.immich.localAddress}:2283";
                     };
                   };
                 }
