@@ -12,7 +12,7 @@ in {
   options.${namespace}.containers.immich = with types; {
     enable = mkBoolOpt false "Enable Immich nixos-container;";
     dataPath = mkOpt str "/tank/immich" "Immich data path on host machine";
-    host = mkOpt str "immich.sbulav.ru" "The host to serve flood on";
+    host = mkOpt str "immich.sbulav.ru" "The host to serve Immich on";
     hostAddress = mkOpt str "172.16.64.10" "With private network, which address to use on Host";
     localAddress = mkOpt str "172.16.64.109" "With privateNetwork, which address to use in container";
     secret_file = mkOpt str "secrets/serverz/default.yaml" "SOPS secret to get creds from";
