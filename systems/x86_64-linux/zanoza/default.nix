@@ -114,6 +114,7 @@ in {
   environment.systemPackages = with pkgs; [
     alejandra
     nixd # LSP for nix
+    smartmontools
   ];
   # ======================== DO NOT CHANGE THIS ========================
   system.stateVersion = "24.11";
