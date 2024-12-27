@@ -74,7 +74,7 @@ in {
         autohide-delay = 0.0;
         # how fast is the dock showing animation
         autohide-time-modifier = 1.0;
-        expose-group-by-app = true;
+        expose-group-apps = true;
         mineffect = "scale";
         minimize-to-application = true;
         mouse-over-hilite-stack = true;
