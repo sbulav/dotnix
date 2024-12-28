@@ -109,6 +109,13 @@ in {
       localAddress = "172.16.64.110";
       secret_file = "secrets/zanoza/default.yaml";
     };
+    ocis = {
+      enable = true;
+      host = "ocis.sbulav.ru";
+      hostAddress = "172.16.64.10";
+      localAddress = "172.16.64.111";
+      secret_file = "secrets/zanoza/default.yaml";
+    };
   };
 
   environment.systemPackages = with pkgs; [
@@ -116,6 +123,7 @@ in {
     nixd # LSP for nix
     smartmontools
   ];
+
   # ======================== DO NOT CHANGE THIS ========================
   system.stateVersion = "24.11";
   # ======================== DO NOT CHANGE THIS ========================
