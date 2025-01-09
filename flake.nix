@@ -1,4 +1,3 @@
-#https://github.com/Kazuto/.nix/blob/master/modules/linux/home/default.nix
 {
   description = "Sbulav nix config";
 
