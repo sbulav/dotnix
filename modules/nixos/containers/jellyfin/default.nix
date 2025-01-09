@@ -194,6 +194,12 @@ in {
         '';
 
         networking = {
+          hosts = {
+            #TODO: remove this once migrated
+            "${cfg.hostAddress}" = [
+              "authelia.sbulav.ru"
+            ];
+          };
           firewall = {
             enable = true;
             # https://jellyfin.org/docs/general/networking/index.html#port-bindings
