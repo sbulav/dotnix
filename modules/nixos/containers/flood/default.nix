@@ -61,7 +61,7 @@ in {
         services.rtorrent = {
           enable = true;
           dataDir = "/var/lib/torrents";
-          package = pkgs.jesec-rtorrent;
+          # package = pkgs.jesec-rtorrent;
           # configText = ''
           #   log.add_output = "rpc_events", "log"
           #   log.add_output = "rpc_dump", "log"
