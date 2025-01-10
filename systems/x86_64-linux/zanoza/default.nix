@@ -109,6 +109,12 @@ in {
       localAddress = "172.16.64.110";
       secret_file = "secrets/zanoza/default.yaml";
     };
+    cockpit = {
+      enable = true;
+      host = "cockpit.sbulav.ru";
+      hostAddress = "172.16.64.10";
+      localAddress = "172.16.64.111";
+    };
   };
 
   environment.systemPackages = with pkgs; [
