@@ -145,8 +145,8 @@ in {
                     domain = "${cfg.domain}";
                     authelia_url = "https://${cfg.host}";
                     default_redirection_url = "https://home.${cfg.domain}";
-                    expiration = "12h";
-                    inactivity = "4h";
+                    expiration = "48h";
+                    inactivity = "24h";
                     remember_me = "1M";
                   }
                 ];
