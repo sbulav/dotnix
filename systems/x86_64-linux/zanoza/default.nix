@@ -110,10 +110,14 @@ in {
       secret_file = "secrets/zanoza/default.yaml";
     };
     cockpit = {
-      enable = true;
+      enable = false;
       host = "cockpit.sbulav.ru";
       hostAddress = "172.16.64.10";
       localAddress = "172.16.64.111";
+    };
+    prometheus = {
+      enable = true;
+      host = "prometheus.sbulav.ru";
     };
   };
 

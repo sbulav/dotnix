@@ -11,7 +11,7 @@ in {
   options.${namespace}.containers.v2raya = with types; {
     enable = mkBoolOpt false "Enable v2raya nixos-container;";
     dataPath = mkOpt str "/tank/v2raya" "v2raya data path on host machine";
-    host = mkOpt str "v2raya.sbulav.ru" "The host to serve flood on";
+    host = mkOpt str "v2raya.sbulav.ru" "The host to serve v2raya on";
     hostAddress = mkOpt str "172.16.64.10" "With private network, which address to use on Host";
     localAddress = mkOpt str "172.16.64.108" "With privateNetwork, which address to use in container";
   };
