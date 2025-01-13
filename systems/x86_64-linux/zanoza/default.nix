@@ -40,7 +40,12 @@ in {
 
   custom.services.logrotate = {
     enable = true;
-    logFiles = ["/tank/traefik/logs/*.log" "/tank/authelia/logs/*.log"];
+    logFiles = [
+      "/tank/authelia/logs/*.log"
+      "/tank/torrents/log/*.log"
+      "/tank/traefik/logs/*.log"
+      "/tank/v2raya/logs/*.log"
+    ];
   };
 
   custom.containers = {
@@ -102,22 +107,15 @@ in {
       localAddress = "172.16.64.109";
       secret_file = "secrets/zanoza/default.yaml";
     };
-    seafile = {
-      enable = false;
-      host = "seafile.sbulav.ru";
-      hostAddress = "172.16.64.10";
-      localAddress = "172.16.64.110";
-      secret_file = "secrets/zanoza/default.yaml";
-    };
-    cockpit = {
-      enable = false;
-      host = "cockpit.sbulav.ru";
-      hostAddress = "172.16.64.10";
-      localAddress = "172.16.64.111";
-    };
     prometheus = {
       enable = true;
       host = "prometheus.sbulav.ru";
+    };
+    grafana = {
+      enable = true;
+      host = "grafana.sbulav.ru";
+      hostAddress = "172.16.64.10";
+      localAddress = "172.16.64.112";
     };
   };
 

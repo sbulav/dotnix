@@ -10,7 +10,6 @@ with lib.custom; let
 in {
   options.${namespace}.containers.prometheus = with types; {
     enable = mkBoolOpt false "Enable the Prometheus monitoring service ;";
-    domain = mkOpt str "" "The domain to get certificates to";
     host = mkOpt str "prometheus.sbulav.ru" "The host to serve prometheus on";
   };
 
