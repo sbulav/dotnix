@@ -15,6 +15,7 @@ in {
     host = mkOpt str "grafana.sbulav.ru" "The host to serve grafana on";
     hostAddress = mkOpt str "172.16.64.10" "With private network, which address to use on Host";
     localAddress = mkOpt str "172.16.64.112" "With privateNetwork, which address to use in container";
+    secret_file = mkOpt str "secrets/zanoza/default.yaml" "SOPS secret to get creds from";
   };
 
   imports = [
@@ -33,6 +34,16 @@ in {
   ];
 
   config = mkIf cfg.enable {
+    sops.secrets = {
+      "grafana/oidc_client_secret" = {
+        sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
+        uid = 196;
+      };
+      "grafana/admin_password" = {
+        sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
+        uid = 196;
+      };
+    };
     # Allow grafana to read all exporters via trusted interface
     networking.firewall.trustedInterfaces = ["ve-grafana"];
     containers.grafana = {
@@ -49,18 +60,54 @@ in {
           hostPath = "${cfg.dataPath}/data/";
           isReadOnly = false;
         };
+
+        "${config.sops.secrets."grafana/oidc_client_secret".path}" = {
+          isReadOnly = true;
+        };
+        "${config.sops.secrets."grafana/admin_password".path}" = {
+          isReadOnly = true;
+        };
       };
 
       config = {...}: {
-        # TODO: set up initial admin password via SOPS ()
-        # TODO: configure OIDC authentication via ENVIRONMENT variables https://www.authelia.com/integration/openid-connect/grafana/
         services.grafana = {
           enable = true;
-          # settings.server.http_addr = "${cfg.localAddress}";
           settings = {
-            server.protocol = "http";
-            server.http_addr = "${cfg.localAddress}";
+            server = {
+              protocol = "http";
+              http_addr = "${cfg.localAddress}";
+              root_url = "https://${cfg.host}";
+            };
+            security = {
+              admin_email = config.${namespace}.user.email;
+              admin_password = "$__file{${
+                config.sops.secrets."grafana/admin_password".path
+              }}";
+            };
             analytics.reporting_enabled = false;
+            users.auto_assign_org = true;
+            users.auto_assign_org_id = 1;
+            auth = {
+              signout_redirect_url = "https://authelia.sbulav.ru/application/o/grafana/end-session/";
+              # oauth_auto_login = true;
+            };
+            "auth.generic_oauth" = {
+              enabled = true;
+              name = "Authelia";
+              allow_sign_up = true;
+              client_id = "grafana";
+              client_secret = "$__file{${config.sops.secrets."grafana/oidc_client_secret".path}}";
+              api_url = "https://authelia.sbulav.ru/api/oidc/userinfo";
+              auth_url = "https://authelia.sbulav.ru/api/oidc/authorization";
+              token_url = "https://authelia.sbulav.ru/api/oidc/token";
+              empty_scopes = false;
+              scopes = "openid profile email groups";
+              groups_attribute_path = "groups";
+              email_attribute_path = "email";
+              login_attribute_path = "preferred_username";
+              name_attribute_path = "name";
+              role_attribute_path = "contains(roles[*], 'admin') && 'Admin' || contains(roles[*], 'editor') && 'Editor' || 'Viewer'";
+            };
           };
           provision = {
             enable = true;

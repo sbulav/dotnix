@@ -217,6 +217,17 @@ in {
                       token_endpoint_auth_method = "client_secret_basic";
                       userinfo_signed_response_alg = "none";
                     }
+                    {
+                      authorization_policy = "one_factor";
+                      client_id = "grafana";
+                      client_name = "grafana";
+                      client_secret = "$pbkdf2-sha512$310000$4jNs4mRSxsVHn0Fz6n5CLw$McFHhCkX6ZPPNaNx0QdWHg67v7XQAwGKwtIWAAl2ODkUJ0fsaPUMNigVE9YAUd1zHHpODVjx9jQHIjbUXqBhGw";
+                      consent_mode = "implicit";
+                      public = "false";
+                      redirect_uris = ["https://grafana.${cfg.domain}/login/generic_oauth"];
+                      token_endpoint_auth_method = "client_secret_basic";
+                      userinfo_signed_response_alg = "none";
+                    }
                   ];
                 };
               };
