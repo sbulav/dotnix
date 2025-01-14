@@ -106,7 +106,7 @@ in {
               email_attribute_path = "email";
               login_attribute_path = "preferred_username";
               name_attribute_path = "name";
-              role_attribute_path = "contains(roles[*], 'admin') && 'Admin' || contains(roles[*], 'editor') && 'Editor' || 'Viewer'";
+              role_attribute_path = "contains(groups[*], 'admin') && 'Admin' || contains(groups[*], 'editor') && 'Editor' || 'Viewer'";
             };
           };
           provision = {
@@ -122,7 +122,6 @@ in {
                 }
               ];
             };
-            # TODO: add dashboard for ZFS
             # TODO: add dashboard for UPS
             dashboards.settings.providers = [
               {
@@ -140,6 +139,15 @@ in {
                   name = "smartctl-exporter-dashboard.json";
                   url = "https://raw.githubusercontent.com/blesswinsamuel/grafana-dashboards/refs/heads/main/dashboards/dist/dashboards/smartctl.json";
                   hash = "sha256-LtFe8ssPt1efIqTl94NLKVmuSuZWT8Hlu6ADNmb63h0=";
+                };
+                orgId = 1;
+              }
+              {
+                name = "ZFS stats";
+                options.path = pkgs.fetchurl {
+                  name = "zfs-stats2.json";
+                  url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/zfs/zfs-stats.json";
+                  hash = "sha256-1+DFTJXC9w41dYVHiarCN3QqWX6WCE053Sj0BktE2Bg=";
                 };
                 orgId = 1;
               }

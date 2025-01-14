@@ -22,6 +22,22 @@
   boot.zfs.extraPools = ["tank"];
   networking.hostId = "3f032090";
   services.zfs.autoScrub.enable = true;
+  services.zfs.zed.settings = {
+    ZED_DEBUG_LOG = "/var/log/zed.debug.log";
+    ZED_EMAIL_ADDR = [
+      "root"
+    ];
+    ZED_EMAIL_PROG = "${pkgs.msmtp}/bin/msmtp";
+    ZED_EMAIL_OPTS = "-a zed @ADDRESS@";
+
+    ZED_NOTIFY_INTERVAL_SECS = 3600;
+    ZED_NOTIFY_VERBOSE = true;
+
+    ZED_USE_ENCLOSURE_LEDS = true;
+    ZED_SCRUB_AFTER_RESILVER = true;
+  };
+  # Won't work
+  services.zfs.zed.enableMail = false;
 
   fileSystems."/" = {
     device = "/dev/disk/by-uuid/d19e6f41-6ce1-404a-bd84-bc65e003e04c";

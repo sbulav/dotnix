@@ -38,5 +38,15 @@ in {
         account default: gmail
       '';
     };
+
+  environment.etc = {
+    "aliases" = {
+      text = ''
+        root: zppfan@gmail.com
+      '';
+      mode = "0644";
+      };
   };
+  };
+
 }
