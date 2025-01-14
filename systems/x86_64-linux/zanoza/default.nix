@@ -111,6 +111,10 @@ in {
       enable = true;
       host = "prometheus.sbulav.ru";
     };
+    msmtp = {
+      enable = true;
+      secret_file = "secrets/zanoza/default.yaml";
+    };
     grafana = {
       enable = true;
       host = "grafana.sbulav.ru";
