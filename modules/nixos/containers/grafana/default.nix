@@ -112,19 +112,32 @@ in {
           provision = {
             enable = true;
             datasources.settings = {
-              datasources = [
-                {
+              datasources = let
+                prometheus = {
                   name = "Prometheus";
                   type = "prometheus";
                   access = "proxy";
                   url = "http://${cfg.hostAddress}:9090";
                   isDefault = true;
-                }
-              ];
+                };
+                loki =
+                  if config.${namespace}.containers.loki.enable
+                  then [
+                    {
+                      name = "Loki";
+                      type = "loki";
+                      access = "proxy";
+                      url = "http://${cfg.hostAddress}:3030";
+                    }
+                  ]
+                  else [];
+              in
+                [prometheus] ++ loki;
             };
             # TODO: add dashboard for UPS
-            dashboards.settings.providers = [
-              {
+            # TODO: add dashboard for UPS
+            dashboards.settings.providers = let
+              nodeExporterFull = {
                 name = "Node Exporter Full";
                 options.path = pkgs.fetchurl {
                   name = "node-exporter-full-37-grafana-dashboard.json";
@@ -132,8 +145,9 @@ in {
                   hash = "sha256-1DE1aaanRHHeCOMWDGdOS1wBXxOF84UXAjJzT5Ek6mM=";
                 };
                 orgId = 1;
-              }
-              {
+              };
+
+              smartctlExporter = {
                 name = "Smartctl Exporter";
                 options.path = pkgs.fetchurl {
                   name = "smartctl-exporter-dashboard.json";
@@ -141,8 +155,9 @@ in {
                   hash = "sha256-LtFe8ssPt1efIqTl94NLKVmuSuZWT8Hlu6ADNmb63h0=";
                 };
                 orgId = 1;
-              }
-              {
+              };
+
+              zfsStats = {
                 name = "ZFS stats";
                 options.path = pkgs.fetchurl {
                   name = "zfs-stats2.json";
@@ -150,8 +165,24 @@ in {
                   hash = "sha256-1+DFTJXC9w41dYVHiarCN3QqWX6WCE053Sj0BktE2Bg=";
                 };
                 orgId = 1;
-              }
-            ];
+              };
+              logs =
+                if config.${namespace}.containers.loki.enable
+                then [
+                  {
+                    name = "Logs dashboard";
+                    options.path = pkgs.fetchurl {
+                      name = "logs-dashboard2.json";
+                      url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/monitoring/Logs-promtail.json";
+                      hash = "sha256-rBgTrpMWOphSOVXPHc7kayzuTy0PylPOzk50VSnRrRs=";
+                    };
+                    orgId = 1;
+                  }
+                ]
+                else [];
+            in
+              [nodeExporterFull smartctlExporter zfsStats] ++ logs;
+            # 13639
           };
         };
         networking = {

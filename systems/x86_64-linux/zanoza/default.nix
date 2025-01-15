@@ -115,6 +115,9 @@ in {
       enable = true;
       secret_file = "secrets/zanoza/default.yaml";
     };
+    loki = {
+      enable = true;
+    };
     grafana = {
       enable = true;
       host = "grafana.sbulav.ru";
