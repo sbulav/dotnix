@@ -43,6 +43,14 @@ in {
         sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
         uid = 196;
       };
+      "telegram-notifications-bot-token" = {
+        sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
+        uid = 196;
+      };
+      "grafana/email-password" = {
+        sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
+        uid = 196;
+      };
     };
     # Allow grafana to read all exporters via trusted interface
     networking.firewall.trustedInterfaces = ["ve-grafana"];
@@ -67,6 +75,12 @@ in {
         "${config.sops.secrets."grafana/admin_password".path}" = {
           isReadOnly = true;
         };
+        "${config.sops.secrets."telegram-notifications-bot-token".path}" = {
+          isReadOnly = true;
+        };
+        "${config.sops.secrets."grafana/email-password".path}" = {
+          isReadOnly = true;
+        };
       };
 
       config = {...}: {
@@ -77,6 +91,14 @@ in {
               protocol = "http";
               http_addr = "${cfg.localAddress}";
               root_url = "https://${cfg.host}";
+            };
+            smtp = rec {
+              enabled = true;
+              user = "zppfan@gmail.com";
+              from_name = "ZANOZA-notifications";
+              from_address = user;
+              host = "smtp.gmail.com:587";
+              password = "$__file{${config.sops.secrets."grafana/email-password".path}}";
             };
             security = {
               admin_email = config.${namespace}.user.email;
@@ -111,6 +133,37 @@ in {
           };
           provision = {
             enable = true;
+            alerting.contactPoints.settings = {
+              apiVersion = 1;
+              contactPoints = [
+                {
+                  name = "grafana-default-email";
+                  receivers = [
+                    {
+                      uid = "basic-email";
+                      type = "email";
+                      settings.addresses = config.${namespace}.user.email;
+                    }
+                  ];
+                }
+
+                {
+                  name = "Telegram";
+                  receivers = [
+                    {
+                      type = "telegram";
+                      uid = "telegram";
+                      settings = {
+                        chatid = "681806836";
+                        bottoken = "\${TELEGRAM_TOKEN}";
+                        uploadImage = false;
+                      };
+                    }
+                  ];
+                }
+              ];
+            };
+
             datasources.settings = {
               datasources = let
                 prometheus = {
@@ -183,6 +236,14 @@ in {
             in
               [nodeExporterFull smartctlExporter zfsStats] ++ logs;
             # 13639
+          };
+        };
+
+        systemd.services.grafana = {
+          serviceConfig = {
+            EnvironmentFile = [
+              config.sops.secrets."telegram-notifications-bot-token".path
+            ];
           };
         };
         networking = {
