@@ -133,35 +133,54 @@ in {
           };
           provision = {
             enable = true;
-            alerting.contactPoints.settings = {
-              apiVersion = 1;
-              contactPoints = [
-                {
-                  name = "grafana-default-email";
-                  receivers = [
-                    {
-                      uid = "basic-email";
-                      type = "email";
-                      settings.addresses = config.${namespace}.user.email;
-                    }
-                  ];
-                }
+            alerting = {
+              contactPoints.settings = {
+                apiVersion = 1;
+                contactPoints = [
+                  {
+                    name = "grafana-default-email";
+                    receivers = [
+                      {
+                        uid = "basic-email";
+                        type = "email";
+                        settings.addresses = config.${namespace}.user.email;
+                      }
+                    ];
+                  }
 
-                {
-                  name = "Telegram";
-                  receivers = [
-                    {
-                      type = "telegram";
-                      uid = "telegram";
-                      settings = {
-                        chatid = "681806836";
-                        bottoken = "\${TELEGRAM_TOKEN}";
-                        uploadImage = false;
-                      };
-                    }
-                  ];
-                }
-              ];
+                  {
+                    name = "Telegram";
+                    receivers = [
+                      {
+                        type = "telegram";
+                        uid = "telegram";
+                        settings = {
+                          chatid = "681806836";
+                          bottoken = "\${TELEGRAM_TOKEN}";
+                          uploadImage = false;
+                        };
+                      }
+                    ];
+                  }
+                ];
+              };
+              rules.settings = let
+                rules = builtins.fromJSON (builtins.readFile ./alerting/rules.json);
+                ruleIds = map (r: r.uid) rules;
+              in {
+                apiVersion = 1;
+                groups = [
+                  {
+                    orgId = 1;
+                    name = "zanoza";
+                    folder = "ALERTS";
+                    interval = "5m";
+                    inherit rules;
+                  }
+                ];
+                # deleteRules seems to happen after creating the above rules, effectively rolling back
+                # any updates.
+              };
             };
 
             datasources.settings = {
@@ -233,9 +252,22 @@ in {
                   }
                 ]
                 else [];
+              authelia =
+                if config.${namespace}.containers.authelia.enable
+                then [
+                  {
+                    name = "Authelia dashboard";
+                    options.path = pkgs.fetchurl {
+                      name = "authelia-dashboard.json";
+                      url = "https://raw.githubusercontent.com/authelia/authelia/refs/heads/master/examples/grafana-dashboards/simple.json";
+                      hash = "sha256-y+WbEev4ezdJyorjnnZi37CL1Pd9PxYAvl5N0hsFJnk=";
+                    };
+                    orgId = 1;
+                  }
+                ]
+                else [];
             in
-              [nodeExporterFull smartctlExporter zfsStats] ++ logs;
-            # 13639
+              [nodeExporterFull smartctlExporter zfsStats] ++ logs ++ authelia;
           };
         };
 

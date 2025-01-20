@@ -41,10 +41,9 @@ in {
           # enabledCollectors = ["systemd"];
           enable = true;
         };
-        # Provided by node exporter
-        # zfs.enable = true;
         smartctl = {
           enable = true;
+          # TODO: make this dynamic or pass via options
           devices = [
             "/dev/nvme0n1"
             "/dev/sda"
@@ -55,21 +54,27 @@ in {
         };
       };
 
-      # ingest the published nodes
-      scrapeConfigs = [
-        {
+      # Ingest the published nodes
+      scrapeConfigs = let
+        nodesScrapeConfig = {
           job_name = "nodes";
-          static_configs = [
+          static_configs = let
+            baseTargets = [
+              "127.0.0.1:3021" # Node exporter
+              "127.0.0.1:9633" # Smartctl exporter
+            ];
+
+            autheliaTarget =
+              if config.${namespace}.containers.authelia.enable
+              then ["${config.${namespace}.containers.authelia.localAddress}:9959"]
+              else [];
+          in [
             {
-              targets = [
-                "127.0.0.1:3021" #Node exporer
-                # "127.0.0.1:9134" #ZFS exporter
-                "127.0.0.1:9633" #Smartctl exporter
-              ];
+              targets = baseTargets ++ autheliaTarget;
             }
           ];
-        }
-      ];
+        };
+      in [nodesScrapeConfig];
     };
   };
 }

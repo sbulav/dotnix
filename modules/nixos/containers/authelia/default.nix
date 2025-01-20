@@ -114,6 +114,12 @@ in {
                 level = "info";
                 file_path = "/var/lib/authelia-main/logs/authelia.log";
               };
+              telemetry = {
+                metrics = {
+                  address = "tcp://${cfg.localAddress}:9959";
+                  enabled = true;
+                };
+              };
               authentication_backend = {
                 file.path = "/var/lib/authelia-main/users/users_database.yml";
                 password_reset.disable = true;
@@ -237,7 +243,7 @@ in {
         networking = {
           firewall = {
             enable = true;
-            allowedTCPPorts = [9091];
+            allowedTCPPorts = [9091 9959];
           };
           # Use systemd-resolved inside the container
           # Workaround for bug https://github.com/NixOS/nixpkgs/issues/162686
