@@ -49,11 +49,29 @@ in {
   };
 
   custom.containers = {
+    # {{{ Services on OS
+    loki = {
+      enable = true;
+    };
+    prometheus = {
+      enable = true;
+      host = "prometheus.sbulav.ru";
+    };
+    msmtp = {
+      enable = true;
+      secret_file = "secrets/zanoza/default.yaml";
+    };
+    nfs = {
+      enable = true;
+      filesystems = ["/tank/torrents" "/tank/video"];
+      restrictedClients = ["192.168.88.0/23"];
+    };
     traefik = {
       enable = true;
       cf_secret_file = "secrets/zanoza/default.yaml";
       domain = "sbulav.ru";
-    };
+    }; # }}}
+    # {{{ Services in nixos-containers
     homepage = {
       enable = true;
       host = "home.sbulav.ru";
@@ -107,24 +125,13 @@ in {
       localAddress = "172.16.64.109";
       secret_file = "secrets/zanoza/default.yaml";
     };
-    prometheus = {
-      enable = true;
-      host = "prometheus.sbulav.ru";
-    };
-    msmtp = {
-      enable = true;
-      secret_file = "secrets/zanoza/default.yaml";
-    };
-    loki = {
-      enable = true;
-    };
     grafana = {
       enable = true;
       host = "grafana.sbulav.ru";
       hostAddress = "172.16.64.10";
       localAddress = "172.16.64.112";
       secret_file = "secrets/zanoza/default.yaml";
-    };
+    }; # }}}
   };
 
   environment.systemPackages = with pkgs; [
