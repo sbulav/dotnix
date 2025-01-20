@@ -207,7 +207,6 @@ in {
                 [prometheus] ++ loki;
             };
             # TODO: add dashboard for UPS
-            # TODO: add dashboard for UPS
             dashboards.settings.providers = let
               nodeExporterFull = {
                 name = "Node Exporter Full";
@@ -266,8 +265,22 @@ in {
                   }
                 ]
                 else [];
+              traefik =
+                if config.${namespace}.containers.traefik.enable
+                then [
+                  {
+                    name = "Traefik via Loki dashboard";
+                    options.path = pkgs.fetchurl {
+                      name = "traefik-via-loki-dashboard2.json";
+                      url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/traefik/traefik-via-loki.json";
+                      hash = "sha256-jKXBG3PGYHwJVAkN44U7BmQ+KsHWE4KVAGllb3kt7g4=";
+                    };
+                    orgId = 1;
+                  }
+                ]
+                else [];
             in
-              [nodeExporterFull smartctlExporter zfsStats] ++ logs ++ authelia;
+              [nodeExporterFull smartctlExporter zfsStats] ++ logs ++ authelia ++ traefik;
           };
         };
 

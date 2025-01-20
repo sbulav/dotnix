@@ -7,10 +7,12 @@
   log = {
     level = "INFO";
     filePath = "/traefik/logs/traefik.log";
+    format = "json";
   };
 
   accessLog = {
     filePath = "/traefik/logs/access.log";
+    format = "json";
     # Log access to Dashboard
     addInternals = true;
     # Buffer logs in memory before writing to disk
