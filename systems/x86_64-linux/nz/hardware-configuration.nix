@@ -28,17 +28,17 @@
     fsType = "vfat";
   };
 
-  # fileSystems."/mnt/tank/torrents" = {
-  #   device = "192.168.89.200:/mnt/tank/torrents";
-  #   options = [
-  #     "noauto"
-  #     "x-systemd.automount"
-  #     "x-systemd.requires=network.target"
-  #     "x-systemd.mount-timeout=10"
-  #     "x-systemd.idle-timeout=1min"
-  #   ];
-  #   fsType = "nfs";
-  # };
+  fileSystems."/mnt/tank/torrents" = {
+    device = "192.168.89.207:/tank/torrents";
+    options = [
+      "noauto"
+      "x-systemd.automount"
+      "x-systemd.requires=network.target"
+      "x-systemd.mount-timeout=10"
+      "x-systemd.idle-timeout=1min"
+    ];
+    fsType = "nfs";
+  };
 
   # fileSystems."/mnt/obsidian" = {
   #   device = "192.168.89.200:/mnt/tank/Apps/obsidian";
