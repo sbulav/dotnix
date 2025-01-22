@@ -11,13 +11,14 @@ in {
   options.${namespace}.containers.prometheus = with types; {
     enable = mkBoolOpt false "Enable the Prometheus monitoring service ;";
     host = mkOpt str "prometheus.sbulav.ru" "The host to serve prometheus on";
+    smartctl_devices = mkOpt (listOf str) [] "List of devices to monitor, in the format ['/dev/sda']";
   };
 
   imports = [
     (import ../shared/shared-traefik-route.nix
       {
         app = "prometheus";
-        host = "${cfg.host}";
+        host = cfg.host;
         # url = "http://${cfg.localAddress}:9090";
         url = "http://127.0.0.1:9090";
         route_enabled = cfg.enable;
@@ -25,7 +26,7 @@ in {
       })
     (import ../shared/shared-adguard-dns-rewrite.nix
       {
-        host = "${cfg.host}";
+        host = cfg.host;
         rewrite_enabled = cfg.enable;
       })
   ];
@@ -38,24 +39,33 @@ in {
       exporters = {
         node = {
           port = 3021;
-          # enabledCollectors = ["systemd"];
+          # enabledCollectors = [""];
           enable = true;
         };
         smartctl = {
           enable = true;
-          # TODO: make this dynamic or pass via options
-          devices = [
-            "/dev/nvme0n1"
-            "/dev/sda"
-            "/dev/sdb"
-            "/dev/sdc"
-            "/dev/sdd"
-          ];
+          devices = cfg.smartctl_devices;
+        };
+        nut = {
+          enable = true;
         };
       };
 
       # Ingest the published nodes
       scrapeConfigs = let
+        nutScrapeConfig =
+          if config.${namespace}.containers.ups.enable
+          then {
+            job_name = "nut";
+            metrics_path = "/ups_metrics";
+
+            static_configs = [
+              {
+                targets = ["127.0.0.1:9199"];
+              }
+            ];
+          }
+          else {};
         nodesScrapeConfig = {
           job_name = "nodes";
           static_configs = let
@@ -74,7 +84,7 @@ in {
             }
           ];
         };
-      in [nodesScrapeConfig];
+      in [nodesScrapeConfig nutScrapeConfig];
     };
   };
 }

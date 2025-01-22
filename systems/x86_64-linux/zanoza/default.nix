@@ -56,10 +56,14 @@ in {
     prometheus = {
       enable = true;
       host = "prometheus.sbulav.ru";
+      smartctl_devices = ["/dev/nvme0n1" "/dev/sda" "/dev/sdb" "/dev/sdc" "/dev/sdd"];
     };
     msmtp = {
       enable = true;
       secret_file = "secrets/zanoza/default.yaml";
+    };
+    ups = {
+      enable = true;
     };
     nfs = {
       enable = true;
