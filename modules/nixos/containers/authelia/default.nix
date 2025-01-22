@@ -99,6 +99,7 @@ in {
         };
       };
       config = {...}: {
+        time.timeZone = "Europe/Moscow";
         services.authelia.instances = {
           main = {
             enable = true;
