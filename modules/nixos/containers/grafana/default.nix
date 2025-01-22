@@ -221,9 +221,9 @@ in {
               smartctlExporter = {
                 name = "Smartctl Exporter";
                 options.path = pkgs.fetchurl {
-                  name = "smartctl-exporter-dashboard.json";
-                  url = "https://raw.githubusercontent.com/blesswinsamuel/grafana-dashboards/refs/heads/main/dashboards/dist/dashboards/smartctl.json";
-                  hash = "sha256-LtFe8ssPt1efIqTl94NLKVmuSuZWT8Hlu6ADNmb63h0=";
+                  name = "smartctl-exporter-dashboard2.json";
+                  url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/smartctl/smartctl.json";
+                  hash = "sha256-B6cWUiGsM3dbx2BVUdnaqjYVQgTzd/y7DNm2Rq1Cvws=";
                 };
                 orgId = 1;
               };
