@@ -259,7 +259,7 @@ in {
                     options.path = pkgs.fetchurl {
                       name = "authelia-dashboard.json";
                       url = "https://raw.githubusercontent.com/authelia/authelia/refs/heads/master/examples/grafana-dashboards/simple.json";
-                      hash = "sha256-quC1L5wv2iCcX5aorSFSDdp1napV69+FcPW+aQyqBtc=";
+                      hash = "sha256-y+WbEev4ezdJyorjnnZi37CL1Pd9PxYAvl5N0hsFJnk=";
                     };
                     orgId = 1;
                   }
@@ -287,7 +287,7 @@ in {
                     options.path = pkgs.fetchurl {
                       name = "prometheus-nut-exporter2.json";
                       url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/ups/prometheus-nut-exporter.json";
-                      hash = "sha256-UHFLa3YqMjLKOCDA53NRyPztAcYlzQjsFSZWBxK2pUo=";
+                      hash = "sha256-quC1L5wv2iCcX5aorSFSDdp1napV69+FcPW+aQyqBtc=";
                     };
                     orgId = 1;
                   }
