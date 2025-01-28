@@ -62,6 +62,10 @@ in {
       enable = true;
       secret_file = "secrets/zanoza/default.yaml";
     };
+    restic = {
+      enable = true;
+      secret_file = "secrets/zanoza/default.yaml";
+    };
     ups = {
       enable = true;
     };
