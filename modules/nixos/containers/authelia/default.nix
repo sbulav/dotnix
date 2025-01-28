@@ -22,14 +22,14 @@ in {
     (import ../shared/shared-traefik-route.nix
       {
         app = "authelia";
-        host = "${cfg.host}";
+        host = cfg.host;
         url = "http://${cfg.localAddress}:9091";
         middleware = "secure-headers";
         route_enabled = cfg.enable;
       })
     (import ../shared/shared-adguard-dns-rewrite.nix
       {
-        host = "${cfg.host}";
+        host = cfg.host;
         rewrite_enabled = cfg.enable;
       })
   ];
@@ -64,8 +64,8 @@ in {
 
       privateNetwork = true;
       # Need to add 172.16.64.0/18 on router
-      hostAddress = "${cfg.hostAddress}";
-      localAddress = "${cfg.localAddress}";
+      hostAddress = cfg.hostAddress;
+      localAddress = cfg.localAddress;
 
       # Mounting Cloudflare creds(email and dns api token) as file
       bindMounts = {
@@ -149,7 +149,7 @@ in {
                 name = "authelia_session";
                 cookies = [
                   {
-                    domain = "${cfg.domain}";
+                    domain = cfg.domain;
                     authelia_url = "https://${cfg.host}";
                     default_redirection_url = "https://home.${cfg.domain}";
                     expiration = "48h";

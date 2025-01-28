@@ -23,7 +23,7 @@ in {
     (import ../shared/shared-traefik-bypass-route.nix
       {
         app = "immich";
-        host = "${cfg.host}";
+        host = cfg.host;
         url = "http://${cfg.localAddress}:2283";
         route_enabled = cfg.enable;
         middleware = ["secure-headers"];
@@ -32,13 +32,13 @@ in {
     (import ../shared/shared-traefik-route.nix
       {
         app = "immich";
-        host = "${cfg.host}";
+        host = cfg.host;
         url = "http://${cfg.localAddress}:2283";
         route_enabled = cfg.enable;
       })
     (import ../shared/shared-adguard-dns-rewrite.nix
       {
-        host = "${cfg.host}";
+        host = cfg.host;
         rewrite_enabled = cfg.enable;
       })
   ];
@@ -89,13 +89,13 @@ in {
 
         services.immich = {
           enable = true;
-          host = "${cfg.localAddress}";
+          host = cfg.localAddress;
           mediaLocation = "/var/lib/immich";
           # Setting settings to null to inject oidc config with client secret from sops
           settings = null;
           environment = {
             IMMICH_ENV = "production";
-            IMMICH_TRUSTED_PROXIES = "${cfg.hostAddress}";
+            IMMICH_TRUSTED_PROXIES = cfg.hostAddress;
             IMMICH_CONFIG_FILE = "${config.sops.secrets."immich_config".path}";
           };
         };

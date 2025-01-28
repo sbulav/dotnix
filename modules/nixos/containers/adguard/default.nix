@@ -20,7 +20,7 @@ in {
     (import ../shared/shared-traefik-route.nix
       {
         app = "adguard";
-        host = "${cfg.host}";
+        host = cfg.host;
         url = "http://${cfg.localAddress}:3000";
         route_enabled = cfg.enable;
       })
@@ -38,13 +38,13 @@ in {
 
       privateNetwork = true;
       # Need to add 172.16.64.0/18 on router
-      hostAddress = "${cfg.hostAddress}";
-      localAddress = "${cfg.localAddress}";
+      hostAddress = cfg.hostAddress;
+      localAddress = cfg.localAddress;
 
       config = {...}: {
         services.adguardhome = {
           enable = true;
-          host = "${cfg.localAddress}";
+          host = cfg.localAddress;
           port = 3000;
           settings = {
             dns = {
@@ -68,8 +68,8 @@ in {
 
               rewrites = [
                 {
-                  domain = "${cfg.host}";
-                  answer = "${cfg.rewriteAddress}";
+                  domain = cfg.host;
+                  answer = cfg.rewriteAddress;
                 }
               ];
             };

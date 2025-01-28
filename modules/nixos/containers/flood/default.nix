@@ -20,13 +20,13 @@ in {
     (import ../shared/shared-traefik-route.nix
       {
         app = "flood";
-        host = "${cfg.host}";
+        host = cfg.host;
         url = "http://${cfg.localAddress}:3000";
         route_enabled = cfg.enable;
       })
     (import ../shared/shared-adguard-dns-rewrite.nix
       {
-        host = "${cfg.host}";
+        host = cfg.host;
         rewrite_enabled = cfg.enable;
       })
   ];
@@ -54,8 +54,8 @@ in {
       };
       privateNetwork = true;
       # Need to add 172.16.64.0/18 on router
-      hostAddress = "${cfg.hostAddress}";
-      localAddress = "${cfg.localAddress}";
+      hostAddress = cfg.hostAddress;
+      localAddress = cfg.localAddress;
 
       config = {...}: {
         services.rtorrent = {
@@ -69,7 +69,7 @@ in {
         };
         services.flood = {
           enable = true;
-          host = "${cfg.localAddress}";
+          host = cfg.localAddress;
           port = 3000;
           extraArgs = [
             "--noauth"

@@ -19,14 +19,14 @@ in {
     (import ../shared/shared-traefik-route.nix
       {
         app = "v2raya";
-        host = "${cfg.host}";
+        host = cfg.host;
         url = "http://${cfg.localAddress}:2017";
         route_enabled = cfg.enable;
         middlewares = ["secure-headers" "allow-lan"];
       })
     (import ../shared/shared-adguard-dns-rewrite.nix
       {
-        host = "${cfg.host}";
+        host = cfg.host;
         rewrite_enabled = cfg.enable;
       })
   ];
