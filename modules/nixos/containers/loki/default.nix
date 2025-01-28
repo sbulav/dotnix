@@ -111,7 +111,7 @@ in {
               max_age = "12h";
               labels = {
                 job = "systemd-journal";
-                host = "${config.system.name}";
+                host = config.system.name";
               };
             };
             relabel_configs = [

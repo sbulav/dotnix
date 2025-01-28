@@ -130,7 +130,7 @@ in {
           nextcloud = {
             enable = true;
             package = inputs.stable.legacyPackages.x86_64-linux.nextcloud30;
-            hostName = "${cfg.host}";
+            hostName = cfg.host;
             secretFile = "/run/secrets/nextcloud-secretFile";
 
             https = true;
