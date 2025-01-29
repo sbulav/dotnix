@@ -158,6 +158,8 @@ in {
                           chatid = "681806836";
                           bottoken = "\${TELEGRAM_TOKEN}";
                           uploadImage = false;
+                          message = "{{ template \"alert_list\" . }}";
+                          parse_mode = "HTML";
                         };
                       }
                     ];
@@ -166,7 +168,7 @@ in {
               };
               rules.settings = let
                 rules = builtins.fromJSON (builtins.readFile ./alerting/rules.json);
-                ruleIds = map (r: r.uid) rules;
+                # ruleIds = map (r: r.uid) rules;
               in {
                 apiVersion = 1;
                 groups = [
@@ -181,6 +183,7 @@ in {
                 # deleteRules seems to happen after creating the above rules, effectively rolling back
                 # any updates.
               };
+              templates.path = ./alerting/templates.yaml;
             };
 
             datasources.settings = {

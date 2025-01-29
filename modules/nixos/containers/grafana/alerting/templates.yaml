@@ -1,0 +1,46 @@
+# config file version
+apiVersion: 1
+
+templates:
+  - orgId: 1
+    name: alert_list
+    template: |
+      {{ define "alert_list" }}
+        {{ if gt (len .Alerts.Firing) 0 }}
+          {{ len .Alerts.Firing }} firing:
+          {{ range .Alerts.Firing }} {{ template "alert_template" .}} {{ end }}
+        {{ end }}
+        {{ if gt (len .Alerts.Resolved) 0 }}
+          {{ len .Alerts.Resolved }} resolved:
+          {{ range .Alerts.Resolved }} {{ template "alert_template" .}} {{ end }}
+        {{ end }}
+      {{ end }}
+
+
+      {{ define "alert_template" }}
+        {{ if eq .Status "firing" }}🟥{{ else }}🟩{{ end }} {{ .Labels.grafana_folder }} - <b>{{ .Labels.alertname }}</b>
+        <b>Metric:</b> {{ .Values.B }}
+
+        {{- if .Labels.host }}
+        <b>Host:</b> {{ .Labels.host }}
+        {{- end }}
+        {{- if .Labels.devicename }}
+        <b>Device name:</b> {{ .Labels.devicename }}
+        {{- end }}
+        {{- if .Labels.device }}
+        <b>Device:</b> {{ .Labels.device }}
+        {{- end }}
+        {{- if .Labels.path }}
+        <b>Path:</b> {{ .Labels.path }}
+        {{- end }}
+        {{- if .Labels.location }}
+        <b>Location:</b> {{ .Labels.location }}
+        {{- end }}
+
+        {{- if gt (len .Annotations) 0 }}
+        <b>Annotations:</b>
+        {{- range .Annotations.SortedPairs }}
+          {{ .Name }}: {{ .Value }}
+        {{- end }}
+        {{- end }}
+      {{ end }}
