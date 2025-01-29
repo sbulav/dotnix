@@ -9,14 +9,16 @@ with lib;
 with lib.custom; let
   cfg = config.${namespace}.containers.restic;
   mkNtfyScript = status: priority: hostName: ''
-    status="$1"
-    priority="$2"
-    hostName="$3"
+    # status="$1"
+    # priority="$2"
+    # hostName="$3"
     data="{\"chat_id\": \"681806836\", \"text\": \"Backups on $hostName: \n PRIORITY: $priority \n STATUS: $status.\"}"
+    echo "Sending data"
+    echo "$data"
      ${lib.getExe pkgs.curl} -X POST \
     ┊ -H 'Content-Type: application/json' \
     ┊ -d "$data" \
-    ┊ https://api.telegram.org/bot$NTFY_TOKEN/sendMessage
+    ┊ https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage
   '';
 in {
   options.${namespace}.containers.restic = with types; {
@@ -102,28 +104,25 @@ in {
     };
     systemd.services = {
       restic-backups-tank_immich = {
-        environment.NTFY_TOKEN = config.sops.secrets."telegram-notifications-bot-token".path;
         onSuccess = ["restic-ntfy-success.service"];
         onFailure = ["restic-ntfy-failure.service"];
       };
       restic-backups-tank_nextcloud = {
-        environment.NTFY_TOKEN = config.sops.secrets."telegram-notifications-bot-token".path;
         onSuccess = ["restic-ntfy-success.service"];
         onFailure = ["restic-ntfy-failure.service"];
       };
       restic-backups-tank_photos = {
-        environment.NTFY_TOKEN = config.sops.secrets."telegram-notifications-bot-token".path;
         onSuccess = ["restic-ntfy-success.service"];
         onFailure = ["restic-ntfy-failure.service"];
       };
 
       restic-ntfy-success = {
-        environment.NTFY_TOKEN = config.sops.secrets."telegram-notifications-bot-token".path;
+        serviceConfig.EnvironmentFile = [config.sops.secrets."telegram-notifications-bot-token".path];
         script = mkNtfyScript "SUCCESS ✅" "INFO" "${config.system.name}";
       };
 
       restic-ntfy-failure = {
-        environment.NTFY_TOKEN = config.sops.secrets."telegram-notifications-bot-token".path;
+        serviceConfig.EnvironmentFile = [config.sops.secrets."telegram-notifications-bot-token".path];
         script = mkNtfyScript "FAILURE 🔥" "HIGH" "${config.system.name}";
       };
     };

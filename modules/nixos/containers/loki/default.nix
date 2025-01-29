@@ -111,7 +111,7 @@ in {
               max_age = "12h";
               labels = {
                 job = "systemd-journal";
-                host = config.system.name";
+                host = config.system.name;
               };
             };
             relabel_configs = [
@@ -128,42 +128,42 @@ in {
               {
                 labels = {
                   job = "traefik-access-log";
-                  host = "${config.system.name}";
+                  host = config.system.name;
                   __path__ = "/tank/traefik/logs/access.log";
                 };
               }
               {
                 labels = {
                   job = "traefik-log";
-                  host = "${config.system.name}";
+                  host = config.system.name;
                   __path__ = "/tank/traefik/logs/traefik.log";
                 };
               }
               {
                 labels = {
                   job = "authelia";
-                  host = "${config.system.name}";
+                  host = config.system.name;
                   __path__ = "/tank/authelia/logs/authelia.log";
                 };
               }
               {
                 labels = {
                   job = "grafana";
-                  host = "${config.system.name}";
+                  host = config.system.name;
                   __path__ = "/tank/grafana/data/log/grafana.log";
                 };
               }
               {
                 labels = {
                   job = "jellyfin";
-                  host = "${config.system.name}";
+                  host = config.system.name;
                   __path__ = "/tank/jellyfin/log/*.log";
                 };
               }
               {
                 labels = {
                   job = "v2raya";
-                  host = "${config.system.name}";
+                  host = config.system.name;
                   __path__ = "/tank/v2raya/logs/*.log";
                 };
               }
