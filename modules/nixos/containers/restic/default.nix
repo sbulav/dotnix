@@ -9,13 +9,24 @@ with lib;
 with lib.custom; let
   cfg = config.${namespace}.containers.restic;
   mkNtfyScript = status: priority: hostName: ''
-    # status="$1"
-    # priority="$2"
-    # hostName="$3"
-    data="{\"chat_id\": \"681806836\", \"text\": \"Backups on $hostName: \n PRIORITY: $priority \n STATUS: $status.\"}"
+    echo "----------------------"
+    if [[ "$status" != "SUCCESS" ]]; then
+      echo "Detecting failured backups"
+      status_nextcloud=$(systemctl show restic-backups-tank_nextcloud.service --property=ExecMainStatus)
+      status_immich=$(systemctl show restic-backups-tank_immich.service --property=ExecMainStatus)
+      status_photos=$(systemctl show restic-backups-tank_photos.service --property=ExecMainStatus)
+      status_result="\n--------------\nNEXTCLOUD: $status_nextcloud\nIMMICH: $status_immich\nPHOTOS: $status_photos"
+      icon="🔥"
+    else
+      echo "Last backup was successfull"
+      status_result="$status"
+      icon="✅"
+    fi
+
+    data="{\"chat_id\": \"681806836\", \"text\": \"Backups on $hostName: $icon \n PRIORITY: $priority \n BACKUP STATUS: $status_result\"}"
     echo "Sending data"
     echo "$data"
-     ${lib.getExe pkgs.curl} -X POST \
+     ${lib.getExe pkgs.curl} -s -X POST \
     ┊ -H 'Content-Type: application/json' \
     ┊ -d "$data" \
     ┊ https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage
@@ -119,11 +130,21 @@ in {
       restic-ntfy-success = {
         serviceConfig.EnvironmentFile = [config.sops.secrets."telegram-notifications-bot-token".path];
         script = mkNtfyScript "SUCCESS ✅" "INFO" "${config.system.name}";
+        environment = {
+          status = "SUCCESS";
+          priority = "INFO";
+          hostName = config.system.name;
+        };
       };
 
       restic-ntfy-failure = {
         serviceConfig.EnvironmentFile = [config.sops.secrets."telegram-notifications-bot-token".path];
-        script = mkNtfyScript "FAILURE 🔥" "HIGH" "${config.system.name}";
+        script = mkNtfyScript "SUCCESS ✅" "INFO" "${config.system.name}";
+        environment = {
+          status = "FAILURE";
+          priority = "HIGH";
+          hostName = config.system.name;
+        };
       };
     };
   };
