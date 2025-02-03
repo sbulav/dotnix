@@ -27,7 +27,8 @@ in {
         url = "http://${cfg.localAddress}:2283";
         route_enabled = cfg.enable;
         middleware = ["secure-headers"];
-        pathregexp = "/api/(albums|assets|users|partners|people)|/api/.well-known/immich|^/api/(auth|oauth|socket.io|sync|assets|server|search|ds|view)/";
+        # pathregexp = "/api/(albums|assets|users|partners)|/api/.well-known/immich|^/api/(auth|oauth|socket.io|sync|assets|server)/";
+        pathregexp = "^/api/";
       })
     (import ../shared/shared-traefik-route.nix
       {
