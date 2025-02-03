@@ -28,6 +28,7 @@ with lib.custom; {
       gh = enabled;
       bat = enabled;
       k9s = enabled;
+      tea = enabled;
     };
 
     desktop = {
