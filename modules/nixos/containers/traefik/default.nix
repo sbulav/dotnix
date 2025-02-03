@@ -69,8 +69,6 @@ in {
         systemd.services.traefik.serviceConfig.EnvironmentFile = "/run/secrets/traefik-cf-env";
         services.traefik = {
           enable = true;
-          ## Using stable traefik version as Dashboard is broken in 3.2.2
-          package = inputs.stable.legacyPackages.x86_64-linux.traefik;
           staticConfigOptions = import ./staticConfigOptions.nix;
 
           dynamicConfigOptions = {
