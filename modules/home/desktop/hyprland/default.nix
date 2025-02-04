@@ -17,12 +17,13 @@ in {
     home = {
       packages = with pkgs; [brightnessctl];
     };
+
     wayland.windowManager.hyprland = {
       enable = true;
       extraConfig =
         builtins.readFile ./hyprland.conf;
 
-      systemd.enable = true;
+      systemd.enable = false;
       xwayland.enable = true;
 
       settings = {

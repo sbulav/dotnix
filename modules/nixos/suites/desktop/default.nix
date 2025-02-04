@@ -21,6 +21,7 @@ in {
         regreet = enabled;
         xdg-portal = enabled;
         hyprland-utils = enabled;
+        uwsm = enabled;
       };
       apps = {
         firefox = enabled;
