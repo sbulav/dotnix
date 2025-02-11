@@ -18,6 +18,7 @@ in {
     # Required as deps
     programs.hyprland = {
       enable = true;
+      withUWSM = true;
       xwayland.enable = true;
     };
 
