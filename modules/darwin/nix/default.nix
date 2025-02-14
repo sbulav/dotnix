@@ -78,7 +78,6 @@ in {
         automatic = true;
         interval = {Day = 7;};
         options = "--delete-older-than 30d";
-        user = config.custom.user.name;
       };
 
       # flake-utils-plus

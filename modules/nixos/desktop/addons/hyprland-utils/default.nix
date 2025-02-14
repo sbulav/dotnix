@@ -61,7 +61,7 @@ in {
       # Enable touchpad support (enabled default in most desktopManager).
       libinput.enable = true;
       displayManager = {
-        defaultSession = "hyprland";
+        defaultSession = "hyprland-uwsm";
       };
     };
   };
