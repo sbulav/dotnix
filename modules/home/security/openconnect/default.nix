@@ -10,9 +10,15 @@ with lib.custom; let
   cfg = config.${namespace}.security.openconnect;
   route_delete_command =
     if pkgs.stdenv.isLinux
-    then "sudo route del -net 192.168.0.0/16"
+    then ''
+      sudo route del -net 192.168.0.0/16
+      sudo route add -net 10.8.0.1/32 192.168.89.1 #openconnect
+    ''
     else if pkgs.stdenv.isDarwin
-    then "sudo route delete -net 192.168.0.0/16"
+    then ''
+      sudo route delete -net 192.168.0.0/16
+      sudo route add -net 10.8.0.1/32 192.168.89.1 #openconnect
+    ''
     else "";
 
   vpnScript = pkgs.writeScriptBin "myvpn" ''
