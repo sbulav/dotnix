@@ -9,21 +9,17 @@ with lib;
 with lib.custom; let
   cfg = config.custom.desktop.addons.regreet;
   wallpaper = options.system.wallpaper.value;
-  greetdSwayConfig = pkgs.writeText "greetd-sway-config" ''
-    exec "dbus-update-activation-environment --systemd DISPLAY WAYLAND_DISPLAY SWAYSOCK XDG_CURRENT_DESKTOP"
-    input "type:touchpad" {
-      tap enabled
+  dbus-run-session = lib.getExe' pkgs.dbus "dbus-run-session";
+  hyprland = lib.getExe config.programs.hyprland.package;
+  hyprland-conf = pkgs.writeText "greetd-hyprland.conf" ''
+    bind = SUPER SHIFT, E, killactive,
+    misc {
+        disable_hyprland_logo = true
     }
-    seat seat0 xcursor_theme Bibata-Modern-Classic 24
-    xwayland disable
-
-    bindsym Mod4+shift+e exec swaynag \
-      -t warning \
-      -m 'What do you want to do?' \
-      -b 'Poweroff' 'systemctl poweroff' \
-      -b 'Reboot' 'systemctl reboot'
-
-    exec "${lib.getExe config.programs.regreet.package} -l debug; swaymsg exit"
+    animations {
+        enabled = false
+    }
+    exec-once = ${lib.getExe config.programs.regreet.package}; hyprctl dispatch exit
   '';
 in {
   options.custom.desktop.addons.regreet = with types; {
@@ -51,21 +47,26 @@ in {
       theme.name = "Catppuccin-Mocha-Compact-Mauve-dark";
 
       settings = {
+        env = {
+          STATE_DIR = "/var/cache/regreet";
+        };
+
         background = {
           path = wallpaper;
           fit = "Cover";
         };
       };
     };
-
-    programs.sway.enable = true;
-    # services.greetd.settings.default_session.command =
-    #   "${config.programs.sway.package}/bin/sway --config ${greetdSwayConfig}"
-    #   + (lib.optionalString (config.networking.hostName == "rog") " --unsupported-gpu");
-
-    services.greetd.settings.default_session = {
-      command = "env GTK_USE_PORTAL=0 ${getExe pkgs.sway} --config ${greetdSwayConfig}";
+    systemd.tmpfiles.settings."10-regreet" = let
+      defaultConfig = {
+        user = "greeter";
+        group = config.users.users.${config.services.greetd.settings.default_session.user}.group;
+        mode = "0755";
+      };
+    in {
+      "/var/lib/regreet".d = defaultConfig;
     };
     security.pam.services.greetd.enableGnomeKeyring = true;
+    services.greetd.settings.default_session.command = "${dbus-run-session} ${hyprland} --config ${hyprland-conf} &> /dev/null";
   };
 }
