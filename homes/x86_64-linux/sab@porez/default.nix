@@ -13,6 +13,7 @@ in {
       enable = true;
       name = config.snowfallorg.user.name;
     };
+    games.enable = true;
 
     desktop = {
       hyprland = enabled;

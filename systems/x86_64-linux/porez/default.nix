@@ -28,6 +28,7 @@ in {
   suites.common.enable = true; # Enables the basics, like audio, networking, ssh, etc.
   suites.desktop.enable = true;
   suites.develop.enable = true;
+  suites.games.enable = true;
   custom.security.sops = {
     enable = true;
     sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
