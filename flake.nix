@@ -37,10 +37,6 @@
       url = "github:sbulav/wallpapers-nix";
     };
 
-    wezterm = {
-      url = "github:wez/wezterm/main?dir=nix";
-    };
-
     # Sops (Secrets)
     sops-nix = {
       url = "github:Mic92/sops-nix";
