@@ -31,12 +31,22 @@
         to = "websecure";
         scheme = "https";
       };
+      transport.respondingTimeouts = {
+        readTimeout = "600s";
+        idleTimeout = "600s";
+        writeTimeout = "600s";
+      };
     };
 
     websecure = {
       address = ":443";
       asDefault = true;
       http.tls.certResolver = "cloudflare";
+      transport.respondingTimeouts = {
+        readTimeout = "600s";
+        idleTimeout = "600s";
+        writeTimeout = "600s";
+      };
     };
   };
 
