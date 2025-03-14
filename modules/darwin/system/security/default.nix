@@ -15,7 +15,7 @@ in {
 
   config = mkIf cfg.enable (mkMerge [
     {
-      security.pam.enableSudoTouchIdAuth = true;
+      security.pam.services.sudo_local.touchIdAuth = true;
       # skip sudo authn for frequently used commands
       environment.etc."sudoers.d/10-nix-commands".text = with pkgs; ''
         ${config.${namespace}.user.name} ALL=(ALL:ALL) NOPASSWD: \
