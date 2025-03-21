@@ -36,7 +36,7 @@ in {
         priority = 1;
         frequency = "daily";
         rotate = 7; # special value, means every 7 days
-        minage = 3; # avoid removing logs that are less than 7 days old
+        # minage = 3; # avoid removing logs that are less than 7 days old
 
         # compression
         compress = true; # lets compress logs to save space
