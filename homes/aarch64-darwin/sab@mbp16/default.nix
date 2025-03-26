@@ -24,10 +24,11 @@ with lib.custom; {
     };
 
     tools = {
-      git = enabled;
-      gh = enabled;
       bat = enabled;
+      gh = enabled;
+      git = enabled;
       k9s = enabled;
+      opentofu = enabled;
       tea = enabled;
     };
 
