@@ -49,10 +49,12 @@ in {
       yazi = enabled;
     };
     tools = {
+      direnv = disabled;
       gh = enabled;
       git = enabled;
-      direnv = disabled;
       k9s = enabled;
+      opentofu = enabled;
+      yandex-cloud = enabled;
     };
     security = {
       rbw = enabled;
