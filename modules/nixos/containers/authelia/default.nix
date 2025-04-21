@@ -182,6 +182,11 @@ in {
 
               identity_providers = {
                 oidc = {
+                  claims_policies = {
+                    # https://github.com/pulsejet/nextcloud-oidc-login/issues/311
+                    # https://www.authelia.com/integration/openid-connect/openid-connect-1.0-claims/#restore-functionality-prior-to-claims-parameter
+                    nextcloud_policy.id_token = ["groups" "email" "email_verified" "alt_emails" "preferred_username" "name"];
+                  };
                   clients = [
                     {
                       authorization_policy = "one_factor";
@@ -199,6 +204,7 @@ in {
                       authorization_policy = "one_factor";
                       client_id = "nextcloud";
                       client_name = "Nextcloud";
+                      claims_policy = "nextcloud_policy";
                       client_secret = "$pbkdf2-sha512$310000$UO0xTTiZTXcj6cUL1R7P/A$4SQ.Zzv//x02/sZ5WM8EBPYd/Tps07K8.Zq19sjVVV6vIMCb.e5giDgHeZokgD3lBv4MOVlxttCjRU0dhFO15w";
                       consent_mode = "implicit";
                       pkce_challenge_method = "S256";
