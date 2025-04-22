@@ -71,8 +71,8 @@ in {
     };
     nfs = {
       enable = true;
-      filesystems = ["/tank/torrents" "/tank/video"];
-      restrictedClients = ["192.168.88.0/23"];
+      filesystems = ["/tank/torrents" "/tank/video" "/tank/ipcam"];
+      restrictedClients = ["192.168.80.0/20"];
     };
     traefik = {
       enable = true;
