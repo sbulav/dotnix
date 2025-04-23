@@ -38,6 +38,7 @@ in {
 
     apps = {
       obsidian = enabled;
+      ktalk = enabled;
     };
 
     cli-apps = {
