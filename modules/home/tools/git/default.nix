@@ -11,10 +11,10 @@ with lib.custom; let
 in {
   options.custom.tools.git = with types; {
     enable = mkBoolOpt false "Whether or not to install and configure git.";
-    userName = mkOpt types.str user.fullName "The name to configure git with.";
-    userEmail = mkOpt types.str user.email "The email to configure git with.";
+    userName = mkOpt types.string user.fullName "The name to configure git with.";
+    userEmail = mkOpt types.string user.email "The email to configure git with.";
     signingKey =
-      mkOpt types.str "7C43420F61CEC7FB" "The key ID to sign commits with.";
+      mkOpt types.string "7C43420F61CEC7FB" "The key ID to sign commits with.";
   };
 
   config = mkIf cfg.enable {

@@ -19,9 +19,9 @@
     else "/home/${cfg.name}";
 in {
   options.custom.user = {
-    name = mkOpt types.str "sab" "The name to use for the user account.";
-    fullName = mkOpt types.str "Sergei Bulavintsev" "The full name of the user.";
-    email = mkOpt types.str "bulavintsev.sergey@gmail.com" "The email of the user.";
+    name = mkOpt types.string "sab" "The name to use for the user account.";
+    fullName = mkOpt types.string "Sergei Bulavintsev" "The full name of the user.";
+    email = mkOpt types.string "bulavintsev.sergey@gmail.com" "The email of the user.";
     uid = mkOpt (types.nullOr types.int) 501 "The uid for the user account.";
   };
 

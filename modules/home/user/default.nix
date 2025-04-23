@@ -22,11 +22,11 @@
 in {
   options.custom.user = {
     enable = mkOpt types.bool false "Whether to configure the user account.";
-    name = mkOpt types.str "sab" "The name to use for the user account.";
-    fullName = mkOpt types.str "Sergei Bulavintsev" "The full name of the user.";
-    email = mkOpt types.str "bulavintsev.sergey@gmail.com" "The email of the user.";
+    name = mkOpt types.string "sab" "The name to use for the user account.";
+    fullName = mkOpt types.string "Sergei Bulavintsev" "The full name of the user.";
+    email = mkOpt types.string "bulavintsev.sergey@gmail.com" "The email of the user.";
 
-    home = mkOpt (types.nullOr types.str) home-directory "The user's home directory.";
+    home = mkOpt (types.nullOr types.string) home-directory "The user's home directory.";
   };
 
   config = mkIf cfg.enable (mkMerge [
