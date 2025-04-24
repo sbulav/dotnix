@@ -38,14 +38,17 @@ in {
     podman.enable = false;
   };
 
-  custom.services.logrotate = {
-    enable = true;
-    logFiles = [
-      "/tank/authelia/logs/*.log"
-      "/tank/torrents/log/*.log"
-      "/tank/traefik/logs/*.log"
-      "/tank/v2raya/logs/*.log"
-    ];
+  custom.services = {
+    ipcamCleanup.enable = true;
+    logrotate = {
+      enable = true;
+      logFiles = [
+        "/tank/authelia/logs/*.log"
+        "/tank/torrents/log/*.log"
+        "/tank/traefik/logs/*.log"
+        "/tank/v2raya/logs/*.log"
+      ];
+    };
   };
 
   custom.containers = {

@@ -89,6 +89,10 @@ in {
           "hostPath" = "/tank/video/";
           isReadOnly = false;
         };
+        "/var/lib/jellyfin/video/ipcam" = {
+          "hostPath" = "/tank/ipcam";
+          isReadOnly = false;
+        };
       };
 
       config = {pkgs, ...}: {
