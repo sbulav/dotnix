@@ -201,6 +201,10 @@ if.app-id = 'us.zoom.xos'
 run = ['layout floating', 'move-node-to-workspace 4']
 
 [[on-window-detected]]
+if.app-id = 'Толк'
+run = ['layout floating', 'move-node-to-workspace 4']
+
+[[on-window-detected]]
 if.app-id = 'org.videolan.vlc'
 run = "move-node-to-workspace 5"
 
