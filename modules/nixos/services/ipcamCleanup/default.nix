@@ -38,7 +38,7 @@ in {
         # 2) for every .dav file, ensure a .dav.mp4 hardlink exists
         find /tank/ipcam/hcam -type f -name '*.dav' | while IFS= read -r f; do
           # escape '$_{f}' as $${f} so Nix leaves it alone
-          link="$${f}.mp4"
+          link="''${f}.mp4"
           [ -e "$link" ] || ln "$f" "$link"
         done
       '';
