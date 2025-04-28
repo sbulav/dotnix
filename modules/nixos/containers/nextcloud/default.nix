@@ -129,7 +129,7 @@ in {
         services = {
           nextcloud = {
             enable = true;
-            package = inputs.stable.legacyPackages.x86_64-linux.nextcloud30;
+            package = inputs.stable.legacyPackages.x86_64-linux.nextcloud31;
             hostName = cfg.host;
             secretFile = "/run/secrets/nextcloud-secretFile";
 
