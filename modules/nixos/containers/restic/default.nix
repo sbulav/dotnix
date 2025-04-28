@@ -35,7 +35,7 @@ in {
   options.${namespace}.containers.restic = with types; {
     enable = mkBoolOpt false "Enable the restic backup service ;";
     backup_user = mkOpt str "sab" "The backup user";
-    backup_host = mkOpt str "192.168.88.201" "The backup server host";
+    backup_host = mkOpt str "192.168.92.197" "The backup server host";
     # backup_paths = mkOpt (listOf str) [] "List of paths to backup";
     secret_file = mkOpt str "secrets/zanoza/default.yaml" "SOPS secret to get creds from";
   };
