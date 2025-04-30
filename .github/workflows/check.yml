@@ -9,8 +9,13 @@ jobs:
       matrix:
         os: [ubuntu-latest]
         arch: [x86_64-linux, aarch64-darwin]
+
     if: github.ref == 'refs/heads/main'
     steps:
       - uses: actions/checkout@v4
+      - uses: cachix/cachix-action@v16
+        with:
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          name: ${{ env.CACHIX_BINARY_CACHE }}
       - name: Check Nix flake inputs
         uses: DeterminateSystems/flake-checker-action@v9
