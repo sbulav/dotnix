@@ -12,13 +12,14 @@ env:
 
 jobs:
   check:
-    name: Check expressions on ${{ matrix.arch }}
+    # name: Check expressions on ${{ matrix.arch }}
+    name: Check expressions on
     runs-on: ${{ matrix.os }}
     strategy:
       fail-fast: false
       matrix:
         os: [ubuntu-latest]
-        arch: [x86_64-linux, aarch64-darwin]
+        # arch: [x86_64-linux, aarch64-darwin]
 
     # if: github.ref == 'refs/heads/main'
     steps:
