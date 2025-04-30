@@ -27,7 +27,7 @@ in {
         firefox = enabled;
         imv = enabled;
         slack = enabled;
-        zoom-us = enabled;
+        zoom-us = disabled;
         telegram = enabled;
         vlc = enabled;
         zathura = enabled;

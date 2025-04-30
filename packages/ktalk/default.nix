@@ -10,6 +10,16 @@
     url = "https://st.ktalk.host/ktalk-app/linux/${pname}${version}x86_64.AppImage";
     sha256 = "0sb7n49kv0kwjby7sbp959jg0hhb6k0dygz7i2wv5rh58q01cy2a";
   };
+  # Install and register the .desktop entry
+  desktopItem = pkgs.makeDesktopItem {
+    name = "ktalk";
+    desktopName = "ktalk";
+    comment = "Kontur.Talk";
+    icon = "ktalk";
+    exec = "ktalk %U";
+    categories = ["VideoConference"];
+    mimeTypes = ["x-scheme-handler/ktalk"];
+  };
   appimageContents = pkgs.appimageTools.extractType2 {
     inherit
       pname
@@ -21,6 +31,7 @@ in
   pkgs.appimageTools.wrapType2 rec {
     inherit
       pname
+      desktopItem
       version
       src
       ;
@@ -28,13 +39,19 @@ in
     extraInstallCommands = ''
       source "${pkgs.makeWrapper}/nix-support/setup-hook"
 
-      wrapProgram $out/bin/${pname}
+      # now write a new wrapper that:
+      #  1. runs the real binary in a detached session, redirecting all IO to /dev/null
+      #  2. immediately exits (so you don’t block your terminal or the desktop)
+      wrapProgram $out/bin/${pname} \
+        --run "setsid $out/bin/.${pname}-wrapped \"\$@\" >/dev/null 2>&1 </dev/null &" \
+        --run "exit 0"
 
-      install -m 444 -D ${appimageContents}/${pname}.desktop -t $out/share/applications/
+      mkdir -p $out/share/applications/
+      cp ${desktopItem}/share/applications/*.desktop $out/share/applications/
+      cp -r ${appimageContents}/usr/share/icons/ \
+            $out/share/icons/
 
-      # Directly use Logo png without conversion
-      install -m  444 -D ${appimageContents}/usr/share/icons/hicolor/512x512/apps/${pname}.png $out/share/icons/hicolor/512x512/apps/${pname}.png
-
+      runHook postInstall
     '';
 
     meta = with lib; {
