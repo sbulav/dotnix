@@ -1,4 +1,4 @@
-name: Test flake
+name: Build flake and upload to cachix
 
 on:
   pull_request:
