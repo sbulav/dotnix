@@ -1,0 +1,122 @@
+name: Build flake and upload to cachix
+
+on:
+  pull_request:
+  push:
+    branches:
+      - main
+      - ci-add-cachix
+
+env:
+  CACHIX_BINARY_CACHE: dotnix
+
+jobs:
+  check:
+    name: Check expressions on ${{ matrix.arch }}
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest]
+        arch: [x86_64-linux, aarch64-darwin]
+    runs-on: ${{ matrix.os }}
+
+    # if: github.ref == 'refs/heads/main'
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - uses: cachix/cachix-action@v16
+        with:
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          name: ${{ env.CACHIX_BINARY_CACHE }}
+
+      - name: Check Nix flake inputs
+        uses: DeterminateSystems/flake-checker-action@v9
+
+  build:
+    needs:
+      - check
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Free Disk Space
+        uses: endersonmenezes/free-disk-space@v2
+        with:
+          remove_android: true
+          remove_dotnet: true
+          remove_haskell: true
+          remove_tool_cache: true
+          remove_swap: true
+          remove_packages: "azure-cli google-cloud-cli microsoft-edge-stable google-chrome-stable firefox postgresql* temurin-* *llvm* mysql* dotnet-sdk-*"
+          remove_packages_one_command: true
+          remove_folders: "/usr/share/swift /usr/share/miniconda /usr/share/az* /usr/share/glade* /usr/local/lib/node_modules /usr/local/share/chromium /usr/local/share/powershell"
+          testing: false
+      - uses: cachix/install-nix-action@v31
+        with:
+          nix_path: nixpkgs=channel:nixos-unstable
+
+      - uses: cachix/cachix-action@v16
+        with:
+          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+          name: ${{ env.CACHIX_BINARY_CACHE }}
+
+      - uses: actions/checkout@v4
+
+      - run: nix build --json --no-link --print-build-logs .#nixosConfigurations.zanoza.config.system.build.toplevel
+
+  # build-darwin:
+  #   needs:
+  #     - check
+  #   runs-on: macos-latest
+  #   steps:
+  #     - uses: cachix/install-nix-action@v31
+  #       with:
+  #         nix_path: nixpkgs=channel:nixos-unstable
+
+  #     - uses: cachix/cachix-action@v16
+  #       with:
+  #         authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+  #         name: ${{ env.CACHIX_BINARY_CACHE }}
+
+  #     - uses: actions/checkout@v4
+
+  #     - run: nix develop -c just darwin-build "x86_64"
+
+  # build-home-manager:
+  #   needs:
+  #     - check
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: cachix/install-nix-action@v31
+  #       with:
+  #         nix_path: nixpkgs=channel:nixos-unstable
+
+  #     - uses: cachix/cachix-action@v16
+  #       with:
+  #         authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+  #         name: ${{ env.CACHIX_BINARY_CACHE }}
+
+  #     - uses: actions/checkout@v4
+
+  #     - run: nix develop -c just home-manager-build "x86_64-linux"
+
+  # build-nixos:
+  #   needs:
+  #     - check
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #     - uses: cachix/install-nix-action@v31
+  #       with:
+  #         nix_path: nixpkgs=channel:nixos-unstable
+
+  #     - uses: cachix/cachix-action@v16
+  #       with:
+  #         authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
+  #         name: ${{ env.CACHIX_BINARY_CACHE }}
+
+  #     - uses: actions/checkout@v4
+
+  #     - run: nix develop -c just nixos-build "x86_64"
