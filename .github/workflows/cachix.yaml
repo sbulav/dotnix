@@ -11,7 +11,7 @@ env:
   CACHIX_BINARY_CACHE: dotnix
 
 jobs:
-  checks:
+  check:
     name: Check expressions on ${{ matrix.arch }}
     runs-on: ${{ matrix.os }}
     strategy:
