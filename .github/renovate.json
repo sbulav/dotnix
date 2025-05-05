@@ -12,5 +12,16 @@
   },
   "nix": {
     "enabled": true
-  }
+  },
+  "packageRules": [
+    {
+      "matchDatasources": [
+        "git-refs"
+      ],
+      "matchPackageNames": [
+        "stable"
+      ],
+      "allowedVersions": "/^nixos-\\d{2}\\.\\d{2}$/"
+    }
+  ]
 }
