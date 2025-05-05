@@ -53,6 +53,9 @@ in {
 
   custom.containers = {
     # {{{ Services on OS
+    ocis = {
+      enable = true;
+    };
     loki = {
       enable = true;
     };

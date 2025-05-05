@@ -55,20 +55,32 @@ in {
           address = "${cfg.localAddress}";
           # https://github.com/owncloud/ocis/blob/master/deployments/examples/ocis_hello/docker-compose.yml
           environment = {
-            PROXY_TLS = "false"; # do not use SSL between Traefik and oCIS
+            GATEWAY_STORAGE_USERS_MOUNT_ID = "998";
             OCIS_INSECURE = "false";
             OCIS_INSECURE_BACKENDS = "true";
             OCIS_JWT_SECRET = "super_secret";
+            OCIS_LDAP_BIND_PASSWORD = "password";
             OCIS_LOG_LEVEL = "error";
-            OCIS_MOUNT_ID = "123";
+            OCIS_MACHINE_AUTH_API_KEY = "foo";
+            OCIS_MOUNT_ID = "998";
             OCIS_SERVICE_ACCOUNT_ID = "foo";
             OCIS_SERVICE_ACCOUNT_SECRET = "foo";
-            OCIS_STORAGE_USERS_MOUNT_ID = "123";
+            OCIS_STORAGE_USERS_MOUNT_ID = "998";
             OCIS_SYSTEM_USER_API_KEY = "foo";
-            OCIS_SYSTEM_USER_ID = "123";
+            OCIS_SYSTEM_USER_ID = "998";
             OCIS_TRANSFER_SECRET = "foo";
-            STORAGE_USERS_MOUNT_ID = "123";
-            OCIS_MACHINE_AUTH_API_KEY = "foo";
+            PROXY_TLS = "false"; # do not use SSL between Traefik and oCIS
+            STORAGE_USERS_MOUNT_ID = "998";
+            CS3_ALLOW_INSECURE = "true";
+            GRAPH_APPLICATION_ID = "1234";
+            IDM_IDPSVC_PASSWORD = "password";
+            IDM_REVASVC_PASSWORD = "password";
+            IDM_SVC_PASSWORD = "password";
+            IDP_ISS = "https://localhost:9200";
+            IDP_TLS = "false";
+            TLS_INSECURE = "true";
+            TLS_SKIP_VERIFY_CLIENT_CERT = "true";
+            WEBDAV_ALLOW_INSECURE = "true";
           };
         };
 
