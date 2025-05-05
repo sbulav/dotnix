@@ -13,12 +13,8 @@
   "nix": {
     "enabled": true
   },
-  "packageRules": [
-    {
-      "matchPackageNames": [
-        "stable"
-      ],
-      "enabled": false
-    }
+  "ignoreDeps": [
+    "stable",
+    "wallpapers-nix"
   ]
 }
