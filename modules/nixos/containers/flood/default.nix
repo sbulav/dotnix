@@ -58,6 +58,9 @@ in {
       localAddress = cfg.localAddress;
 
       config = {...}: {
+        systemd.tmpfiles.rules = [
+          "d /var/lib/torrents/log 700 rtorrent rtorrent -"
+        ];
         services.rtorrent = {
           enable = true;
           dataDir = "/var/lib/torrents";
