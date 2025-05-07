@@ -2,10 +2,10 @@ name: Build flake and upload to cachix
 
 on:
   pull_request:
+  workflow_dispatch:
   push:
     branches:
       - main
-      - ci-add-cachix
 
 env:
   CACHIX_BINARY_CACHE: dotnix
