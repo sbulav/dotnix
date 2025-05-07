@@ -18,6 +18,15 @@ in {
     secret_file = mkOpt str "secrets/serverz/default.yaml" "SOPS secret to get creds from";
   };
   imports = [
+    (import ../shared/shared-traefik-clientip-route.nix
+      {
+        app = "immich";
+        host = cfg.host;
+        url = "http://${cfg.localAddress}:2283";
+        route_enabled = cfg.enable;
+        middleware = ["secure-headers" "allow-lan"];
+        clientips = "ClientIP(`172.16.64.0/24`) || ClientIP(`192.168.80.0/20`)";
+      })
     # TODO: fix this workaround for accessing mobile devices
     # https://github.com/immich-app/immich/discussions/3118
     (import ../shared/shared-traefik-bypass-route.nix

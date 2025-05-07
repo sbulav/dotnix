@@ -20,16 +20,16 @@ in {
     (import ../shared/shared-traefik-clientip-route.nix
       {
         app = "jellyfin";
-        host = "${cfg.host}";
+        host = cfg.host;
         url = "http://${cfg.localAddress}:8096";
         route_enabled = cfg.enable;
         middleware = ["secure-headers-jellyfin" "allow-lan"];
-        clientips = "ClientIP(`172.16.64.0/24`) || ClientIP(`192.168.89.0/24`) || ClientIP(`192.168.88.0/24`)";
+        clientips = "ClientIP(`172.16.64.0/24`) || ClientIP(`192.168.80.0/20`)";
       })
     (import ../shared/shared-traefik-route.nix
       {
         app = "jellyfin";
-        host = "${cfg.host}";
+        host = cfg.host;
         url = "http://${cfg.localAddress}:8096";
         route_enabled = cfg.enable;
         middleware = ["secure-headers-jellyfin" "authelia"];
