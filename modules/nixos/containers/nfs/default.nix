@@ -14,7 +14,7 @@ in {
   options.${namespace}.containers.nfs = with lib.types; {
     enable = mkBoolOpt false "Enable NFS server for exporting filesystems";
     filesystems = mkOpt (listOf str) [] "List of filesystems to export, in the format ['/path/to/dir']";
-    restrictedClients = mkOpt (listOf str) ["192.168.88.0/23"] "List of allowed client IPs for NFS exports";
+    restrictedClients = mkOpt (listOf str) ["192.168.80.0/20"] "List of allowed client IPs for NFS exports";
   };
 
   config = mkIf cfg.enable {
