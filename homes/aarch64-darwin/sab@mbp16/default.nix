@@ -11,7 +11,8 @@ with lib.custom; {
     };
     apps = {
       obsidian = enabled;
-      zoom-us = enabled;
+      zoom-us = disabled;
+      ktalk = enabled;
     };
 
     cli-apps = {
