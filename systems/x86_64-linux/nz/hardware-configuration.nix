@@ -39,8 +39,6 @@
     ];
     fsType = "nfs";
   };
-  programs.fuse.enable = true;
-  users.users.sab.extraGroups = ["fuse"];
 
   # fileSystems."/mnt/obsidian" = {
   #   device = "192.168.89.200:/mnt/tank/Apps/obsidian";
