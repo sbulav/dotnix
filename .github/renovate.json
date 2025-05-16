@@ -15,6 +15,8 @@
   },
   "ignoreDeps": [
     "stable",
-    "wallpapers-nix"
+    "wallpapers-nix",
+    "darwin",
+    "home-manager"
   ]
 }
