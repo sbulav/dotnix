@@ -67,11 +67,12 @@ jobs:
 
       - uses: actions/checkout@v4
 
-      - name: Update flake.lock
-        uses: DeterminateSystems/update-flake-lock@v25
+      # - name: Update flake.lock
+      #   uses: DeterminateSystems/update-flake-lock@v25
         # with:
         #   path-to-flake-dir: 'dotnix/'
 
+      - run: nix flake update
       - run: nix build --json --no-link --print-build-logs .#nixosConfigurations.zanoza.config.system.build.toplevel
 
   # build-darwin:
