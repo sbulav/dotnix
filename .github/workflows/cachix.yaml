@@ -3,6 +3,8 @@ name: Build flake and upload to cachix
 on:
   pull_request:
   workflow_dispatch:
+  schedule:
+    - cron: "0 0 * * *"
   push:
     branches:
       - main
@@ -64,6 +66,11 @@ jobs:
           name: ${{ env.CACHIX_BINARY_CACHE }}
 
       - uses: actions/checkout@v4
+
+      - name: Update flake.lock
+        uses: DeterminateSystems/update-flake-lock@25
+        # with:
+        #   path-to-flake-dir: 'dotnix/'
 
       - run: nix build --json --no-link --print-build-logs .#nixosConfigurations.zanoza.config.system.build.toplevel
 
