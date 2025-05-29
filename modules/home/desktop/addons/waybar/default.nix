@@ -26,9 +26,7 @@ in {
         target = "hyprland-session.target";
       };
 
-      style = pkgs.substituteAll {
-        src = ./style.css;
-      };
+      style = builtins.readFile "./style.css";
 
       settings = {
         mainBar = {
