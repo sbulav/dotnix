@@ -24,7 +24,7 @@ in {
       enableZshIntegration = true;
 
       settings = {
-        manager = {
+        mgr = {
           layout = [1 3 4];
           linemode = "size";
           show_hidden = false;
