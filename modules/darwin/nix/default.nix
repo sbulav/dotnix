@@ -87,7 +87,7 @@ in {
       generateNixPathFromInputs = true;
       linkInputs = true;
     };
-    system.activationScripts.postUserActivation =
+    system.activationScripts.postActivation =
       {
         text = ''
           ${pkgs.nvd}/bin/nvd --nix-bin-dir=${pkgs.nix}/bin diff /run/current-system "$systemConfig"

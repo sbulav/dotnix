@@ -38,8 +38,8 @@ in {
       fish = {
         enable = true;
         shellAliases = {
-          nixup = "darwin-rebuild switch --flake ~/dotnix";
-          nixt = "darwin-rebuild check --flake ~/dotnix";
+          nixup = "sudo darwin-rebuild switch --flake ~/dotnix";
+          nixt = "sudo darwin-rebuild check --flake ~/dotnix";
         };
       };
     };

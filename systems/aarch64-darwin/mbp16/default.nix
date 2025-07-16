@@ -26,5 +26,8 @@ with lib.custom; {
     "/opt/homebrew/bin"
   ];
 
-  system.stateVersion = 4;
+  system = {
+    primaryUser = "sab";
+    stateVersion = 4;
+  };
 }
