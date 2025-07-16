@@ -36,7 +36,7 @@ jobs:
           name: ${{ env.CACHIX_BINARY_CACHE }}
 
       - name: Check Nix flake inputs
-        uses: DeterminateSystems/flake-checker-action@v11
+        uses: DeterminateSystems/flake-checker-action@v12
 
   build:
     needs:
