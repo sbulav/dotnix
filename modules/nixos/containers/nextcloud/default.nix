@@ -37,7 +37,7 @@ in {
         url = "http://${cfg.localAddress}:80";
         route_enabled = cfg.enable;
         middleware = ["nextcloud-redirect"];
-        pathregexp = "/status.php|/remote.php/(dav|direct)/|/ocs/v2.php/|/index.php/|/core|/apps";
+        pathregexp = "/api/|/status.php|/remote.php/(dav|direct)/|/ocs/v2.php/|/index.php/|/core|/apps";
       })
     (import ../shared/shared-traefik-route.nix
       {
