@@ -1,10 +1,22 @@
-{pkgs, ...}:
-pkgs.mkShell {
-  nativeBuildInputs = with pkgs; [
-    treefmt
-
-    alejandra
-    python310Packages.mdformat
-    shfmt
+{
+  inputs,
+  mkShell,
+  pkgs,
+  system,
+  namespace,
+  ...
+}:
+mkShell {
+  packages = with pkgs; [
+    deadnix
+    nh
+    statix
+    sops
   ];
+
+  shellHook = ''
+    echo 🔨 Welcome to ${namespace}
+
+
+  '';
 }

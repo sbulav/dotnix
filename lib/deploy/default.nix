@@ -4,19 +4,11 @@
   namespace,
 }: let
   inherit (inputs) deploy-rs;
-in rec {
-  ## Create deployment configuration for use with deploy-rs.
-  ##
-  ## ```nix
-  ## mkDeploy {
-  ##   inherit self;
-  ##   overrides = {
-  ##     my-host.system.sudo = "doas -u";
-  ##   };
-  ## }
-  ## ```
-  ##
-  #@ { self: Flake, overrides: Attrs ? {} } -> Attrs
+
+  # Helper: Returns true if a system is a Darwin system (MacOS)
+  isDarwin = system:
+    lib.hasPrefix "aarch64-darwin" system || lib.hasPrefix "x86_64-darwin" system;
+
   mkDeploy = {
     self,
     overrides ? {},
@@ -28,19 +20,27 @@ in rec {
         result: name: let
           host = hosts.${name};
           user = host.config.${namespace}.user.name or null;
-          inherit (host.pkgs) system;
+          system = host.pkgs.system;
+          override = overrides.${name} or {};
+          # Only inject checks = false for Darwin systems
+          checksOpt =
+            if isDarwin system
+            then {checks = false;}
+            else {};
         in
           result
           // {
             ${name} =
-              (overrides.${name} or {})
+              override
+              // checksOpt
               // {
-                hostname = overrides.${name}.hostname or "${name}";
+                hostname = override.hostname or "${name}";
                 profiles =
-                  (overrides.${name}.profiles or {})
+                  (override.profiles or {})
                   // {
                     system =
-                      (overrides.${name}.profiles.system or {})
+                      (override.profiles or {})
+                  .system or {}
                       // {
                         path = deploy-rs.lib.${system}.activate.nixos host;
                       }
@@ -48,13 +48,12 @@ in rec {
                         user = "root";
                         sshUser = user;
                       };
-                    # // lib.optionalAttrs (host.config.${namespace}.security.doas.enable or false) { sudo = "doas -u"; };
                   };
               };
           }
       ) {}
       names;
-  in {
-    inherit nodes;
-  };
+  in {inherit nodes;};
+in {
+  inherit mkDeploy;
 }
