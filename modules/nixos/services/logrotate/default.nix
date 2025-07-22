@@ -23,30 +23,20 @@ in {
 
   config = mkIf cfg.enable {
     services.logrotate.settings = {
-      header = {
-        # general
-        global = true;
-        dateext = true;
-        dateformat = "-%Y-%m-%d";
-        nomail = true;
-        missingok = true;
-        copytruncate = true;
-
-        # rotation frequency
-        priority = 1;
-        frequency = "daily";
-        rotate = 7; # special value, means every 7 days
-        # minage = 3; # avoid removing logs that are less than 7 days old
-
-        # compression
-        compress = true; # lets compress logs to save space
-        compresscmd = "${lib.getExe' pkgs.zstd "zstd"}";
-        compressoptions = " -Xcompression-level 10";
-        compressext = "zst";
-        uncompresscmd = "${lib.getExe' pkgs.zstd "unzstd"}";
-      };
       "multiple_paths" = {
         files = cfg.logFiles;
+        frequency = "daily";
+        rotate = 7;
+        dateext = true;
+        dateformat = "-%Y-%m-%d";
+        compress = true;
+        compresscmd = "${pkgs.zstd}/bin/zstd";
+        compressoptions = "-10";
+        compressext = ".zst";
+        uncompresscmd = "${pkgs.zstd}/bin/unzstd";
+        copytruncate = true;
+        missingok = true;
+        notifempty = true;
       };
     };
   };
