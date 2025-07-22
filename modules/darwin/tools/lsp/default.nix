@@ -17,6 +17,8 @@ in {
     nix.nixPath = ["nixpkgs=${inputs.nixpkgs}"];
     environment.systemPackages = with pkgs; [
       lua-language-server # LSP for lua
+      yaml-language-server # LSP for yaml
+      jsonnet-language-server
       marksman # LSP for markdown
       nixd # LSP for nix
       tree-sitter
@@ -25,6 +27,7 @@ in {
       pyright
       black
       helm-ls
+      shfmt
     ];
   };
 }
