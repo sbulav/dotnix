@@ -22,6 +22,7 @@ in {
         AppleShowAllExtensions = true;
         AppleShowAllFiles = true;
         CreateDesktop = false;
+        FXRemoveOldTrashItems = true;
         FXDefaultSearchScope = "SCcf";
         FXEnableExtensionChangeWarning = false;
         # NOTE: Four-letter codes for the other view modes: `icnv`, `clmv`, `glyv`
@@ -42,9 +43,21 @@ in {
         };
 
         NSGlobalDomain = {
+          "com.apple.sound.beep.feedback" = 0;
+          "com.apple.sound.beep.volume" = 0.0;
           AppleAccentColor = 1;
           AppleHighlightColor = "0.65098 0.85490 0.58431";
+          AppleShowAllExtensions = true;
+          AppleShowScrollBars = "Automatic";
           AppleSpacesSwitchOnActivate = false;
+          NSAutomaticCapitalizationEnabled = false;
+          NSAutomaticDashSubstitutionEnabled = false;
+          NSAutomaticPeriodSubstitutionEnabled = false;
+          NSAutomaticQuoteSubstitutionEnabled = false;
+          NSAutomaticSpellingCorrectionEnabled = false;
+          NSAutomaticWindowAnimationsEnabled = false;
+          NSTextShowsControlCharacters = true;
+          NSWindowResizeTime = 0.2;
           WebKitDeveloperExtras = true;
         };
       };
@@ -66,6 +79,10 @@ in {
       # Displays have separate Spaces
       spaces.spans-displays = false;
 
+      universalaccess = {
+        reduceMotion = true;
+      };
+
       # dock settings
       dock = {
         # auto show and hide dock
@@ -73,8 +90,9 @@ in {
         # remove delay for showing dock
         autohide-delay = 0.0;
         # how fast is the dock showing animation
-        autohide-time-modifier = 1.0;
+        autohide-time-modifier = 0.2;
         expose-group-apps = true;
+        expose-animation-duration = 0.1;
         mineffect = "scale";
         minimize-to-application = true;
         mouse-over-hilite-stack = true;
