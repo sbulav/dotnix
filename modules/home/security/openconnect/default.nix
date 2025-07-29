@@ -11,8 +11,8 @@ with lib.custom; let
   route_delete_command =
     if pkgs.stdenv.isLinux
     then ''
-      sudo route del -net 192.168.0.0/16
-      sudo route add -net 10.8.0.1/32 192.168.89.1 #openconnect
+      sudo ip route del 192.168.0.0/16
+      sudo ip route add 10.8.0.1/32 via 192.168.90.1 #openconnect
     ''
     else if pkgs.stdenv.isDarwin
     then ''
