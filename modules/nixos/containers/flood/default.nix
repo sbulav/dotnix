@@ -74,10 +74,14 @@ in {
           enable = true;
           dataDir = "/var/lib/torrents";
           # package = pkgs.jesec-rtorrent;
-          # configText = ''
-          #   log.add_output = "rpc_events", "log"
-          #   log.add_output = "rpc_dump", "log"
-          # '';
+          # Using upstream rtorrent pkg, config below is required
+          # https://github.com/jesec/flood?tab=readme-ov-file#rtorrent-notes
+          configText = ''
+            method.redirect=load.throw,load.normal
+            method.redirect=load.start_throw,load.start
+            method.insert=d.down.sequential,value|const,0
+            method.insert=d.down.sequential.set,value|const,0
+          '';
         };
         services.flood = {
           enable = true;
