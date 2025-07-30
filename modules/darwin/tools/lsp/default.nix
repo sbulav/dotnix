@@ -25,6 +25,7 @@ in {
       yamllint
       nodejs_22 # Note for LSP servers
       pyright
+      ruff
       black
       helm-ls
       shfmt
