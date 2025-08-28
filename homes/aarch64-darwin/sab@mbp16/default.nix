@@ -9,6 +9,9 @@ with lib.custom; {
       enable = true;
       name = config.snowfallorg.user.name;
     };
+    ai = {
+      opencode = enabled;
+    };
     apps = {
       obsidian = enabled;
       zoom-us = disabled;
