@@ -30,8 +30,8 @@ with lib.custom; {
       vault = disabled;
       sops = {
         enable = true;
-        defaultSopsFile = lib.snowfall.fs.get-file "secrets/sab/default.yaml";
-        sshKeyPaths = ["${config.home.homeDirectory}/.ssh/id_ed25519"];
+        # Shared module auto-resolves to secrets/sab/default.yaml
+        # No common secrets needed for this minimal config
       };
     };
   };

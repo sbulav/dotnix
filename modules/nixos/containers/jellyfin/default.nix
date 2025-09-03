@@ -42,10 +42,15 @@ in {
   ];
 
   config = mkIf cfg.enable {
-    sops.secrets = {
-      "jellyfin/oidc_client_secret" = {
+    # Import shared SOPS templates
+    imports = [
+      ../../shared/security/sops
+    ];
+    
+    custom.security.sops.secrets = {
+      # OIDC client secret using standard template
+      "jellyfin/oidc_client_secret" = lib.custom.secrets.containers.oidcClientSecret "jellyfin" // {
         sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
-        uid = 999;
       };
     };
     networking.nat = {

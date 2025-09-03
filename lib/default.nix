@@ -93,5 +93,118 @@ _: {
       path = "/var/lib/containers/${containerName}/.env";
       mode = "0400";
     };
+    
+    # Container service templates
+    containers = {
+      # OIDC/OAuth client secrets (jellyfin, grafana, immich)
+      oidcClientSecret = serviceName: {
+        uid = 999;
+        restartUnits = ["container@${serviceName}.service"];
+      };
+      
+      # Admin passwords (nextcloud, grafana)
+      adminPassword = serviceName: {
+        uid = 999;
+        restartUnits = ["container@${serviceName}.service"];
+      };
+      
+      # Application config files (immich_config)
+      appConfig = appName: {
+        uid = 999;
+        restartUnits = ["container@${appName}.service"];
+      };
+      
+      # Environment files with restart (homepage, traefik)
+      envFileWithRestart = containerName: {
+        uid = 999;
+        restartUnits = ["container@${containerName}.service"];
+      };
+      
+      # Cloudflare credentials environment (traefik pattern)
+      cloudflareEnv = serviceName: {
+        uid = 999;
+        restartUnits = ["container@${serviceName}.service"];
+      };
+    };
+    
+    # Common service patterns
+    services = {
+      # Shared telegram bot token (grafana + restic)
+      sharedTelegramBot = uid: {
+        uid = uid;  # 196 for grafana, 1000 for restic
+      };
+      
+      # Unified email password (consolidate grafana + msmtp)
+      unifiedEmailPassword = uid: {
+        uid = uid;
+      };
+      
+      # Backup repository passwords
+      backupPassword = backupName: {
+        uid = 1000;  # User-level backups
+      };
+    };
+    
+    # Special UID variants for services that need different UIDs
+    special = {
+      # Grafana uses UID 196
+      grafana = {
+        oidcClientSecret = {
+          uid = 196;
+          restartUnits = ["container@grafana.service"];
+        };
+        
+        adminPassword = {
+          uid = 196;
+          restartUnits = ["container@grafana.service"];
+        };
+        
+        telegramBot = {
+          uid = 196;
+        };
+        
+        emailPassword = {
+          uid = 196;
+        };
+      };
+    };
+    
+    # System-level secrets
+    system = {
+      # SSH keys for system services
+      sshKey = keyName: hostName: {
+        uid = 0;  # root
+        mode = "0600";
+      };
+      
+      # Host-specific system secrets
+      hostSecret = secretName: hostName: {
+        uid = 0;
+        mode = "0400";
+      };
+    };
+    
+    # Multi-secret patterns for complex services
+    multiSecrets = {
+      # Authelia pattern (4 individual secrets with same config)
+      authelia = serviceName: {
+        "${serviceName}-storage-encryption-key" = {
+          uid = 999;
+          restartUnits = ["container@${serviceName}.service"];
+        };
+        "${serviceName}-jwt-secret" = {
+          uid = 999;
+          restartUnits = ["container@${serviceName}.service"];
+        };
+        "${serviceName}-session-secret" = {
+          uid = 999;  
+          restartUnits = ["container@${serviceName}.service"];
+        };
+        "${serviceName}-jwt-rsa-key" = {
+          uid = 999;
+          restartUnits = ["container@${serviceName}.service"];
+        };
+      };
+    };
   };
 }

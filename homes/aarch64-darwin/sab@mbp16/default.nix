@@ -47,18 +47,14 @@ with lib.custom; {
       openconnect = enabled;
       sops = {
         enable = true;
-        defaultSopsFile = lib.snowfall.fs.get-file "secrets/sab/default.yaml";
-        sshKeyPaths = ["${config.home.homeDirectory}/.ssh/id_ed25519"];
+        # Shared module auto-resolves to secrets/sab/default.yaml
+        commonSecrets.enableCredentials = true;
+        # Darwin SOPS works normally now - no fallback needed
       };
     };
   };
 
-  sops.secrets = {
-    env_credentials = {
-      sopsFile = lib.snowfall.fs.get-file "secrets/sab/default.yaml";
-      path = "${config.home.homeDirectory}/.ssh/sops-env-credentials";
-    };
-  };
+  # env_credentials now handled by commonSecrets.enableCredentials = true
   home.sessionPath = [
     "$HOME/bin"
   ];

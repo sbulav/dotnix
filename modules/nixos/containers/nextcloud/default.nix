@@ -60,14 +60,24 @@ in {
       externalInterface = "ens3";
     };
 
-    sops.secrets = {
-      nextcloud-admin-pass = {
+    # Import shared SOPS templates
+    imports = [
+      ../../shared/security/sops
+    ];
+    
+    custom.security.sops.secrets = {
+      # Admin password (follows template pattern but custom name)
+      "nextcloud-admin-pass" = {
         sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
         uid = 999;
+        restartUnits = ["container@nextcloud.service"];
       };
-      nextcloud-secretFile = {
+      
+      # Secret file (app-specific)
+      "nextcloud-secretFile" = {
         sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
         uid = 999;
+        restartUnits = ["container@nextcloud.service"];
       };
     };
     containers.nextcloud = {

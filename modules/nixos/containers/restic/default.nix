@@ -41,11 +41,20 @@ in {
   };
 
   config = mkIf cfg.enable {
-    sops.secrets = {
-      # //TODO: Telegram telegram-notifications-bot-token from grafana, is this an issue?
-      "backups/restic_odroid" = {
+    # Import shared SOPS templates
+    imports = [
+      ../../shared/security/sops
+    ];
+    
+    custom.security.sops.secrets = {
+      # Backup repository password using template
+      "backups/restic_odroid" = lib.custom.secrets.services.backupPassword "restic_odroid" // {
         sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
-        uid = 1000;
+      };
+      
+      # Shared telegram bot token for notifications (UID 1000 for user services)
+      "telegram-notifications-bot-token" = lib.custom.secrets.services.sharedTelegramBot 1000 // {
+        sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
       };
     };
     # Run backup script on a timer start at 01:05
