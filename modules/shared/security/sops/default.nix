@@ -3,7 +3,7 @@
   lib,
   namespace,
   pkgs,
-  osConfig ? {},
+  osConfig ? null,
   ...
 }: let
   inherit (lib) mkIf mkMerge mkDefault types optionalAttrs;
@@ -13,7 +13,7 @@
   
   # Auto-detect platform and profile
   isDarwin = pkgs.stdenv.isDarwin;
-  isHome = osConfig == {};
+  isHome = osConfig == null || osConfig == {};
   
   platform = if isDarwin then "darwin" else "linux";
   profile = if isHome then "home" else "system";
@@ -48,16 +48,12 @@ in {
       enableServiceTokens = mkBoolOpt false "Enable service authentication tokens.";
     };
     
-    # Darwin compatibility
-    darwinFallback = {
-      enable = mkBoolOpt true "Enable Darwin compatibility mode when SOPS unavailable.";
-      alternativeSecrets = mkOpt attrs {} "Alternative secret handling for Darwin.";
-    };
+    # Removed Darwin fallback options - Darwin SOPS works normally now
   };
 
   config = mkIf cfg.enable (mkMerge [
     # Base packages (home-manager only)
-    (mkIf isHome {
+    (mkIf (isHome && config ? home) {
       home.packages = with pkgs; [
         age
         sops  
@@ -65,8 +61,8 @@ in {
       ];
     })
     
-    # SOPS configuration (when available)
-    (mkIf (!isDarwin || !cfg.darwinFallback.enable) {
+    # SOPS configuration (platform-agnostic)
+    {
       sops = mkSecretsConfig {
         inherit hostName userName;
         platform = if cfg.platform != "auto" then cfg.platform else platform;
@@ -79,10 +75,10 @@ in {
       } // optionalAttrs (cfg.sshKeyPaths != []) {
         age.sshKeyPaths = cfg.sshKeyPaths;
       };
-    })
+    }
     
-    # Common secrets
-    (mkIf cfg.commonSecrets.enableCredentials {
+    # Common secrets (home-manager only)
+    (mkIf (cfg.commonSecrets.enableCredentials && config ? home) {
       sops.secrets.env_credentials = secrets.envCredentials userName;
     })
     
@@ -96,11 +92,6 @@ in {
             else lib.snowfall.fs.get-file "secrets/${userName}/default.yaml";
         }
       ) cfg.secrets;
-    })
-    
-    # Darwin fallback mode
-    (mkIf (isDarwin && cfg.darwinFallback.enable) {
-      warnings = ["SOPS shared module: Darwin fallback mode active - some secrets may not be available"];
     })
   ]);
 }

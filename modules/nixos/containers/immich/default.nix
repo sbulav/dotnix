@@ -54,10 +54,15 @@ in {
   ];
 
   config = mkIf cfg.enable {
-    sops.secrets = {
-      immich_config = {
+    # Import shared SOPS templates
+    imports = [
+      ../../shared/security/sops
+    ];
+    
+    custom.security.sops.secrets = {
+      # Application config using template
+      "immich_config" = lib.custom.secrets.containers.appConfig "immich" // {
         sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
-        uid = 999;
       };
     };
     networking.nat = {

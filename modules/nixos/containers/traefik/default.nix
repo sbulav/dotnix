@@ -31,10 +31,15 @@ in {
   ];
 
   config = mkIf cfg.enable {
-    sops.secrets = {
-      traefik-cf-env = {
+    # Import shared SOPS templates
+    imports = [
+      ../../shared/security/sops
+    ];
+    
+    custom.security.sops.secrets = {
+      # Cloudflare environment file using template
+      "traefik-cf-env" = lib.custom.secrets.containers.cloudflareEnv "traefik" // {
         sopsFile = lib.snowfall.fs.get-file "${cfg.cf_secret_file}";
-        restartUnits = ["container@traefik.service"];
       };
     };
 

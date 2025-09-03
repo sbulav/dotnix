@@ -35,29 +35,16 @@ in {
   ];
 
   config = mkIf cfg.enable {
-    sops.secrets = {
-      authelia-storage-encryption-key = {
+    # Import shared SOPS templates
+    imports = [
+      ../../shared/security/sops
+    ];
+    
+    custom.security.sops.secrets = lib.mapAttrs (name: template: 
+      template // {
         sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
-        uid = 999;
-        restartUnits = ["container@authelia.service"];
-      };
-      authelia-jwt-secret = {
-        sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
-        uid = 999;
-        restartUnits = ["container@authelia.service"];
-      };
-      authelia-session-secret = {
-        sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
-        uid = 999;
-        restartUnits = ["container@authelia.service"];
-      };
-      "authelia-jwt-rsa-key" = {
-        # format = "binary";
-        sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
-        uid = 999;
-        restartUnits = ["container@authelia.service"];
-      };
-    };
+      }
+    ) (lib.custom.secrets.multiSecrets.authelia "authelia");
     containers.authelia = {
       ephemeral = true;
       autoStart = true;

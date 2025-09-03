@@ -14,10 +14,15 @@ in {
     secret_file = mkOpt str "secrets/zanoza/default.yaml" "SOPS secret to get creds from";
   };
   config = mkIf cfg.enable {
-    sops.secrets = {
-      "email-password" = {
+    # Import shared SOPS templates
+    imports = [
+      ../../shared/security/sops
+    ];
+    
+    custom.security.sops.secrets = {
+      # Use shared email password (same Gmail account as grafana)
+      "shared/email-password" = lib.custom.secrets.services.unifiedEmailPassword 1000 // {
         sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
-        uid = 1000;
       };
     };
     programs.msmtp = {
@@ -31,7 +36,7 @@ in {
           tls_starttls = true;
           from = "ZANOZA-notifications";
           user = "zppfan@gmail.com";
-          passwordeval = "${pkgs.coreutils}/bin/cat ${config.sops.secrets.email-password.path}";
+          passwordeval = "${pkgs.coreutils}/bin/cat ${config.sops.secrets."shared/email-password".path}";
         };
       };
       extraConfig = ''

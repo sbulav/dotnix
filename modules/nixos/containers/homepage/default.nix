@@ -40,8 +40,14 @@ in {
       })
   ];
   config = mkIf cfg.enable {
-    sops.secrets = {
-      "homepage-env" = {
+    # Import shared SOPS templates
+    imports = [
+      ../../shared/security/sops
+    ];
+    
+    custom.security.sops.secrets = {
+      # Environment file using template
+      "homepage-env" = lib.custom.secrets.containers.envFileWithRestart "homepage" // {
         sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
       };
     };

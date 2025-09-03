@@ -2,7 +2,7 @@
   lib,
   config,
   namespace,
-  osConfig,
+  osConfig ? {},
   ...
 }: let
   inherit (lib) mkEnableOption mkIf;
@@ -30,9 +30,8 @@ in {
         invert = false;
         #TODO:(atuin) disable when comfortable
         show_help = true;
-        sops.secrets = lib.mkIf config.${namespace}.security.sops.enable {
-          key_path = config.sops.secrets.atuin_key.path;
-        };
+        key_path = lib.mkIf config.${namespace}.security.sops.enable 
+                     config.sops.secrets.atuin_key.path;
 
         # This came from https://github.com/nifoc/dotfiles/blob/ce5f9e935db1524d008f97e04c50cfdb41317766/home/programs/atuin.nix#L2
         history_filter = [
@@ -43,9 +42,12 @@ in {
       };
     };
 
-    sops.secrets = lib.mkIf config.${namespace}.security.sops.enable {
+    # Integrate with shared SOPS module
+    custom.security.sops.secrets = lib.mkIf config.${namespace}.security.sops.enable {
       atuin_key = {
-        sopsFile = lib.snowfall.fs.get-file "secrets/sab/default.yaml";
+        # sopsFile auto-resolved by shared module
+        path = "${config.home.homeDirectory}/.local/share/atuin/key";
+        mode = "0600";
       };
     };
   };
