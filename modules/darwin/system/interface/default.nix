@@ -79,9 +79,9 @@ in {
       # Displays have separate Spaces
       spaces.spans-displays = false;
 
-      universalaccess = {
-        reduceMotion = true;
-      };
+      # universalaccess = {
+      #   reduceMotion = true;
+      # };
 
       # dock settings
       dock = {
