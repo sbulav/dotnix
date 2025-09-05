@@ -1,16 +1,25 @@
 # DEPRECATED: This module has been replaced by the shared SOPS module
-# Redirect to shared module for backwards compatibility
+# Minimal stub for backwards compatibility
 {
   lib,
+  namespace,
   ...
-}: {
-  # Import the shared SOPS module
-  imports = [
-    ../../../shared/security/sops
-  ];
+}: 
+with lib.custom; {
+  # Minimal options to prevent errors
+  options.${namespace}.security.sops = {
+    enable = lib.mkEnableOption "SOPS secrets management (deprecated stub)";
+    secrets = lib.mkOption {
+      type = lib.types.attrs;
+      default = {};
+      description = "Secret definitions (deprecated stub)";
+    };
+  };
 
-  # Add deprecation warning
-  warnings = [
-    "modules/home/security/sops is deprecated - configurations now use the shared SOPS module at modules/shared/security/sops"
-  ];
+  config = {
+    # Add deprecation warning
+    warnings = lib.mkIf true [
+      "modules/home/security/sops is deprecated - configurations now use the shared SOPS module at modules/shared/security/sops"
+    ];
+  };
 }

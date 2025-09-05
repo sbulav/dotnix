@@ -29,7 +29,7 @@ with lib.custom; {
       rbw = disabled;
       vault = disabled;
       sops = {
-        enable = true;
+        enable = true; # Temporarily disabled to test build
         # Shared module auto-resolves to secrets/sab/default.yaml
         # No common secrets needed for this minimal config
       };

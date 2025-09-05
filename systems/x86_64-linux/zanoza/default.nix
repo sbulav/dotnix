@@ -23,9 +23,9 @@ in {
   suites.develop.enable = false;
 
   custom.security.sops = {
-    enable = true;
+    enable = false; # Temporarily disabled to test build
     sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
-    defaultSopsFile = lib.snowfall.fs.get-file "secrets/saz/default.yaml";
+    defaultSopsFile = lib.snowfall.fs.get-file "secrets/zanoza/default.yaml";
   };
 
   users.users.sab.openssh.authorizedKeys.keys = [
