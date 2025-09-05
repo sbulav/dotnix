@@ -1,25 +1,35 @@
-# DEPRECATED: This module has been replaced by the shared SOPS module
-# Minimal stub for backwards compatibility
 {
   lib,
+  config,
   namespace,
+  pkgs,
   ...
-}: 
-with lib.custom; {
-  # Minimal options to prevent errors
+}: let
+  inherit (lib) mkEnableOption mkIf;
+  cfg = config.${namespace}.security.sops;
+in {
   options.${namespace}.security.sops = {
-    enable = lib.mkEnableOption "SOPS secrets management (deprecated stub)";
-    secrets = lib.mkOption {
-      type = lib.types.attrs;
-      default = {};
-      description = "Secret definitions (deprecated stub)";
+    enable = mkEnableOption "SOPS secrets management for home-manager";
+    defaultSopsFile = lib.mkOption {
+      type = lib.types.nullOr lib.types.path;
+      default = null;
+      description = "Override default SOPS file path";
     };
   };
 
-  config = {
-    # Add deprecation warning
-    warnings = lib.mkIf true [
-      "modules/home/security/sops is deprecated - configurations now use the shared SOPS module at modules/shared/security/sops"
+  config = mkIf cfg.enable {
+    home.packages = with pkgs; [
+      age
+      sops
+      ssh-to-age
     ];
+
+    sops = {
+      defaultSopsFile = 
+        if cfg.defaultSopsFile != null 
+        then cfg.defaultSopsFile 
+        else lib.snowfall.fs.get-file "secrets/sab/default.yaml";
+      age.keyFile = "${config.home.homeDirectory}/.config/sops/age/keys.txt";
+    };
   };
 }
