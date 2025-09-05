@@ -30,7 +30,7 @@ in {
         invert = false;
         #TODO:(atuin) disable when comfortable
         show_help = true;
-        key_path = lib.mkIf config.${namespace}.security.sops.enable 
+        key_path = lib.mkIf config.custom.security.sops.enable 
                      config.sops.secrets.atuin_key.path;
 
         # This came from https://github.com/nifoc/dotfiles/blob/ce5f9e935db1524d008f97e04c50cfdb41317766/home/programs/atuin.nix#L2
@@ -42,10 +42,9 @@ in {
       };
     };
 
-    # Integrate with SOPS directly
-    sops.secrets = lib.mkIf config.${namespace}.security.sops.enable {
-      atuin_key = {
-        sopsFile = lib.snowfall.fs.get-file "secrets/sab/default.yaml";
+    # Use shared SOPS module for secrets
+    custom.security.sops = lib.mkIf config.custom.security.sops.enable {
+      secrets.atuin_key = {
         path = "${config.home.homeDirectory}/.local/share/atuin/key";
         mode = "0600";
       };

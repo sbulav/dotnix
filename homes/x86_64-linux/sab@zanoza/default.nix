@@ -30,7 +30,6 @@ with lib.custom; {
       vault = disabled;
       sops = {
         enable = true;
-        defaultSopsFile = lib.snowfall.fs.get-file "secrets/sab/default.yaml";
         # Shared module auto-resolves to secrets/sab/default.yaml
         # No common secrets needed for this minimal config
       };

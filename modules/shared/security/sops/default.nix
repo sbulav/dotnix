@@ -1,15 +1,14 @@
 {
   config,
   lib,
-  namespace,
   pkgs,
   osConfig ? null,
   ...
 }: let
   inherit (lib) mkIf mkMerge mkDefault types optionalAttrs;
-  inherit (lib.${namespace}) mkBoolOpt mkOpt mkSecretsConfig secrets;
+  inherit (lib.custom) mkBoolOpt mkOpt mkSecretsConfig secrets;
   
-  cfg = config.${namespace}.security.sops;
+  cfg = config.custom.security.sops;
   
   # Auto-detect platform and profile
   isDarwin = pkgs.stdenv.isDarwin;
@@ -24,10 +23,10 @@
     
   userName = if isHome
     then config.home.username or "sab"
-    else config.${namespace}.user.name or "sab";
+    else config.custom.user.name or "sab";
 
 in {
-  options.${namespace}.security.sops = with types; {
+  options.custom.security.sops = with types; {
     enable = mkBoolOpt false "Whether to enable SOPS secrets management.";
     
     # Override auto-detection if needed
@@ -72,7 +71,7 @@ in {
           if cfg.defaultSopsFile != null 
           then cfg.defaultSopsFile 
           else lib.snowfall.fs.get-file "secrets/${userName}/default.yaml";
-      } // optionalAttrs (cfg.sshKeyPaths != []) {
+      } // optionalAttrs (cfg.sshKeyPaths != [] && !isHome) {
         age.sshKeyPaths = cfg.sshKeyPaths;
       };
     }
