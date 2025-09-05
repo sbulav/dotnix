@@ -84,6 +84,7 @@
 
       homes.modules = with inputs; [
         sops-nix.homeManagerModules.sops
+        ./modules/shared/security/sops
       ];
       systems = {
         modules = {
