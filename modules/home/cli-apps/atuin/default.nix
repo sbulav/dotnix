@@ -42,10 +42,10 @@ in {
       };
     };
 
-    # Integrate with shared SOPS module
-    custom.security.sops.secrets = lib.mkIf config.${namespace}.security.sops.enable {
+    # Integrate with SOPS directly
+    sops.secrets = lib.mkIf config.${namespace}.security.sops.enable {
       atuin_key = {
-        # sopsFile auto-resolved by shared module
+        sopsFile = lib.snowfall.fs.get-file "secrets/sab/default.yaml";
         path = "${config.home.homeDirectory}/.local/share/atuin/key";
         mode = "0600";
       };
