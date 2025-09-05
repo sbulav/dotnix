@@ -43,10 +43,6 @@ in {
   ];
 
   config = mkIf cfg.enable {
-    # Import shared SOPS templates
-    imports = [
-      ../../shared/security/sops
-    ];
     
     # Use shared templates with grafana-specific UID requirements
     custom.security.sops.secrets = lib.mkMerge [

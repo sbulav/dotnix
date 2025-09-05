@@ -40,11 +40,10 @@ in {
     secret_file = mkOpt str "secrets/zanoza/default.yaml" "SOPS secret to get creds from";
   };
 
+  imports = [
+  ];
+
   config = mkIf cfg.enable {
-    # Import shared SOPS templates
-    imports = [
-      ../../shared/security/sops
-    ];
     
     custom.security.sops.secrets = {
       # Backup repository password using template

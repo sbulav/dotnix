@@ -31,10 +31,6 @@ in {
   ];
 
   config = mkIf cfg.enable {
-    # Import shared SOPS templates
-    imports = [
-      ../../shared/security/sops
-    ];
     
     custom.security.sops.secrets = {
       # Cloudflare environment file using template

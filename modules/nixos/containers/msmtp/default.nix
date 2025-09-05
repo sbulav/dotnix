@@ -13,11 +13,11 @@ in {
     enable = mkBoolOpt false "Enable the msmtp email service ;";
     secret_file = mkOpt str "secrets/zanoza/default.yaml" "SOPS secret to get creds from";
   };
+
+  imports = [
+  ];
+
   config = mkIf cfg.enable {
-    # Import shared SOPS templates
-    imports = [
-      ../../shared/security/sops
-    ];
     
     custom.security.sops.secrets = {
       # Use shared email password (same Gmail account as grafana)

@@ -59,11 +59,6 @@ in {
       internalInterfaces = ["ve-nextcloud"];
       externalInterface = "ens3";
     };
-
-    # Import shared SOPS templates
-    imports = [
-      ../../shared/security/sops
-    ];
     
     custom.security.sops.secrets = {
       # Admin password (follows template pattern but custom name)
