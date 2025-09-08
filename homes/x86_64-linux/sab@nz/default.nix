@@ -36,6 +36,9 @@ in {
       };
     };
 
+    ai = {
+      opencode = enabled; #Until unstable is fixed
+    };
     apps = {
       obsidian = enabled;
       ktalk = enabled;
