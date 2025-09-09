@@ -10,7 +10,7 @@ with lib.custom; {
       name = config.snowfallorg.user.name;
     };
     ai = {
-      opencode = disabled; #Until unstable is fixed
+      opencode = enabled;
     };
     apps = {
       obsidian = enabled;
