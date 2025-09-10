@@ -11,6 +11,7 @@ with lib.custom; {
     };
     ai = {
       opencode = enabled;
+      mcp-k8s-go = enabled;
     };
     apps = {
       obsidian = enabled;
