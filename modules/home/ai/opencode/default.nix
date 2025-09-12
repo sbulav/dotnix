@@ -2,6 +2,7 @@
   lib,
   config,
   pkgs,
+  namespace,
   ...
 }: let
   inherit (lib) mkEnableOption mkIf;
@@ -14,7 +15,7 @@ in {
 
   config = mkIf cfg.enable {
     home.packages = with pkgs; [
-      opencode
+      pkgs.${namespace}.opencode
     ];
   };
 }
