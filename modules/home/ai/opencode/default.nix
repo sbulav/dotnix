@@ -5,13 +5,15 @@
   namespace,
   ...
 }: let
-  inherit (lib)
+  inherit
+    (lib)
     mkEnableOption
     mkIf
     mkOption
     types
     mapAttrs'
-    nameValuePair;
+    nameValuePair
+    ;
 
   cfg = config.custom.ai.opencode;
 in {
@@ -47,17 +49,23 @@ in {
       {
         "opencode/opencode.json".text = builtins.toJSON cfg.settings;
       }
-      // mapAttrs' (name: value:
-        nameValuePair "opencode/agents/${name}.json" {text = builtins.toJSON value;}
-      ) cfg.agents
-      // mapAttrs' (name: value:
-        nameValuePair "opencode/commands/${name}.json" {text = builtins.toJSON value;}
-      ) cfg.commands
-      // mapAttrs' (name: value:
-        nameValuePair "opencode/tools/${name}" {
-          text = value;
-          executable = true;
-        }
-      ) cfg.tools;
+      // mapAttrs' (
+        name: value:
+          nameValuePair "opencode/agents/${name}.json" {text = builtins.toJSON value;}
+      )
+      cfg.agents
+      // mapAttrs' (
+        name: value:
+          nameValuePair "opencode/commands/${name}.json" {text = builtins.toJSON value;}
+      )
+      cfg.commands
+      // mapAttrs' (
+        name: value:
+          nameValuePair "opencode/tools/${name}" {
+            text = value;
+            executable = true;
+          }
+      )
+      cfg.tools;
   };
 }
