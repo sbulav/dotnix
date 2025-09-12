@@ -67,6 +67,9 @@ in {
         sops
         ssh-to-age
       ];
+
+      home.sessionVariables.SOPS_AGE_KEY_FILE =
+        "${config.home.homeDirectory}/.config/sops/age/keys.txt";
     })
 
     # SOPS configuration (platform-agnostic)
