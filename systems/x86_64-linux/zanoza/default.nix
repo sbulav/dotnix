@@ -2,6 +2,7 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running ‘nixos-help’).
 {
+  inputs,
   pkgs,
   lib,
   ...
@@ -9,6 +10,7 @@
   system = "x86_64-linux";
   hostName = "zanoza";
 in {
+  _module.args.pkgs = inputs.stable.legacyPackages.${system};
   imports = [
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
