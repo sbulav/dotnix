@@ -12,7 +12,7 @@
     then
       builtins.fetchurl {
         url = "https://st.ktalk.host/ktalk-app/linux/${pname}${version}x86_64.AppImage";
-        sha256 = "1d08sgsk0p19l6nlkjjivzq9v92lc6fj787vxvlfkk8ap4jaw1j0";
+        sha256 = "1isjrh51in9kh0l68a4dq72apn744b1q0m53gf4qs6z9qc144nki";
       }
     else
       builtins.fetchurl {
