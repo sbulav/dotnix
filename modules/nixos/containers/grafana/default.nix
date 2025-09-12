@@ -43,23 +43,30 @@ in {
   ];
 
   config = mkIf cfg.enable {
-    
     # Use shared templates with grafana-specific UID requirements
     custom.security.sops.secrets = lib.mkMerge [
       # Grafana special templates (UID 196)
       {
-        "grafana/oidc_client_secret" = lib.custom.secrets.special.grafana.oidcClientSecret // {
-          sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
-        };
-        "grafana/admin_password" = lib.custom.secrets.special.grafana.adminPassword // {
-          sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
-        };
-        "telegram-notifications-bot-token" = lib.custom.secrets.special.grafana.telegramBot // {
-          sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
-        };
-        "shared/email-password" = lib.custom.secrets.special.grafana.emailPassword // {
-          sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
-        };
+        "grafana/oidc_client_secret" =
+          lib.custom.secrets.special.grafana.oidcClientSecret
+          // {
+            sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
+          };
+        "grafana/admin_password" =
+          lib.custom.secrets.special.grafana.adminPassword
+          // {
+            sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
+          };
+        "telegram-notifications-bot-token" =
+          lib.custom.secrets.special.grafana.telegramBot
+          // {
+            sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
+          };
+        "grafana/email-password" =
+          lib.custom.secrets.special.grafana.emailPassword
+          // {
+            sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
+          };
       }
     ];
     # Allow grafana to read all exporters via trusted interface
@@ -88,7 +95,7 @@ in {
         "${config.sops.secrets."telegram-notifications-bot-token".path}" = {
           isReadOnly = true;
         };
-        "${config.sops.secrets."shared/email-password".path}" = {
+        "${config.sops.secrets."grafana/email-password".path}" = {
           isReadOnly = true;
         };
       };
@@ -108,7 +115,7 @@ in {
               from_name = "ZANOZA-notifications";
               from_address = user;
               host = "smtp.gmail.com:587";
-              password = "$__file{${config.sops.secrets."shared/email-password".path}}";
+              password = "$__file{${config.sops.secrets."grafana/email-password".path}}";
             };
             security = {
               admin_email = config.${namespace}.user.email;
