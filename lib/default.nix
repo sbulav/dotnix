@@ -1,4 +1,19 @@
-_: {
+{ pkgs ? { stdenv = { isDarwin = false; isLinux = true; }; },
+  config ? {}, ... }: let
+  userHome = userName:
+    if config ? home && config.home ? homeDirectory then
+      config.home.homeDirectory
+    else if config ? users && config.users ? users &&
+      builtins.hasAttr userName config.users.users &&
+      config.users.users.${userName} ? home then
+        config.users.users.${userName}.home
+    else if pkgs.stdenv.isDarwin then
+      "/Users/${userName}"
+    else if pkgs.stdenv.isLinux then
+      "/home/${userName}"
+    else
+      "/home/${userName}";
+in {
   override-meta = meta: package:
     package.overrideAttrs (_: {
       inherit meta;
@@ -68,17 +83,13 @@ _: {
   secrets = {
     # User environment credentials
     envCredentials = userName: {
-      path = if builtins.pathExists "/home"
-             then "/home/${userName}/.ssh/sops-env-credentials"
-             else "/Users/${userName}/.ssh/sops-env-credentials";
+      path = "${userHome userName}/.ssh/sops-env-credentials";
       mode = "0600";
     };
     
     # SSH key secrets
     sshKey = keyName: userName: {
-      path = if builtins.pathExists "/home"
-             then "/home/${userName}/.ssh/${keyName}"
-             else "/Users/${userName}/.ssh/${keyName}";
+      path = "${userHome userName}/.ssh/${keyName}";
       mode = "0600";
     };
     
