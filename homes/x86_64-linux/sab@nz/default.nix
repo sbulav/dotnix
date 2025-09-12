@@ -66,8 +66,9 @@ in {
       openconnect = enabled;
       sops = {
         enable = true;
-        # Shared module auto-resolves to secrets/sab/default.yaml  
+        # Shared module auto-resolves to secrets/sab/default.yaml
         commonSecrets.enableCredentials = true;
+        profile = "home";
       };
     };
   };
