@@ -24,7 +24,7 @@ in {
         keyFile = "${config.users.users.${config.${namespace}.user.name}.home}/.config/sops/age/keys.txt";
       };
     } // lib.optionalAttrs (cfg.secrets != {}) {
-      secrets = cfg.secrets;
+      secrets = lib.mapAttrs (_: secret: builtins.removeAttrs secret ["uid"]) cfg.secrets;
     };
 
     warnings = [
