@@ -1,21 +1,33 @@
-_: _final: prev: {
-  opencode = prev.opencode.overrideAttrs (old: let
-    version = "0.7.9";
-    src = prev.fetchFromGitHub {
+{...}: final: prev: {
+  opencode = prev.opencode.overrideAttrs (oldAttrs: let
+    version = "0.9.2";
+    src = final.fetchFromGitHub {
       owner = "sst";
       repo = "opencode";
       rev = "v${version}";
-      hash = "sha256-pDG/wXbTbplBmssYbPjbAQ1O+EL5YeLAtQhioiRNIVc=";
+      hash = "sha256-o7SzDGbWgCh8cMNK+PeLxAw0bQMKFouHdedUslpA6gw=";
     };
+
+    tui = oldAttrs.tui.overrideAttrs (_: {
+      inherit src version;
+      vendorHash = "sha256-8pwVQVraLSE1DRL6IFMlQ/y8HQ8464N/QwAS8Faloq4=";
+    });
   in {
-    inherit version src;
-    tui = old.tui.overrideAttrs (_: {
-      inherit version src;
-      vendorHash = "sha256-de5FtS7iMrbmoLlIjdfrxs2OEI/f1dfU90GIJbvdO50=";
-    });
-    node_modules = old.node_modules.overrideAttrs (_: {
-      inherit version src;
-      outputHash = "sha256-PmLO0aU2E7NlQ7WtoiCQzLRw4oKdKxS5JI571lvbhHo=";
-    });
+    inherit version src tui;
+
+    buildPhase = ''
+      runHook preBuild
+
+      bun build \
+        --define OPENCODE_TUI_PATH="'${tui}/bin/tui'" \
+        --define OPENCODE_VERSION="'${version}'" \
+        --compile \
+        --compile-exec-argv="--" \
+        --target=bun-${final.system} \
+        --outfile=opencode \
+        ./packages/opencode/src/index.ts \
+
+      runHook postBuild
+    '';
   });
 }
