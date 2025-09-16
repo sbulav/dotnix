@@ -41,6 +41,8 @@ in {
 
       # users.${config.custom.user.name} = args:
       #   mkAliasDefinitions options.custom.home.extraOptions;
+
+      users.${config.custom.user.name} = mkAliasDefinitions options.custom.home.extraOptions;
     };
   };
 }
