@@ -19,6 +19,7 @@
 in {
   options.custom.ai.opencode = {
     enable = mkEnableOption "Enable opencode AI assistent";
+
     settings = mkOption {
       type = types.attrs;
       default = {
@@ -58,11 +59,15 @@ in {
               };
               "claude-3-5-haiku-20241022" = {
                 name = "Claude Haiku 3.5 (2024-10-22)";
+                options = {
+                  max_tokens = 8192;
+                };
               };
             };
             options = {
               apiKey = "{env:OPENAI_API_KEY}";
               baseURL = "https://llmgtw.hhdev.ru/proxy/anthropic/v1";
+              max_tokens = 8192;
               headers = {"anthropic-version" = "2023-06-01";};
             };
           };
@@ -121,22 +126,53 @@ in {
               };
             };
           };
+
+          # NEW: xAI Grok provider
+          "hhdev-grok" = {
+            name = "HHDev xAi Grok";
+            npm = "@ai-sdk/xai";
+            options = {
+              apiKey = "{env:OPENAI_API_KEY}";
+              baseURL = "https://llmgtw.hhdev.ru/proxy/xai";
+            };
+            models = {
+              "grok-4-0709" = {name = "Grok 4";};
+              "grok-code-fast-1" = {name = "Grok Code Fast 1";};
+            };
+          };
+        };
+
+        # NEW: MCP servers block
+        mcp = {
+          kubernetes = {
+            type = "local";
+            command = ["mcp-k8s-go" "--readonly"];
+            enabled = true;
+          };
+          nixos = {
+            type = "local";
+            command = ["nix" "run" "github:utensils/mcp-nixos" "--"];
+            enabled = true;
+          };
         };
 
         "$schema" = "https://opencode.ai/config.json";
       };
       description = "Configuration for opencode.json";
     };
+
     agents = mkOption {
       type = types.attrsOf types.attrs;
       default = {};
       description = "Agent configuration files";
     };
+
     commands = mkOption {
       type = types.attrsOf types.attrs;
       default = {};
       description = "Command configuration files";
     };
+
     tools = mkOption {
       type = types.attrsOf types.lines;
       default = {};
@@ -148,6 +184,7 @@ in {
     home.packages = with pkgs; [
       opencode
     ];
+
     xdg.configFile =
       {
         "opencode/opencode.json".text = builtins.toJSON cfg.settings;
