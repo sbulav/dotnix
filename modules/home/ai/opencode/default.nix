@@ -37,25 +37,78 @@
   in
     nameValuePair fileName commandConfig) (filterAttrs (name: _: lib.hasSuffix ".nix" name) commandFiles);
 
-  # Merge all configurations into settings
-  defaultSettings = {
-    model = "hhdev-openai/gpt-4.1";
-    small_model = "hhdev-openai/gpt-4.1";
+   # Helper functions to convert Nix to YAML/Markdown
+   optionalToYaml = key: value:
+     if value != null && value != ""
+     then "${key}: ${builtins.toJSON value}"
+     else "";
 
-    disabled_providers = [
-      "openai"
-      "amazon-bedrock"
-      "opencode"
-    ];
+   toolsToYaml = tools:
+     if tools == {} then "" else
+     let
+       toolLines = lib.mapAttrsToList (name: enabled: "  ${name}: ${builtins.toJSON enabled}") tools;
+     in
+     "tools:\n" + lib.concatStringsSep "\n" toolLines;
 
-    provider = providers;
-    mcp = mcpServers;
+   permissionToYaml = permission:
+     if permission == {} then "" else
+     let
+       permLines = lib.mapAttrsToList (name: value:
+         if builtins.isAttrs value then
+           let
+             subLines = lib.mapAttrsToList (subName: subValue:
+               "      \"${subName}\": \"${subValue}\""
+             ) value;
+           in
+           "  ${name}:\n" + lib.concatStringsSep "\n" subLines
+         else
+           "  ${name}: \"${value}\""
+       ) permission;
+     in
+     "permission:\n" + lib.concatStringsSep "\n" permLines;
 
-    "$schema" = "https://opencode.ai/config.json";
-  };
+   toMarkdownAgent = name: config: ''
+     ---
+     description: ${builtins.toJSON config.description}
+     ${optionalToYaml "mode" (config.mode or null)}
+     ${optionalToYaml "model" (config.model or null)}
+     ${optionalToYaml "temperature" (config.temperature or null)}
+     ${toolsToYaml (config.tools or {})}
+     ${permissionToYaml (config.permission or {})}
+     ---
+     ${config.system_prompt or ""}
+   '';
 
-  # Final settings with user overrides
-  finalSettings = lib.recursiveUpdate defaultSettings cfg.settings;
+   toMarkdownCommand = name: config: ''
+     ---
+     description: ${builtins.toJSON config.description}
+     ${optionalToYaml "agent" (config.agent or null)}
+     ${optionalToYaml "model" (config.model or null)}
+     ---
+     ${config.context or ""}
+
+     ${config.task or ""}
+   '';
+
+   # Merge all configurations into settings
+   defaultSettings = {
+     model = "hhdev-openai/gpt-4.1";
+     small_model = "hhdev-openai/gpt-4.1";
+
+     disabled_providers = [
+       "openai"
+       "amazon-bedrock"
+       "opencode"
+     ];
+
+     provider = providers;
+     mcp = mcpServers;
+
+     "$schema" = "https://opencode.ai/config.json";
+   };
+
+   # Final settings with user overrides
+   finalSettings = lib.recursiveUpdate defaultSettings cfg.settings;
 in {
   options.custom.ai.opencode = {
     enable = mkEnableOption "Enable opencode AI assistant";
@@ -84,12 +137,12 @@ in {
       }
       // mapAttrs' (
         name: value:
-          nameValuePair "opencode/agent/${name}.json" {text = builtins.toJSON value;}
+          nameValuePair "opencode/agent/${name}.md" {text = toMarkdownAgent name value;}
       )
       agents
       // mapAttrs' (
         name: value:
-          nameValuePair "opencode/command/${name}.json" {text = builtins.toJSON value;}
+          nameValuePair "opencode/command/${name}.md" {text = toMarkdownCommand name value;}
       )
       commands
       // mapAttrs' (

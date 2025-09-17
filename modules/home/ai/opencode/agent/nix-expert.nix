@@ -105,7 +105,7 @@
 
         # Prefer:
         pkg.override { enableFeature = true; }
-        pkg.overrideAttrs (old: { pname = "custom-${old.pname}"; })
+        pkg.overrideAttrs (old: { buildInputs = old.buildInputs ++ [ final.newDep ]; })
         ```
 
         # Performance & Closure Size
@@ -167,9 +167,9 @@
         Example: Module with Snowfall-style arguments and namespacing
         ```nix
         { lib, pkgs, config, inputs, namespace, system, ... }:
-        let cfg = config.${namespace}.feature;
+        let cfg = config.''${namespace}.feature;
     in {
-      options.${namespace}.feature.enable = lib.mkEnableOption "Enable feature";
+      options.''${namespace}.feature.enable = lib.mkEnableOption "Enable feature";
       config = lib.mkIf cfg.enable { # ... };
     }
         ```
