@@ -26,14 +26,16 @@
   agents = lib.mapAttrs' (name: _: let
     fileName = lib.removeSuffix ".nix" name;
     agentConfig = import (./agent + "/${name}");
-  in nameValuePair fileName agentConfig) (filterAttrs (name: _: lib.hasSuffix ".nix" name) agentFiles);
+  in
+    nameValuePair fileName agentConfig) (filterAttrs (name: _: lib.hasSuffix ".nix" name) agentFiles);
 
   # Import command configurations from command/ directory
   commandFiles = builtins.readDir ./command;
   commands = lib.mapAttrs' (name: _: let
     fileName = lib.removeSuffix ".nix" name;
     commandConfig = import (./command + "/${name}");
-  in nameValuePair fileName commandConfig) (filterAttrs (name: _: lib.hasSuffix ".nix" name) commandFiles);
+  in
+    nameValuePair fileName commandConfig) (filterAttrs (name: _: lib.hasSuffix ".nix" name) commandFiles);
 
   # Merge all configurations into settings
   defaultSettings = {
@@ -82,12 +84,12 @@ in {
       }
       // mapAttrs' (
         name: value:
-          nameValuePair "opencode/agents/${name}.json" {text = builtins.toJSON value;}
+          nameValuePair "opencode/agent/${name}.json" {text = builtins.toJSON value;}
       )
       agents
       // mapAttrs' (
         name: value:
-          nameValuePair "opencode/commands/${name}.json" {text = builtins.toJSON value;}
+          nameValuePair "opencode/command/${name}.json" {text = builtins.toJSON value;}
       )
       commands
       // mapAttrs' (
