@@ -16,19 +16,9 @@ in {
     secrets = mkOpt (attrsOf attrs) {} "Secret definitions (handled by system config now).";
   };
 
-  config = lib.mkIf cfg.enable {
-    sops = {
-      inherit (cfg) defaultSopsFile;
-      age = {
-        inherit (cfg) sshKeyPaths;
-        keyFile = "${config.users.users.${config.${namespace}.user.name}.home}/.config/sops/age/keys.txt";
-      };
-    } // lib.optionalAttrs (cfg.secrets != {}) {
-      secrets = lib.mapAttrs (_: secret: builtins.removeAttrs secret ["uid"]) cfg.secrets;
-    };
-
-    warnings = [
-      "modules/darwin/system/security/sops is deprecated - use shared SOPS patterns in system configurations"
-    ];
-  };
+   config = lib.mkIf cfg.enable {
+     warnings = [
+       "modules/darwin/system/security/sops is deprecated - use shared SOPS patterns in system configurations"
+     ];
+   };
 }

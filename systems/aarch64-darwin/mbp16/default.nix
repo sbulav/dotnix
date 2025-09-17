@@ -19,6 +19,7 @@ with lib.custom; {
         # System SSH key using template (moved from deprecated system module)
         secrets = {
           "mbp16_sab_ssh_key" = lib.custom.secrets.system.sshKey "mbp16_sab" "mbp16" // {
+            owner = "sab";
             sopsFile = lib.snowfall.fs.get-file "secrets/mbp16/default.yaml";
           };
         };

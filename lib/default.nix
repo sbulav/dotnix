@@ -8,8 +8,19 @@
   config ? {},
   ...
 }: let
+  # OS detection derived from pkgs
+  isDarwin = pkgs.stdenv.isDarwin;
+  isLinux = pkgs.stdenv.isLinux or (!isDarwin);
+
+  # Detect whether we're in a Home Manager context
+  hasHomeCfg = config ? home && config.home ? homeDirectory;
+
+  # Resolve a user's home directory:
+  # - Prefer Home Manager's configured home
+  # - Fall back to system user config if present
+  # - Otherwise use sensible OS defaults
   userHome = userName:
-    if config ? home && config.home ? homeDirectory
+    if hasHomeCfg
     then config.home.homeDirectory
     else if
       config ? users
@@ -17,58 +28,78 @@
       && builtins.hasAttr userName config.users.users
       && config.users.users.${userName} ? home
     then config.users.users.${userName}.home
-    else if pkgs.stdenv.isDarwin
+    else if isDarwin
     then "/Users/${userName}"
-    else if pkgs.stdenv.isLinux
+    else if isLinux
     then "/home/${userName}"
     else "/home/${userName}";
 in {
+  # Simple meta override
   override-meta = meta: package:
-    package.overrideAttrs (_: {
-      inherit meta;
-    });
+    package.overrideAttrs (_: {inherit meta;});
 
-  # Smart secrets file resolution (simplified for now)
+  # Smart secrets file resolution (placeholder)
   getSecretsFile = hostName: userName: "secrets/${userName}/default.yaml";
 
-  # Generate standard SOPS configuration
+  # Generate standard SOPS configuration with robust cross-platform defaults.
+  # On Darwin: both HOME and SYSTEM use the user's Age key at $HOME/.config/sops/age/keys.txt
+  # On Linux: HOME uses user key; SYSTEM uses /var/lib/sops/age/keys.txt
   mkSecretsConfig = {
     hostName,
     userName,
-    platform ? "linux", # "linux" | "darwin"
-    profile ? "home", # "home" | "system"
+    # Callers may override, but defaults auto-detect.
+    platform ? (
+      if isDarwin
+      then "darwin"
+      else "linux"
+    ), # "linux" | "darwin"
+    profile ? (
+      if hasHomeCfg
+      then "home"
+      else "system"
+    ), # "home" | "system"
   }: let
-    isHome = profile == "home";
-    isDarwin = platform == "darwin";
+    # Final flags (allow explicit override via args while keeping auto-detect sane)
+    _isDarwin = (platform == "darwin") || isDarwin;
+    isHome = hasHomeCfg || (profile == "home");
+
+    # Compute a home directory for path defaults
+    homeDir =
+      if hasHomeCfg
+      then config.home.homeDirectory
+      else if _isDarwin
+      then "/Users/${userName}"
+      else "/home/${userName}";
 
     baseConfig = {
       defaultSopsFormat = "yaml";
     };
 
     platformConfig =
-      if isDarwin
+      if _isDarwin
       then {
         age = {
-          keyFile =
-            if isHome
-            then "/Users/${userName}/.config/sops/age/keys.txt"
-            else "/var/lib/sops/age/keys.txt";
+          # IMPORTANT: per request, Darwin uses the user's Age key for BOTH home & system
+          keyFile = "${homeDir}/.config/sops/age/keys.txt";
+          # Only generate a key automatically for Home Manager profiles
+          generateKey = isHome;
           sshKeyPaths =
             if isHome
-            then ["/Users/${userName}/.ssh/id_ed25519"]
+            then ["${homeDir}/.ssh/id_ed25519"]
             else ["/etc/ssh/ssh_host_ed25519_key"];
         };
       }
       else {
         age = {
+          # On Linux it's safe/nice to auto-generate for Home Manager
           generateKey = isHome;
           keyFile =
             if isHome
-            then "/home/${userName}/.config/sops/age/keys.txt"
+            then "${homeDir}/.config/sops/age/keys.txt"
             else "/var/lib/sops/age/keys.txt";
           sshKeyPaths =
             if isHome
-            then ["/home/${userName}/.ssh/id_ed25519"]
+            then ["${homeDir}/.ssh/id_ed25519"]
             else ["/etc/ssh/ssh_host_ed25519_key"];
         };
       };
@@ -88,19 +119,14 @@ in {
     uid ? null, # numeric uid; ignored on darwin
     ...
   } @ args: let
-    isDarwin = pkgs.stdenv.isDarwin;
-
     # Remove function-specific/private args; also drop uid unconditionally here
     # and re-add it conditionally (Linux only) below.
-    stripped =
-      builtins.removeAttrs args ["sopsFile" "path" "owner" "uid"];
+    stripped = builtins.removeAttrs args ["sopsFile" "path" "owner" "uid"];
 
     # Base fields that are always safe
     base =
       stripped
-      // {
-        inherit mode format restartUnits;
-      }
+      // {inherit mode format restartUnits;}
       // (
         if sopsFile != null
         then {inherit sopsFile;}
@@ -125,7 +151,7 @@ in {
       else {}
     );
 
-  # Common secret templates (unchanged; any uid provided will be ignored on darwin)
+  # Common secret templates (uid will be ignored on darwin automatically)
   secrets = {
     # User environment credentials
     envCredentials = userName: {
@@ -207,20 +233,16 @@ in {
           restartUnits = ["container@grafana.service"];
         };
 
-        telegramBot = {
-          uid = 196;
-        };
+        telegramBot = {uid = 196;};
 
-        emailPassword = {
-          uid = 196;
-        };
+        emailPassword = {uid = 196;};
       };
     };
 
     # System-level secrets
     system = {
       sshKey = keyName: hostName:
-        if pkgs.stdenv.isDarwin
+        if isDarwin
         then {
           mode = "0600";
         }
@@ -230,7 +252,7 @@ in {
         };
 
       hostSecret = secretName: hostName:
-        if pkgs.stdenv.isDarwin
+        if isDarwin
         then {
           mode = "0400";
         }
