@@ -13,7 +13,7 @@ let
     };
   };
 
-  opencloudCfg = attrByPath [ namespace "containers" "opencode" ] opencloudDefaults config;
+  opencloudCfg = attrByPath [ namespace "containers" "opencloud" ] opencloudDefaults config;
   opencloudEnabled = opencloudCfg.enable;
   opencloudHost = opencloudCfg.host;
   opencloudClientId = attrByPath [ "oidc" "clientId" ] opencloudDefaults.oidc.clientId opencloudCfg;

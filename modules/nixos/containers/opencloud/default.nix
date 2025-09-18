@@ -3,7 +3,7 @@ let
   inherit (lib) mkIf types;
   inherit (lib.custom) mkBoolOpt mkOpt;
 
-  cfg = config.${namespace}.containers.opencode;
+  cfg = config.${namespace}.containers.opencloud;
 
   opencloudPorts = [
     9100
@@ -44,7 +44,7 @@ let
   issuerUrl = "https://${cfg.oidc.issuerHost}";
   opencloudUrl = "https://${cfg.host}";
 in {
-  options.${namespace}.containers.opencode = let
+  options.${namespace}.containers.opencloud = let
     oidcOpts = types.submodule {
       options = {
         clientId = mkOpt types.str "opencloud" "OIDC client identifier registered in Authelia.";
@@ -76,7 +76,7 @@ in {
 
   imports = [
     (import ../shared/shared-traefik-clientip-route.nix {
-      app = "opencode";
+      app = "opencloud";
       host = cfg.host;
       url = "http://${cfg.localAddress}:9200";
       route_enabled = cfg.enable;
@@ -84,7 +84,7 @@ in {
       clientips = "ClientIP(`172.16.64.0/24`) || ClientIP(`192.168.80.0/20`)";
     })
     (import ../shared/shared-traefik-route.nix {
-      app = "opencode";
+      app = "opencloud";
       host = cfg.host;
       url = "http://${cfg.localAddress}:9200";
       route_enabled = cfg.enable;
@@ -98,21 +98,21 @@ in {
 
   config = mkIf cfg.enable (
     let
-      envSecretPath = config.sops.secrets."opencode-env".path;
+      envSecretPath = config.sops.secrets."opencloud-env".path;
     in {
       networking.nat = {
         enable = true;
-        internalInterfaces = [ "ve-opencode" ];
+        internalInterfaces = [ "ve-opencloud" ];
         externalInterface = "ens3";
       };
 
-      custom.security.sops.secrets."opencode-env" =
-        lib.custom.secrets.containers.envFileWithRestart "opencode"
+      custom.security.sops.secrets."opencloud-env" =
+        lib.custom.secrets.containers.envFileWithRestart "opencloud"
         // {
           sopsFile = lib.snowfall.fs.get-file cfg.secretFile;
         };
 
-      containers.opencode = {
+      containers.opencloud = {
         ephemeral = true;
         autoStart = true;
         privateNetwork = true;
@@ -215,6 +215,6 @@ in {
 
             system.stateVersion = "24.11";
           };
-    };
+    }
   );
 }
