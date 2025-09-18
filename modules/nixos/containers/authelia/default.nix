@@ -1,5 +1,9 @@
-{ config, lib, namespace, ... }:
-let
+{
+  config,
+  lib,
+  namespace,
+  ...
+}: let
   inherit (lib) attrByPath mapAttrs mkIf optionalAttrs optionals types;
   inherit (lib.custom) mkBoolOpt mkOpt;
 
@@ -13,10 +17,10 @@ let
     };
   };
 
-  opencloudCfg = attrByPath [ namespace "containers" "opencloud" ] opencloudDefaults config;
+  opencloudCfg = attrByPath [namespace "containers" "opencloud"] opencloudDefaults config;
   opencloudEnabled = opencloudCfg.enable;
   opencloudHost = opencloudCfg.host;
-  opencloudClientId = attrByPath [ "oidc" "clientId" ] opencloudDefaults.oidc.clientId opencloudCfg;
+  opencloudClientId = attrByPath ["oidc" "clientId"] opencloudDefaults.oidc.clientId opencloudCfg;
   opencloudRedirectBase = "https://${opencloudHost}";
 in {
   options.${namespace}.containers.authelia = {
@@ -47,8 +51,8 @@ in {
     let
       secretFile = lib.snowfall.fs.get-file cfg.secret_file;
       baseSecrets =
-        mapAttrs (name: template: template // { sopsFile = secretFile; })
-          (lib.custom.secrets.multiSecrets.authelia "authelia");
+        mapAttrs (name: template: template // {sopsFile = secretFile;})
+        (lib.custom.secrets.multiSecrets.authelia "authelia");
       opencloudSecretDefinition =
         lib.custom.secrets.containers.oidcClientSecret "authelia"
         // {
@@ -56,9 +60,9 @@ in {
         };
       opencloudSecretPath =
         attrByPath
-          [ "sops" "secrets" "authelia/opencloud-client-secret" "path" ]
-          null
-          config;
+        ["sops" "secrets" "authelia/opencloud-client-secret" "path"]
+        null
+        config;
       opencloudSecretTemplate = ''{{ secret "${opencloudSecretPath}" }}'';
       opencloudRedirectUris = [
         "${opencloudRedirectBase}/"
@@ -269,7 +273,7 @@ in {
                           claims_policy = "opencloud_policy";
                           client_id = opencloudClientId;
                           client_name = "OpenCloud";
-                          client_secret = opencloudSecretTemplate;
+                          client_secret = "$pbkdf2-sha512$310000$bVjJ8YJ7EoJ3CYd6Jf8dNg$btJt834lsSgSg6QIo7319YClVGiuCPVgk7mSGl/VCtW4pVFXMbfho9EjCCpqyK5qLgLm8m0IYvEqGdIOe9WYiA";
                           consent_mode = "implicit";
                           pkce_challenge_method = "S256";
                           public = "false";
