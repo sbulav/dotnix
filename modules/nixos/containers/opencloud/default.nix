@@ -1,5 +1,9 @@
-{ lib, config, namespace, ... }:
-let
+{
+  lib,
+  config,
+  namespace,
+  ...
+}: let
   inherit (lib) mkIf types;
   inherit (lib.custom) mkBoolOpt mkOpt;
 
@@ -80,7 +84,7 @@ in {
       host = cfg.host;
       url = "http://${cfg.localAddress}:9200";
       route_enabled = cfg.enable;
-      middleware = [ "secure-headers" "allow-lan" ];
+      middleware = ["secure-headers" "allow-lan"];
       clientips = "ClientIP(`172.16.64.0/24`) || ClientIP(`192.168.80.0/20`)";
     })
     (import ../shared/shared-traefik-route.nix {
@@ -88,7 +92,7 @@ in {
       host = cfg.host;
       url = "http://${cfg.localAddress}:9200";
       route_enabled = cfg.enable;
-      middleware = [ "secure-headers" "authelia" ];
+      middleware = ["secure-headers" "authelia"];
     })
     (import ../shared/shared-adguard-dns-rewrite.nix {
       host = cfg.host;
@@ -102,7 +106,7 @@ in {
     in {
       networking.nat = {
         enable = true;
-        internalInterfaces = [ "ve-opencloud" ];
+        internalInterfaces = ["ve-opencloud"];
         externalInterface = "ens3";
       };
 
@@ -133,88 +137,88 @@ in {
           };
         };
 
-        config = { lib, ... }:
-          let
-            inherit (lib) mkForce;
-          in {
-            systemd.tmpfiles.rules = [
-              "d /var/lib/opencloud 0750 opencloud opencloud -"
-              "d /etc/opencloud 0750 opencloud opencloud -"
-            ];
+        config = {lib, ...}: let
+          inherit (lib) mkForce;
+        in {
+          systemd.tmpfiles.rules = [
+            "d /var/lib/opencloud 0750 opencloud opencloud -"
+            "d /etc/opencloud 0750 opencloud opencloud -"
+          ];
 
-            networking = {
-              hosts."${cfg.hostAddress}" = [ cfg.oidc.issuerHost cfg.host ];
-              firewall = {
-                enable = true;
-                allowedTCPPorts = opencloudPorts;
-              };
-              useHostResolvConf = mkForce true;
-            };
-
-            services.resolved.enable = false;
-
-            services.opencloud = {
+          networking = {
+            hosts."${cfg.hostAddress}" = [cfg.oidc.issuerHost cfg.host];
+            firewall = {
               enable = true;
-              address = cfg.localAddress;
-              port = 9200;
-              url = opencloudUrl;
-              stateDir = "/var/lib/opencloud";
-              environmentFile = envSecretPath;
-              settings = {
-                proxy = {
-                  autoprovision_accounts = true;
-                  user_oidc_claim = "preferred_username";
-                  user_cs3_claim = "username";
-                  auto_provision_claims = {
-                    username = "preferred_username";
-                    email = "email";
-                    display_name = "name";
-                    groups = cfg.oidc.roleClaim;
-                  };
-                  oidc = {
-                    issuer = issuerUrl;
-                    rewrite_well_known = true;
-                  };
-                  role_assignment = {
-                    driver = "oidc";
-                    oidc_role_mapper = {
-                      role_claim = cfg.oidc.roleClaim;
-                      role_mapping = [
-                        {
-                          role_name = "admin";
-                          claim_value = cfg.oidc.adminGroup;
-                        }
-                        {
-                          role_name = "spaceadmin";
-                          claim_value = cfg.oidc.spaceAdminGroup;
-                        }
-                        {
-                          role_name = "user";
-                          claim_value = cfg.oidc.userGroup;
-                        }
-                        {
-                          role_name = "guest";
-                          claim_value = cfg.oidc.guestGroup;
-                        }
-                      ];
-                    };
-                  };
+              allowedTCPPorts = opencloudPorts;
+            };
+            useHostResolvConf = mkForce true;
+          };
+
+          services.resolved.enable = false;
+
+          services.opencloud = {
+            enable = true;
+            address = cfg.localAddress;
+            port = 9200;
+            url = opencloudUrl;
+            stateDir = "/var/lib/opencloud";
+            environmentFile = envSecretPath;
+            settings = {
+              proxy = {
+                autoprovision_accounts = true;
+                user_oidc_claim = "preferred_username";
+                user_cs3_claim = "username";
+                auto_provision_claims = {
+                  username = "preferred_username";
+                  email = "email";
+                  display_name = "name";
+                  groups = cfg.oidc.roleClaim;
                 };
-                web.web.config = {
-                  server = opencloudUrl;
-                  oidc = {
-                    authority = issuerUrl;
-                    client_id = cfg.oidc.clientId;
-                    response_type = "code";
-                    scope = "openid profile email groups";
-                    post_logout_redirect_uri = opencloudUrl;
+                oidc = {
+                  issuer = issuerUrl;
+                  rewrite_well_known = true;
+                };
+                role_assignment = {
+                  driver = "oidc";
+                  oidc_role_mapper = {
+                    role_claim = cfg.oidc.roleClaim;
+                    role_mapping = [
+                      {
+                        role_name = "admin";
+                        claim_value = cfg.oidc.adminGroup;
+                      }
+                      {
+                        role_name = "spaceadmin";
+                        claim_value = cfg.oidc.spaceAdminGroup;
+                      }
+                      {
+                        role_name = "user";
+                        claim_value = cfg.oidc.userGroup;
+                      }
+                      {
+                        role_name = "guest";
+                        claim_value = cfg.oidc.guestGroup;
+                      }
+                    ];
                   };
                 };
               };
+              web.web.config = {
+                server = opencloudUrl;
+                oidc = {
+                  authority = issuerUrl;
+                  client_id = cfg.oidc.clientId;
+                  response_type = "code";
+                  scope = "openid profile email groups";
+                  post_logout_redirect_uri = opencloudUrl;
+                };
+              };
             };
-
-            system.stateVersion = "24.11";
           };
+
+          system.stateVersion = "24.11";
+        };
+      };
     }
   );
 }
