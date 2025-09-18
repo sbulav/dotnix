@@ -74,10 +74,19 @@ local function refresh_kube_cache()
 		return
 	end
 
+	local function kubectl_path()
+		-- Check if kubectl is in PATH
+		local path_kubectl = read_cmd({ "which", "kubectl" })
+		if path_kubectl then
+			return "kubectl"
+		end
+		-- Fallback to NixOS path
+		return "/run/current-system/sw/bin/kubectl"
+	end
 	-- the rest unchanged...
-	local ctx = read_cmd({ "kubectl", "config", "current-context" }) or "-"
+	local ctx = read_cmd({ kubectl_path(), "config", "current-context" }) or "-"
 	local ns = read_cmd({
-		"kubectl",
+		kubectl_path(),
 		"config",
 		"view",
 		"--minify",
