@@ -1,6 +1,6 @@
 {...}: final: prev: {
   opencode = prev.opencode.overrideAttrs (oldAttrs: let
-    version = "0.9.2";
+    version = "0.9.11";
     src = final.fetchFromGitHub {
       owner = "sst";
       repo = "opencode";
