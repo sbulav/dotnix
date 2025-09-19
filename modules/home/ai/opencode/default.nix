@@ -136,8 +136,7 @@
     ${optionalYamlField "agent" (config.agent or null)}
     ${optionalYamlField "model" (config.model or null)}
     ---
-    ${config.context or ""}
-
+    ${config.requirements or config.context or ""}
     ${config.task or ""}
   '';
 
