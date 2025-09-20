@@ -67,6 +67,7 @@ in {
     };
     restic = {
       enable = true;
+      backup_host = "192.168.92.194";
       secret_file = "secrets/zanoza/default.yaml";
     };
     ups = {

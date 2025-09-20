@@ -27,6 +27,25 @@
     fsType = "vfat";
     options = ["fmask=0077" "dmask=0077"];
   };
+  # Ensure the mountpoint exists at boot
+  systemd.tmpfiles.rules = [
+    "d /mnt/ext 0755 sab sab -"
+  ];
+
+  fileSystems."/mnt/ext" = {
+    device = "/dev/disk/by-uuid/B62873392872F7A7";
+    fsType = "ntfs3"; # use "ntfs3" (kernel), not ntfs-3g
+    # Automount means: don’t block boot; mount on first access
+    options = [
+      "x-systemd.automount"
+      "nofail"
+      "x-systemd.idle-timeout=60s"
+      # optional ownership/permissions if you want user-writable:
+      "uid=1000"
+      "gid=100"
+      "umask=022"
+    ];
+  };
 
   swapDevices = [];
 
