@@ -17,6 +17,12 @@
   boot.kernelModules = ["kvm-intel"];
   boot.extraModulePackages = [];
 
+  # Ensure LVM tooling/udev activation is present
+  services.lvm.enable = true; # activate VGs/LVs at boot
+
+  # Periodic TRIM for NVMe (don’t use 'discard' mount option; let fstrim do it)
+  services.fstrim.enable = true;
+
   fileSystems."/" = {
     device = "/dev/disk/by-uuid/8e5ccb8b-4fbd-4b00-9e2d-820daaee5477";
     fsType = "ext4";
@@ -30,6 +36,7 @@
   # Ensure the mountpoint exists at boot
   systemd.tmpfiles.rules = [
     "d /mnt/ext 0755 sab sab -"
+    "d /tank 0755 sab sab -"
   ];
 
   fileSystems."/mnt/ext" = {
@@ -44,6 +51,17 @@
       "uid=1000"
       "gid=100"
       "umask=022"
+    ];
+  };
+
+  # Mount the LV by label
+  fileSystems."/tank" = {
+    device = "/dev/disk/by-label/tank";
+    fsType = "ext4";
+    options = [
+      "noatime" # reduce metadata writes
+      "nodiratime"
+      # "x-systemd.automount" "nofail" "x-systemd.idle-timeout=60s"  # optional automount behavior
     ];
   };
 
