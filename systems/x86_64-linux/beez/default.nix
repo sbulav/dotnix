@@ -1,6 +1,6 @@
 # Edit this configuration file to define what should be installed on
 # your system.  Help is available in the configuration.nix(5) man page
-# and in the NixOS manual (accessible by running ‘nixos-help’).
+# and in the NixOS manual (accessible by running 'nixos-help').
 {
   pkgs,
   lib,
@@ -33,12 +33,21 @@ in {
         enable = true;
         port = 9633;
         openFirewall = true;
-        devices = [ "/dev/sda" ];  # Adjust based on your disks (run lsblk to check)
+        devices = ["/dev/sda"]; # Adjust based on your disks (run lsblk to check)
       };
     };
   };
 
-  networking.firewall.allowedTCPPorts = [ 9100 9633 ];
+  networking.firewall.allowedTCPPorts = [9100 9633];
+
+  custom.services.linuxTransparentProxy = {
+    enable = true;
+    v2rayAHost = "192.168.89.207";
+    v2rayAPort = 1080;
+    listenPort = 12345;
+    interface = "eth0";
+    tcpPorts = [80 443]; # Or [] for all TCP
+  };
 
   custom.security.sops = {
     enable = true;
