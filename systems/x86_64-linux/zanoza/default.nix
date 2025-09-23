@@ -146,6 +146,21 @@ in {
     }; # }}}
   };
 
+  services.prometheus.scrapeConfigs = [
+    {
+      job_name = "beez-node";
+      static_configs = [
+        {targets = ["192.168.92.194:9100"];} # Replace with actual hostname/IP of beez
+      ];
+    }
+    {
+      job_name = "beez-smartctl";
+      static_configs = [
+        {targets = ["192.168.92.194:9633"];}
+      ];
+    }
+  ];
+
   environment.systemPackages = with pkgs; [
     alejandra
     nixd # LSP for nix

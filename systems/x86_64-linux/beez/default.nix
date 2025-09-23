@@ -22,6 +22,24 @@ in {
   suites.desktop.enable = false;
   suites.develop.enable = false;
 
+  services.prometheus = {
+    exporters = {
+      node = {
+        enable = true;
+        openFirewall = true;
+        port = 9100;
+      };
+      smartctl = {
+        enable = true;
+        port = 9633;
+        openFirewall = true;
+        devices = [ "/dev/sda" ];  # Adjust based on your disks (run lsblk to check)
+      };
+    };
+  };
+
+  networking.firewall.allowedTCPPorts = [ 9100 9633 ];
+
   custom.security.sops = {
     enable = true;
     sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
