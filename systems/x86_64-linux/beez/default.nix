@@ -38,14 +38,15 @@ in {
     };
   };
 
+  # Opening ports for prometheus
   networking.firewall.allowedTCPPorts = [9100 9633];
 
   custom.services.linuxTransparentProxy = {
     enable = true;
     v2rayAHost = "192.168.89.207";
-    v2rayAPort = 1080;
+    v2rayAPort = 20170;
     listenPort = 12345;
-    interface = "eth0";
+    interface = "enp1s0";
     tcpPorts = [80 443]; # Or [] for all TCP
   };
 
