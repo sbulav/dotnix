@@ -49,6 +49,15 @@ in {
     interface = "enp1s0";
     tcpPorts = [80 443]; # Or [] for all TCP
   };
+  # Enable transparent proxy under custom.services
+  # custom.services.linuxTransparentProxy = {
+  #   enable = true;
+  #   v2rayAHost = "192.168.89.207";
+  #   v2rayAPort = 1080;
+  #   listenPort = 12345;
+  #   interface = "eth0";
+  #   tcpPorts = [80 443]; # Or [] for all TCP
+  # };
 
   custom.security.sops = {
     enable = true;
