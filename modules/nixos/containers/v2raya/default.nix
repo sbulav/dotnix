@@ -61,6 +61,11 @@ in {
 
       forwardPorts = [
         {
+          containerPort = 20170;
+          hostPort = 20170;
+          protocol = "tcp";
+        }
+        {
           containerPort = 20172;
           hostPort = 20172;
           protocol = "tcp";
@@ -73,7 +78,7 @@ in {
         networking = {
           firewall = {
             enable = false;
-            allowedTCPPorts = [2017 20172];
+            allowedTCPPorts = [2017 20170 20172];
           };
           # Use systemd-resolved inside the container
           # Workaround for bug https://github.com/NixOS/nixpkgs/issues/162686
