@@ -21,29 +21,30 @@ in {
       enable = true;
       settings = {
         anchor = "top-right";
-        background-color = "#FFFFFFee";
+        background-color = "#0d1117ee";
         border-color = "#00000033";
         border-radius = 5;
         border-size = "1";
         default-timeout = 5000;
+        max-history = 5;
         font = "FiraCode Nerd Font 10";
         group-by = "app-name";
         icon-path = "${pkgs.papirus-icon-theme}/share/icons/Papirus-Dark";
         icons = true;
         layer = "overlay";
         margin = "5";
-        progress-color = "source #07b5efee"; #07b5efee
-        text-color = "#000000cc";
+        progress-color = "source #00d4aaee"; #07b5efee
+        text-color = "#c9d1d9cc";
         max-icon-size = 32;
         "urgency=high" = {
-          border-color = "#394b70";
+          border-color = "#ff6b6bee";
           default-timeout = 0;
         };
         "urgency=normal" = {
-          border-color = "#00000033";
+          border-color = "#7c3aed33";
         };
         "urgency=low" = {
-          border-color = "#ff757f";
+          border-color = "#00d4aa33";
         };
       };
     };
