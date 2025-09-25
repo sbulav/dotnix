@@ -26,7 +26,7 @@ in {
         target = "hyprland-session.target";
       };
 
-      style = "${builtins.readFile ./style.css}";
+      style = "${builtins.readFile ./styles/cyberdream.css}";
 
       settings = {
         mainBar = {
@@ -129,7 +129,7 @@ in {
           "cpu" = {
             format = "󰌢 {load}";
             tooltip = false;
-            on-click = "gnome-system-monitor";
+            on-click = "wezterm -e btm";
           };
           "memory" = {
             format = " {}%";

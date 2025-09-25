@@ -1,0 +1,173 @@
+/*
+ * Waybar – Cyberdream (lightweight, no per-item bubbles)
+ * - transparent bar, flat modules (no backgrounds)
+ * - accents only for active/alerts
+ */
+
+/* ---- Palette ------------------------------------------------------------ */
+@define-color base      #16181a;
+@define-color mantle    #1e2124;
+@define-color crust     #0f1113;
+
+@define-color text      #e7ecf2;
+@define-color subtext0  #b7c0ce;
+@define-color subtext1  #8d97a8;
+
+@define-color surface0  #202427;
+@define-color surface1  #262b2f;
+@define-color surface2  #2d3338;
+
+@define-color blue      #5ea1ff;
+@define-color cyan      #5ef1ff;
+@define-color teal      #41e0c9;
+@define-color green     #78f093;
+@define-color yellow    #ffd76b;
+@define-color orange    #ffb86b;
+@define-color red       #ff6b82;
+@define-color purple    #b38cff;
+
+@define-color overlay0  #3c4048;
+@define-color overlay1  #4a515b;
+@define-color overlay2  #59626e;
+
+/* Opacity helpers */
+@define-color bar-op    rgba(22,24,26,0.55);
+
+/* ---- Resets ------------------------------------------------------------- */
+* {
+  border: none;
+  border-radius: 0;
+  font-family: JetBrainsMono Nerd Font, FiraCode Nerd Font, Helvetica, Arial, sans-serif;
+  font-size: 13px;
+  min-height: 0;
+}
+
+/* ---- Bar --------------------------------------------------------------- */
+window#waybar {
+  background: @bar-op;
+  color: @text;
+  border-bottom: 1px solid rgba(255,255,255,0.15);
+  padding: 6px 8px;
+}
+
+/* Tooltips */
+tooltip {
+  background: rgba(255,255,255,0.90);
+  border-radius: 8px;
+  border: 1px solid rgba(0,0,0,0.20);
+}
+tooltip label { font-size: 12px; color: rgba(0,0,0,0.80); }
+
+/* ---- Flat modules (no chip backgrounds) -------------------------------- */
+widget label,
+widget image {
+  padding: 0 8px;
+  background: transparent;
+  color: @text;
+}
+
+/* Keep window title & custom media fully transparent */
+#window, #custom-media {
+  background: transparent;
+  padding-right: 20px;
+  color: @subtext0;
+}
+
+/* Optional hover underline for interactive modules (subtle) */
+#pulseaudio:hover,
+#network:hover,
+#bluetooth:hover,
+#battery:hover,
+#clock:hover,
+#temperature:hover,
+#cpu:hover,
+#memory:hover,
+#custom-power:hover {
+  box-shadow: inset 0 -2px 0 0 rgba(94,161,255,0.35); /* blue underline */
+}
+
+/* ---- Workspaces: minimal ------------------------------------------------ */
+#workspaces { color: @text; margin-right: 8px; }
+
+#workspaces label {
+  padding: 0 6px 0 8px;
+  font-size: 14px;
+}
+
+#workspaces button {
+  color: @text;
+  padding: 0; /* no bubble */
+  margin: 0 2px;
+  background: transparent;
+  transition: color 0.15s ease, box-shadow 0.15s ease;
+}
+
+#workspaces button:hover {
+  color: @subtext0;
+  box-shadow: inset 0 -2px 0 0 rgba(89,98,110,0.50); /* subtle underline */
+}
+
+#workspaces button.empty   { color: @overlay0; }
+#workspaces button.visible { color: @blue; }
+
+/* only ACTIVE gets a soft pill to anchor the eye; keep it subtle */
+#workspaces button.active {
+  background-color: @surface0;
+  color: @cyan;
+  border-radius: 10px;
+  padding: 0 6px;
+}
+
+#workspaces button.urgent {
+  color: @red;
+  box-shadow: 0 0 0 2px rgba(255,107,130,0.40);
+  border-radius: 12px;
+}
+
+/* ---- Accents by function (text only, no backgrounds) ------------------- */
+#cpu         { color: @purple; }
+#memory      { color: @purple; }
+#temperature { color: @orange; }
+#network     { color: @blue; }
+#pulseaudio  { color: @green; }
+#bluetooth   { color: @teal; }
+#clock       { color: @text; }
+
+/* Pulseaudio states */
+#pulseaudio.muted { color: @overlay2; opacity: 0.9; }
+
+/* Network state */
+#network.disconnected { color: @red; }
+
+/* Battery: keep alert visible even without bubbles */
+@keyframes blink {
+  to { background-color: #ffffff; color: #000000; }
+}
+
+#battery.warning:not(.charging):not(.plugged) {
+  background: #f87171;
+  color: #ffffff;
+  animation-name: blink;
+  animation-duration: 0.5s;
+  animation-timing-function: linear;
+  animation-iteration-count: infinite;
+  animation-direction: alternate;
+}
+
+#battery.charging, #battery.plugged { color: @green; }
+
+/* Tray */
+#tray { padding: 0 6px; }
+#tray > .passive { opacity: 0.6; }
+#tray > .needs-attention {
+  color: @red;
+  text-shadow: 0 0 6px rgba(255,107,130,0.65);
+}
+
+/* Separator (if you kept the custom/sep module) */
+#custom-sep {
+  background: transparent;
+  color: @overlay2;
+  padding: 0 2px;
+}
+#custom-power { color: @red; }

@@ -42,14 +42,14 @@ in {
         sidebar-mode = true;
         sorting-method = "fzf";
         sort = true;
-        terminal = "kitty";
+        terminal = "wezterm";
         font = "FiraCode Nerd Font Regular 12";
         kb-accept-custom = "Control+Return";
         kb-cancel = "Escape,Control+g,Control+bracketleft,Control+space";
         kb-row-select = "Control+Super+space";
         matching = "fuzzy";
       };
-      theme = ./rofi/catppuccin-frappe.rasi;
+      theme = ./themes/cyberdream.rasi;
     };
     home.file.".config/rofi/rofi-vpn.sh" = {
       executable = true;
