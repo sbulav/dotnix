@@ -27,7 +27,7 @@ in {
         wlogout = enabled;
         hyprlock = disabled;
         wezterm = enabled;
-        wallpaper = "${wallpapers}/share/wallpapers/unorganized/left.jpg";
+        wallpaper = "${wallpapers}/share/wallpapers/cities/1-osaka-jade-bg.jpg";
 
         waypaper = {
           enable = true;
