@@ -1,10 +1,11 @@
--- wezterm.on("window-config-reloaded", function(window)
--- 	if wezterm.gui.screens().active.name == "eDP-1" then
--- 		window:set_config_overrides({
--- 			dpi = 384,
--- 		})
--- 	end
--- end)
+-- TODO: fix when is resolved https://github.com/wezterm/wezterm/issues/7156
+wezterm.on("window-config-reloaded", function(window)
+	if wezterm.gui.screens().active.name == "eDP-1" then
+		window:set_config_overrides({
+			dpi = 384,
+		})
+	end
+end)
 -- Update window title
 -- {{{
 wezterm.on("format-window-title", function(tab, _, tabs)

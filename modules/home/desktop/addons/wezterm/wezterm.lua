@@ -23,8 +23,6 @@ else
 	config.font_size = 14
 end
 -- }}}
--- TODO: fix when is resolved https://github.com/wezterm/wezterm/issues/7156
-config.enable_wayland = false
 -- Windows
 -- {{{
 config.window_close_confirmation = "AlwaysPrompt"
