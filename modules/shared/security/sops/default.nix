@@ -68,8 +68,7 @@ in {
         ssh-to-age
       ];
 
-      home.sessionVariables.SOPS_AGE_KEY_FILE =
-        "${config.home.homeDirectory}/.config/sops/age/keys.txt";
+      home.sessionVariables.SOPS_AGE_KEY_FILE = "${config.home.homeDirectory}/.config/sops/age/keys.txt";
     })
 
     # SOPS configuration (platform-agnostic)
@@ -98,9 +97,9 @@ in {
     }
 
     # Common secrets (home-manager only)
-    (mkIf (cfg.commonSecrets.enableCredentials && isHome) {
-      sops.secrets.env_credentials = secrets.envCredentials userName;
-    })
+    # (mkIf (cfg.commonSecrets.enableCredentials && isHome) {
+    #   sops.secrets.env_credentials = secrets.envCredentials userName;
+    # })
 
     # Custom secrets with smart defaults
     (mkIf (cfg.secrets != {}) {

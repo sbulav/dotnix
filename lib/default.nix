@@ -6,11 +6,30 @@
     };
   },
   config ? {},
+  lib,
   ...
 }: let
   # OS detection derived from pkgs
-  isDarwin = pkgs.stdenv.isDarwin;
-  isLinux = pkgs.stdenv.isLinux or (!isDarwin);
+  # Robust OS detection
+  isDarwin =
+    (pkgs ? stdenv && pkgs.stdenv ? isDarwin && pkgs.stdenv.isDarwin)
+    || (
+      pkgs ? stdenv
+      && pkgs.stdenv ? hostPlatform
+      && pkgs.stdenv.hostPlatform ? system
+      && lib.hasInfix "darwin" pkgs.stdenv.hostPlatform.system
+    )
+    || (builtins.match ".*-darwin" (builtins.currentSystem or "") != null);
+
+  isLinux =
+    (pkgs ? stdenv && pkgs.stdenv ? isLinux && pkgs.stdenv.isLinux)
+    || (
+      pkgs ? stdenv
+      && pkgs.stdenv ? hostPlatform
+      && pkgs.stdenv.hostPlatform ? system
+      && lib.hasInfix "linux" pkgs.stdenv.hostPlatform.system
+    )
+    || (builtins.match ".*-linux" (builtins.currentSystem or "") != null);
 
   # Detect whether we're in a Home Manager context
   hasHomeCfg = config ? home && config.home ? homeDirectory;
@@ -29,9 +48,13 @@
       && config.users.users.${userName} ? home
     then config.users.users.${userName}.home
     else if isDarwin
-    then "/Users/${userName}"
-    else if isLinux
-    then "/home/${userName}"
+    then
+      (let
+        envHome = builtins.getEnv "HOME";
+      in
+        if envHome != ""
+        then envHome
+        else "/Users/${userName}")
     else "/home/${userName}";
 in {
   # Simple meta override
@@ -155,7 +178,8 @@ in {
   secrets = {
     # User environment credentials
     envCredentials = userName: {
-      path = "${userHome userName}/.ssh/sops-env-credentials";
+      # Always resolve through userHome, which now is Darwin-safe
+      # path = "${userHome userName}/.ssh/sops-env-credentials";
       mode = "0600";
     };
 
@@ -172,8 +196,12 @@ in {
     };
 
     # Container environment files
+    # For system/container paths, you can gate by OS:
     containerEnv = containerName: {
-      path = "/var/lib/containers/${containerName}/.env";
+      path =
+        if isDarwin
+        then "/var/tmp/${containerName}/.env" # or avoid absolute on macOS
+        else "/var/lib/containers/${containerName}/.env";
       mode = "0400";
     };
 
