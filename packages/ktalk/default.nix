@@ -4,7 +4,7 @@
   ...
 }: let
   pname = "ktalk";
-  version = "3.2.0-beta.2";
+  version = "3.2.0";
 
   # Platform-specific sources
   src =
@@ -12,12 +12,12 @@
     then
       builtins.fetchurl {
         url = "https://st.ktalk.host/ktalk-app/linux/${pname}${version}x86_64.AppImage";
-        sha256 = "1isjrh51in9kh0l68a4dq72apn744b1q0m53gf4qs6z9qc144nki";
+        sha256 = "1yaiyg8cfxyvb585xfpwlji2k2cmmd3skn47chgh74ddpp1jxwgx";
       }
     else
       builtins.fetchurl {
         url = "https://st.ktalk.host/ktalk-app/mac/ktalk.${version}-mac.dmg";
-        sha256 = "16wixqazj7f8sqwqsqy8h3dfi9crx4p17pvjw94qrq9f9gx5i44d";
+        sha256 = "1lk0ssbkjx3wg7ygwgagkm33c2c99yv1psb86i8dawk0bd3ymjzk";
       };
 
   meta = with lib; {
