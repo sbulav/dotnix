@@ -88,8 +88,12 @@
       ];
       systems = {
         modules = {
-          darwin = with inputs; [sops-nix-darwin.darwinModules.sops];
-          nixos = with inputs; [sops-nix.nixosModules.sops];
+          darwin =
+            (with inputs; [sops-nix-darwin.darwinModules.sops])
+            ++ [./modules/shared/security/sops];
+          nixos =
+            (with inputs; [sops-nix.nixosModules.sops])
+            ++ [./modules/shared/security/sops];
         };
       };
       deploy = lib.mkDeploy {inherit (inputs) self;};

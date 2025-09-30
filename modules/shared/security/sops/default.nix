@@ -5,35 +5,47 @@
   osConfig ? null,
   ...
 }: let
-  inherit (lib) mkIf mkMerge mkDefault types optionalAttrs;
+  inherit (lib) attrByPath hasAttrByPath mkIf mkMerge mkDefault types optionalAttrs;
   inherit (lib.custom) mkBoolOpt mkOpt mkSecretsConfig secrets;
 
   cfg = config.custom.security.sops;
 
   # Auto-detect platform and profile
-  isDarwin = pkgs.stdenv.isDarwin;
-  isHome = config ? home;
-
-  platform =
-    if isDarwin
+  detectedPlatform =
+    if pkgs.stdenv.isDarwin
     then "darwin"
     else "linux";
+
+  hasHomeUser = hasAttrByPath ["home" "username"] config;
+  hasHomeDirectory = hasAttrByPath ["home" "homeDirectory"] config;
+  hasHomeConfig = hasHomeUser || hasHomeDirectory;
+
   profile =
     if cfg.profile != "auto"
     then cfg.profile
-    else if isHome
+    else if hasHomeConfig
     then "home"
     else "system";
 
+  platform =
+    if cfg.platform != "auto"
+    then cfg.platform
+    else detectedPlatform;
+
   hostName =
-    if isHome
-    then config.home.username or "unknown" # Fallback for home-manager
-    else config.networking.hostName or "unknown";
+    if profile == "home"
+    then attrByPath ["home" "username"] "unknown" config # Fallback for home-manager
+    else attrByPath ["networking" "hostName"] "unknown" config;
 
   userName =
-    if isHome
-    then config.home.username or "sab"
-    else config.custom.user.name or "sab";
+    if profile == "home"
+    then attrByPath ["home" "username"] "sab" config
+    else attrByPath ["custom" "user" "name"] "sab" config;
+
+  homeDirectory =
+    if profile == "home"
+    then attrByPath ["home" "homeDirectory"] null config
+    else null;
 in {
   options.custom.security.sops = with types; {
     enable = mkBoolOpt false "Whether to enable SOPS secrets management.";
@@ -61,15 +73,17 @@ in {
 
   config = mkIf cfg.enable (mkMerge [
     # Base packages (home-manager only)
-    (mkIf isHome {
+    (mkIf (profile == "home") {
       home.packages = with pkgs; [
         age
         sops
         ssh-to-age
       ];
+    })
 
+    (mkIf (profile == "home" && homeDirectory != null) {
       home.sessionVariables.SOPS_AGE_KEY_FILE =
-        "${config.home.homeDirectory}/.config/sops/age/keys.txt";
+        "${homeDirectory}/.config/sops/age/keys.txt";
     })
 
     # SOPS configuration (platform-agnostic)
@@ -77,14 +91,7 @@ in {
       sops =
         mkSecretsConfig {
           inherit hostName userName;
-          platform =
-            if cfg.platform != "auto"
-            then cfg.platform
-            else platform;
-          profile =
-            if cfg.profile != "auto"
-            then cfg.profile
-            else profile;
+          inherit platform profile;
         }
         // {
           defaultSopsFile =
@@ -92,13 +99,13 @@ in {
             then cfg.defaultSopsFile
             else lib.snowfall.fs.get-file "secrets/${userName}/default.yaml";
         }
-        // optionalAttrs (cfg.sshKeyPaths != [] && !isHome) {
+        // optionalAttrs (cfg.sshKeyPaths != [] && profile != "home") {
           age.sshKeyPaths = cfg.sshKeyPaths;
         };
     }
 
     # Common secrets (home-manager only)
-    (mkIf (cfg.commonSecrets.enableCredentials && isHome) {
+    (mkIf (cfg.commonSecrets.enableCredentials && profile == "home") {
       sops.secrets.env_credentials = secrets.envCredentials userName;
     })
 
