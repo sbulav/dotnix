@@ -1,0 +1,145 @@
+/* Cyberdream palette extracted from ReGreet */
+@define-color cd-bg         #0f1113;
+@define-color cd-bg-ov      rgba(15,17,19,0.55);
+@define-color cd-surface    #191d22;
+@define-color cd-surface-2  #1f252b;
+@define-color cd-border     #2b323a;
+
+@define-color cd-text       #e6edf3;
+@define-color cd-subtext    #c1cad6;
+@define-color cd-muted      #97a4b6;
+
+@define-color cd-blue       #5ea1ff;
+@define-color cd-cyan       #5ef1ff;
+@define-color cd-green      #78f093;
+@define-color cd-yellow     #ffd76b;
+@define-color cd-red        #ff6b82;
+@define-color cd-magenta    #ff5ef1;
+
+/* Dark popovers and menus */
+popover,
+popover.background,
+menu,
+.menu {
+  background: @cd-surface !important;
+  color: @cd-text !important;
+  border: 1px solid @cd-border !important;
+  border-radius: 12px !important;
+  box-shadow: none !important;
+}
+
+popover *,
+popover.background * {
+  background: @cd-surface !important;
+  color: @cd-text !important;
+}
+
+popover > contents,
+popover contents,
+popover box,
+popover scrolledwindow,
+popover viewport,
+popover .view,
+popover list,
+popover listview,
+popover flowbox {
+  background: @cd-surface !important;
+  color: @cd-text !important;
+}
+
+popover list row,
+popover listview row,
+menuitem,
+modelbutton {
+  background: transparent !important;
+  color: @cd-text !important;
+}
+
+popover list row:hover,
+popover listview row:hover,
+menuitem:hover,
+modelbutton:hover {
+  background: @cd-surface-2 !important;
+}
+
+popover list row:selected,
+popover listview row:selected,
+menuitem:active,
+menuitem:checked,
+modelbutton:active,
+modelbutton:checked {
+  background: alpha(@cd-blue, 0.18) !important;
+  color: @cd-text !important;
+}
+
+popover separator,
+menu separator {
+  background-color: alpha(@cd-border, 0.6) !important;
+}
+
+/* Additional GTK4 dropdown/combobox popovers */
+dropdown popover,
+dropdown popover.background,
+dropdown popover > contents,
+dropdown popover listview,
+dropdown popover list,
+dropdown popover .view,
+dropdown popover row,
+dropdown popover scrolledwindow,
+dropdown popover viewport,
+dropdown popover *,
+dropdown popover.background * {
+  background: @cd-surface !important;
+  color: @cd-text !important;
+  border-color: @cd-border !important;
+}
+
+combobox popover,
+combobox popover.background,
+combobox popover > contents,
+combobox popover listview,
+combobox popover list,
+combobox popover .view,
+combobox popover row,
+combobox popover scrolledwindow,
+combobox popover viewport,
+combobox popover *,
+combobox popover.background * {
+  background: @cd-surface !important;
+  color: @cd-text !important;
+  border-color: @cd-border !important;
+}
+
+menubutton popover,
+menubutton popover.background,
+menubutton popover > contents,
+menubutton popover listview,
+menubutton popover list,
+menubutton popover .view,
+menubutton popover row,
+menubutton popover scrolledwindow,
+menubutton popover viewport,
+menubutton popover *,
+menubutton popover.background * {
+  background: @cd-surface !important;
+  color: @cd-text !important;
+  border-color: @cd-border !important;
+}
+
+menubutton row,
+combobox row,
+dropdown row {
+  background: transparent !important;
+}
+
+menubutton row:hover,
+combobox row:hover,
+dropdown row:hover {
+  background: @cd-surface-2 !important;
+}
+
+menubutton row:selected,
+combobox row:selected,
+dropdown row:selected {
+  background: alpha(@cd-blue, 0.18) !important;
+}
