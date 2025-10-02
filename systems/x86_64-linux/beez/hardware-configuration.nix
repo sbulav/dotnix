@@ -15,6 +15,11 @@
   boot.initrd.availableKernelModules = ["xhci_pci" "usb_storage" "usbhid" "sd_mod" "sdhci_pci"];
   boot.initrd.kernelModules = [];
   boot.kernelModules = ["kvm-intel"];
+  boot.kernelParams = [
+    "split_lock_detect=off"
+  ];
+  # Reboot the system in ~10s
+  boot.kernel.sysctl."kernel.panic" = 10;
   boot.extraModulePackages = [];
 
   # Ensure LVM tooling/udev activation is present
@@ -41,7 +46,7 @@
 
   fileSystems."/mnt/ext" = {
     device = "/dev/disk/by-uuid/B62873392872F7A7";
-    fsType = "ntfs3"; # use "ntfs3" (kernel), not ntfs-3g
+    fsType = "ntfs-3g";
     # Automount means: don’t block boot; mount on first access
     options = [
       "x-systemd.automount"
@@ -61,7 +66,9 @@
     options = [
       "noatime" # reduce metadata writes
       "nodiratime"
-      # "x-systemd.automount" "nofail" "x-systemd.idle-timeout=60s"  # optional automount behavior
+      "x-systemd.automount"
+      "nofail"
+      "x-systemd.idle-timeout=60s" # optional automount behavior
     ];
   };
 

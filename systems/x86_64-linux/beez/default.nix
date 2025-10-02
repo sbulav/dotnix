@@ -42,22 +42,13 @@ in {
   networking.firewall.allowedTCPPorts = [9100 9633];
 
   custom.services.linuxTransparentProxy = {
-    enable = true;
+    enable = false;
     v2rayAHost = "192.168.89.207";
     v2rayAPort = 20170;
     listenPort = 12345;
     interface = "enp1s0";
     tcpPorts = [80 443]; # Or [] for all TCP
   };
-  # Enable transparent proxy under custom.services
-  # custom.services.linuxTransparentProxy = {
-  #   enable = true;
-  #   v2rayAHost = "192.168.89.207";
-  #   v2rayAPort = 1080;
-  #   listenPort = 12345;
-  #   interface = "eth0";
-  #   tcpPorts = [80 443]; # Or [] for all TCP
-  # };
 
   custom.security.sops = {
     enable = true;
@@ -79,6 +70,7 @@ in {
     alejandra
     nixd # LSP for nix
     smartmontools
+    ntfs3g
   ];
   # ======================== DO NOT CHANGE THIS ========================
   system.stateVersion = "25.05";
