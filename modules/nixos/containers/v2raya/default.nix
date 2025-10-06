@@ -1,4 +1,5 @@
 {
+  pkgs,
   config,
   lib,
   namespace,
@@ -74,6 +75,7 @@ in {
       config = {...}: {
         services.v2raya = {
           enable = true;
+          cliPackage = pkgs.xray;
         };
         networking = {
           firewall = {
