@@ -20,6 +20,9 @@
     name = "HHDev Anthropic Gateway";
     npm = "@ai-sdk/anthropic";
     models = {
+      "claude-sonnet-4-5-20250929" = {
+        name = "Claude Sonnet 4.5 (2025-09-29)";
+      };
       "claude-sonnet-4-20250514" = {
         name = "Claude Sonnet 4 (2025-05-14)";
       };
