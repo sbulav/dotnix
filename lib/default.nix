@@ -8,9 +8,44 @@
   config ? {},
   ...
 }: let
-  # OS detection derived from pkgs
-  isDarwin = pkgs.stdenv.isDarwin;
-  isLinux = pkgs.stdenv.isLinux or (!isDarwin);
+  stdenv = pkgs.stdenv or {};
+  systemFromStdenv =
+    if stdenv ? hostPlatform && stdenv.hostPlatform ? system
+    then stdenv.hostPlatform.system
+    else null;
+  systemFromPkgs = pkgs.system or null;
+  systemFromConfig =
+    if
+      config ? nixpkgs
+      && config.nixpkgs ? hostPlatform
+      && config.nixpkgs.hostPlatform ? system
+    then config.nixpkgs.hostPlatform.system
+    else null;
+  systemFallback =
+    if builtins ? currentSystem
+    then builtins.currentSystem
+    else null;
+
+  systemName =
+    if systemFromConfig != null
+    then systemFromConfig
+    else if systemFromStdenv != null
+    then systemFromStdenv
+    else if systemFromPkgs != null
+    then systemFromPkgs
+    else if systemFallback != null
+    then systemFallback
+    else "unknown";
+
+  detectedDarwin = (builtins.match ".*-darwin" systemName) != null;
+
+  # OS detection derived from pkgs (fallback to system name if pkgs lacks metadata)
+  isDarwin =
+    (stdenv.isDarwin or false)
+    || detectedDarwin;
+  isLinux =
+    (stdenv.isLinux or false)
+    || (!isDarwin);
 
   # Detect whether we're in a Home Manager context
   hasHomeCfg = config ? home && config.home ? homeDirectory;
@@ -22,6 +57,12 @@
   userHome = userName:
     if hasHomeCfg
     then config.home.homeDirectory
+    else if
+      config ? custom
+      && config.custom ? user
+      && config.custom.user ? home
+      && config.custom.user.home != null
+    then config.custom.user.home
     else if
       config ? users
       && config.users ? users
@@ -154,8 +195,22 @@ in {
   # Common secret templates (uid will be ignored on darwin automatically)
   secrets = {
     # User environment credentials
-    envCredentials = userName: {
-      path = "${userHome userName}/.ssh/sops-env-credentials";
+    envCredentials = userArg: let
+      argIsAttrs = builtins.isAttrs userArg;
+      userName =
+        if argIsAttrs
+        then userArg.userName or (throw "envCredentials: userName is required")
+        else userArg;
+      homeDirOverride =
+        if argIsAttrs && userArg ? homeDir && userArg.homeDir != null
+        then userArg.homeDir
+        else null;
+      homeDir =
+        if homeDirOverride != null
+        then homeDirOverride
+        else userHome userName;
+    in {
+      path = "${homeDir}/.ssh/sops-env-credentials";
       mode = "0600";
     };
 

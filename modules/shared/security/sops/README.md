@@ -66,6 +66,8 @@ lib.custom.mkSecretsConfig { hostName = "myhost"; userName = "myuser"; }
 
 # User-level templates
 lib.custom.secrets.envCredentials "username"
+# or override the home directory explicitly:
+lib.custom.secrets.envCredentials { userName = "username"; homeDir = "/Users/username"; }
 lib.custom.secrets.sshKey "keyname" "username"
 
 # Container templates  
@@ -95,7 +97,7 @@ lib.custom.secrets.special.grafana.adminPassword
 Pre-defined secret templates available:
 
 ### User-Level
-- `secrets.envCredentials userName` - User environment credentials
+- `secrets.envCredentials userName` - User environment credentials (accepts either a username string or `{ userName = "..."; homeDir = "..."; }`)
 - `secrets.sshKey keyName userName` - SSH private keys  
 
 ### Container Services

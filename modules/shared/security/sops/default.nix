@@ -99,7 +99,11 @@ in {
 
     # Common secrets (home-manager only)
     (mkIf (cfg.commonSecrets.enableCredentials && isHome) {
-      sops.secrets.env_credentials = secrets.envCredentials userName;
+      sops.secrets.env_credentials =
+        secrets.envCredentials {
+          inherit userName;
+          homeDir = config.home.homeDirectory or null;
+        };
     })
 
     # Custom secrets with smart defaults
