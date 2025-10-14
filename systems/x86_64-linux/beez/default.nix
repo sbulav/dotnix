@@ -21,6 +21,32 @@ in {
   suites.server.enable = true; # Enables the basics, like neovim, ssh, etc.
   suites.desktop.enable = false;
   suites.develop.enable = false;
+  # FIXING NVME power consumption
+  # Apply PS1 at boot for every NVMe controller
+  systemd.services.nvme-cap-ps1-nvme0 = {
+    description = "Force NVMe power state PS1 (~2.4W)";
+    wantedBy = ["multi-user.target"];
+    after = ["local-fs.target"];
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = ''
+        /run/current-system/sw/bin/nvme set-feature -f 2 -V 1 /dev/nvme0 || true
+      '';
+    };
+  };
+
+  # Apply PS1 at boot for every NVMe controller
+  systemd.services.nvme-cap-ps1-nvme1 = {
+    description = "Force NVMe power state PS1 (~2.4W)";
+    wantedBy = ["multi-user.target"];
+    after = ["local-fs.target"];
+    serviceConfig = {
+      Type = "oneshot";
+      ExecStart = ''
+        /run/current-system/sw/bin/nvme set-feature -f 2 -V 1 /dev/nvme1 || true
+      '';
+    };
+  };
 
   services.prometheus = {
     exporters = {
@@ -71,8 +97,10 @@ in {
     nixd # LSP for nix
     smartmontools
     ntfs3g
+    nvme-cli
   ];
   # ======================== DO NOT CHANGE THIS ========================
   system.stateVersion = "25.05";
   # ======================== DO NOT CHANGE THIS ========================
+}
 }

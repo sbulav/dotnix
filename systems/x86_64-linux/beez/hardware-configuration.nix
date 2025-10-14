@@ -12,67 +12,46 @@
     (modulesPath + "/installer/scan/not-detected.nix")
   ];
 
-  boot.initrd.availableKernelModules = ["xhci_pci" "usb_storage" "usbhid" "sd_mod" "sdhci_pci"];
+  boot.initrd.availableKernelModules = ["xhci_pci" "nvme" "usb_storage" "usbhid" "sd_mod"];
   boot.initrd.kernelModules = [];
   boot.kernelModules = ["kvm-intel"];
-  boot.kernelParams = [
-    "split_lock_detect=off"
-  ];
-  # Reboot the system in ~10s
-  boot.kernel.sysctl."kernel.panic" = 10;
   boot.extraModulePackages = [];
 
-  # Ensure LVM tooling/udev activation is present
-  services.lvm.enable = true; # activate VGs/LVs at boot
-
-  # Periodic TRIM for NVMe (don’t use 'discard' mount option; let fstrim do it)
-  services.fstrim.enable = true;
-
   fileSystems."/" = {
-    device = "/dev/disk/by-uuid/8e5ccb8b-4fbd-4b00-9e2d-820daaee5477";
+    device = "/dev/disk/by-uuid/9558676c-b2b9-4c4f-9e5e-298d285ab20a";
     fsType = "ext4";
   };
 
   fileSystems."/boot" = {
-    device = "/dev/disk/by-uuid/1783-E866";
+    device = "/dev/disk/by-uuid/1DB5-C455";
     fsType = "vfat";
     options = ["fmask=0077" "dmask=0077"];
   };
+
+  swapDevices = [
+    {device = "/dev/disk/by-uuid/c4b2cd1f-14c4-4c07-bb28-c97d149bbe9f";}
+  ];
+
   # Ensure the mountpoint exists at boot
   systemd.tmpfiles.rules = [
     "d /mnt/ext 0755 sab sab -"
     "d /tank 0755 sab sab -"
   ];
 
-  fileSystems."/mnt/ext" = {
-    device = "/dev/disk/by-uuid/B62873392872F7A7";
-    fsType = "ntfs-3g";
-    # Automount means: don’t block boot; mount on first access
-    options = [
-      "x-systemd.automount"
-      "nofail"
-      "x-systemd.idle-timeout=60s"
-      # optional ownership/permissions if you want user-writable:
-      "uid=1000"
-      "gid=100"
-      "umask=022"
-    ];
-  };
-
-  # Mount the LV by label
-  fileSystems."/tank" = {
-    device = "/dev/disk/by-label/tank";
-    fsType = "ext4";
-    options = [
-      "noatime" # reduce metadata writes
-      "nodiratime"
-      "x-systemd.automount"
-      "nofail"
-      "x-systemd.idle-timeout=60s" # optional automount behavior
-    ];
-  };
-
-  swapDevices = [];
+  # fileSystems."/mnt/ext" = {
+  #   device = "/dev/disk/by-uuid/B62873392872F7A7";
+  #   fsType = "ntfs-3g";
+  #   # Automount means: don’t block boot; mount on first access
+  #   options = [
+  #     "x-systemd.automount"
+  #     "nofail"
+  #     "x-systemd.idle-timeout=60s"
+  #     # optional ownership/permissions if you want user-writable:
+  #     "uid=1000"
+  #     "gid=100"
+  #     "umask=022"
+  #   ];
+  # };
 
   # Enables DHCP on each ethernet and wireless interface. In case of scripted networking
   # (the default) this is the recommended approach. When using systemd-networkd it's
