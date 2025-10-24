@@ -7,7 +7,7 @@
   wallpapers = inputs.wallpapers-nix.packages.${pkgs.system}.full;
 in {
   imports = [./hardware-configuration.nix];
-  system.wallpaper = "${wallpapers}/share/wallpapers/unorganized/left.jpg";
+  system.wallpaper = "${wallpapers}/share/wallpapers/cities/1-osaka-jade-bg.jpg";
   # Enable Bootloader
   system.boot.efi.enable = true;
   system.battery.enable = false; # Only for laptops, they will still work without it, just improves battery life
@@ -29,6 +29,7 @@ in {
   suites.desktop.enable = true;
   suites.develop.enable = true;
   suites.games.enable = true;
+  services.ssh.enable = true;
   custom.security.sops = {
     enable = true;
     sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];

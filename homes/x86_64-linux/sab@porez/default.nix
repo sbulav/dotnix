@@ -13,7 +13,6 @@ in {
       enable = true;
       name = config.snowfallorg.user.name;
     };
-    games.enable = true;
 
     desktop = {
       hyprland = enabled;
@@ -22,13 +21,13 @@ in {
         mako = enabled;
         rofi = enabled;
         kitty = disabled;
-        swaylock = disabled;
-        hypridle = disabled;
+        swaylock = enabled;
+        hypridle = enabled;
         waybar = enabled;
         wlogout = enabled;
         hyprlock = disabled;
         wezterm = enabled;
-        wallpaper = "${wallpapers}/share/wallpapers/unorganized/left.jpg";
+        wallpaper = "${wallpapers}/share/wallpapers/cities/1-osaka-jade-bg.jpg";
 
         waypaper = {
           enable = true;
@@ -37,8 +36,14 @@ in {
       };
     };
 
+    ai = {
+      opencode = enabled;
+      mcp-k8s-go = enabled;
+    };
+
     apps = {
-      obsidian = disabled;
+      obsidian = enabled;
+      ktalk = enabled;
     };
 
     cli-apps = {
@@ -50,28 +55,26 @@ in {
       yazi = enabled;
     };
     tools = {
-      gh = disabled;
-      git = enabled;
       direnv = disabled;
-      k9s = disabled;
+      gh = enabled;
+      git = enabled;
+      k9s = enabled;
+      opentofu = enabled;
+      yandex-cloud = disabled;
     };
     security = {
       rbw = enabled;
-      vault = disabled;
-      openconnect = disabled;
-      # sops = {
-      #   enable = false;
-      #   defaultSopsFile = lib.snowfall.fs.get-file "secrets/sab/default.yaml";
-      #   sshKeyPaths = ["${config.home.homeDirectory}/.ssh/id_ed25519"];
-      # };
+      vault = enabled;
+      openconnect = enabled;
+      sops = {
+        enable = true;
+        # Shared module auto-resolves to secrets/sab/default.yaml
+        commonSecrets.enableCredentials = true;
+        profile = "home";
+      };
     };
   };
 
-  # sops.secrets = {
-  #   env_credentials = {
-  #     sopsFile = lib.snowfall.fs.get-file "secrets/sab/default.yaml";
-  #     path = "${config.home.homeDirectory}/.ssh/sops-env-credentials";
-  #   };
-  # };
+  # env_credentials now handled by commonSecrets.enableCredentials = true
   home.stateVersion = "24.11";
 }
