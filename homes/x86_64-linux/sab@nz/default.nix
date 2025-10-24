@@ -15,7 +15,12 @@ in {
     };
 
     desktop = {
-      hyprland = enabled;
+      hyprland = {
+        enable = true;
+        monitors = [
+          ",preferred,auto,auto"
+        ];
+      };
       addons = {
         hyprpaper = enabled;
         mako = enabled;

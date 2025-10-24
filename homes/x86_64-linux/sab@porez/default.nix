@@ -15,7 +15,26 @@ in {
     };
 
     desktop = {
-      hyprland = enabled;
+      hyprland = {
+        enable = true;
+        monitors = [
+          "HDMI-A-1,1920x1080,0x0,1"
+          "HDMI-A-2,3840x2160@60,1920x0,2"
+        ];
+        workspaces.monitorBindings = {
+          "1" = "HDMI-A-1";
+          "2" = "HDMI-A-2";
+          "3" = "HDMI-A-2";
+          "4" = "HDMI-A-2";
+          "5" = "HDMI-A-2";
+          "6" = "HDMI-A-2";
+        };
+        keybindings = {
+          copy = "C";
+          paste = "V";
+          clipboard = "SHIFT C";
+        };
+      };
       addons = {
         hyprpaper = enabled;
         mako = enabled;
