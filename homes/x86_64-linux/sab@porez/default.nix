@@ -19,15 +19,18 @@ in {
         enable = true;
         monitors = [
           "HDMI-A-1,1920x1080,0x0,1"
-          "HDMI-A-2,3840x2160@60,1920x0,2"
+          "DP-2,3840x2560@60,1920x0,2"
         ];
         workspaces.monitorBindings = {
-          "1" = "HDMI-A-1";
-          "2" = "HDMI-A-2";
-          "3" = "HDMI-A-2";
-          "4" = "HDMI-A-2";
-          "5" = "HDMI-A-2";
-          "6" = "HDMI-A-2";
+          "1" = "DP-2";
+          "2" = "DP-2";
+          "3" = "DP-2";
+          "4" = "DP-2";
+          "5" = "DP-2";
+          "6" = "DP-2";
+          "7" = "HDMI-A-1";
+          "8" = "HDMI-A-1";
+          "9" = "HDMI-A-1";
         };
         keybindings = {
           copy = "C";

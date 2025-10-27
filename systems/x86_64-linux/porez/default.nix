@@ -13,7 +13,8 @@ in {
   system.battery.enable = false; # Only for laptops, they will still work without it, just improves battery life
   hardware = {
     fingerprint.enable = false;
-    bluetoothmy.enable = false;
+    bluetooth.enable = true;
+    bluetoothmy.enable = true;
     cpu.amd.enable = true;
     gpu.amd.enable = true;
     openglmy.enable = true;
