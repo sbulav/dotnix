@@ -27,6 +27,7 @@ in {
       rsync
       tree
       unzip
+      usbutils
       yq
     ];
   };

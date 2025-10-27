@@ -66,6 +66,7 @@ in {
     apps = {
       obsidian = enabled;
       ktalk = enabled;
+      libreoffice = enabled;
     };
 
     cli-apps = {
