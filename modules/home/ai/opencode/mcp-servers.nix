@@ -9,4 +9,10 @@
     command = ["nix" "run" "github:utensils/mcp-nixos" "--"];
     enabled = true;
   };
+  hh-jira-mcp = {
+    type = "remote";
+    url = "https://lobechat.pyn.ru/mcp_servers/jira_mcp/mcp";
+    enabled = true;
+  };
 }
+
