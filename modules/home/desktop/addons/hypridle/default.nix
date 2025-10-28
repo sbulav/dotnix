@@ -3,44 +3,68 @@
   lib,
   pkgs,
   ...
-}:
-with lib;
-with lib.custom; let
+}: let
+  inherit (lib) mkIf types;
+  inherit (lib.custom) mkBoolOpt mkOpt;
+
   cfg = config.custom.desktop.addons.hypridle;
+
+  hyprctl = "${lib.getExe' config.wayland.windowManager.hyprland.package "hyprctl"}";
+  swaylock = "${pkgs.swaylock-effects}/bin/swaylock";
+  systemctl = "${pkgs.systemd}/bin/systemctl";
+
+  laptopListeners = [
+    {
+      timeout = 300;
+      on-timeout = "${swaylock} -fF";
+    }
+    {
+      timeout = 600;
+      on-timeout = "${hyprctl} dispatch dpms off";
+      on-resume = "${hyprctl} dispatch dpms on";
+    }
+    {
+      timeout = 1200;
+      on-timeout = "${systemctl} suspend";
+      on-resume = "${hyprctl} dispatch dpms on";
+    }
+  ];
+
+  pcListeners = [
+    {
+      timeout = 600;
+      on-timeout = "${swaylock} -fF";
+    }
+    {
+      timeout = 900;
+      on-timeout = "${hyprctl} dispatch dpms off";
+      on-resume = "${hyprctl} dispatch dpms on";
+    }
+  ];
+
+  listenerConfig =
+    if cfg.profile == "laptop"
+    then laptopListeners
+    else pcListeners;
 in {
   options.custom.desktop.addons.hypridle = {
     enable = mkBoolOpt false "Whether to enable hypridle in the desktop environment.";
+
+    profile = mkOpt (types.enum ["laptop" "pc"]) "laptop" "Power management profile for hypridle.";
   };
 
   config = mkIf cfg.enable {
     services.hypridle = {
       enable = true;
-      # package = pkgs.hypridle;
 
       settings = {
         general = {
-          lock_cmd = "${pkgs.swaylock-effects}/bin/swaylock -fF";
+          lock_cmd = "${swaylock} -fF";
           ignore_dbus_inhibit = false;
-          after_sleep_cmd = "${getExe' config.wayland.windowManager.hyprland.package "hyprctl"} dispatch dpms on";
+          after_sleep_cmd = "${hyprctl} dispatch dpms on";
         };
 
-        # 5 min lock, 10min turn the screen off, 20 min suspend
-        listener = [
-          {
-            timeout = 300;
-            on-timeout = "${pkgs.swaylock-effects}/bin/swaylock -fF";
-          }
-          {
-            timeout = 600;
-            on-timeout = "${getExe' config.wayland.windowManager.hyprland.package "hyprctl"} dispatch dpms off";
-            on-resume = "${getExe' config.wayland.windowManager.hyprland.package "hyprctl"} dispatch dpms on";
-          }
-          {
-            timeout = 1200;
-            on-timeout = "${pkgs.systemd}/bin/systemctl suspend";
-            on-resume = "${getExe' config.wayland.windowManager.hyprland.package "hyprctl"} dispatch dpms on";
-          }
-        ];
+        listener = listenerConfig;
       };
     };
   };

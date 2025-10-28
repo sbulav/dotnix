@@ -44,7 +44,10 @@ in {
         rofi = enabled;
         kitty = disabled;
         swaylock = enabled;
-        hypridle = enabled;
+        hypridle = {
+          enable = true;
+          profile = "pc";
+        };
         waybar = enabled;
         wlogout = enabled;
         hyprlock = disabled;
