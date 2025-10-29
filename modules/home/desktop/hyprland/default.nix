@@ -27,10 +27,15 @@
   mkBind = mainMod: key: action: let
     parts = lib.splitString " " key;
     hasModifiers = builtins.length parts > 1;
-    mods = if hasModifiers then "${mainMod} ${lib.concatStringsSep " " (lib.init parts)}" else mainMod;
-    actualKey = if hasModifiers then lib.last parts else key;
-  in
-    "bind = ${mods}, ${actualKey}, ${action}";
+    mods =
+      if hasModifiers
+      then "${mainMod} ${lib.concatStringsSep " " (lib.init parts)}"
+      else mainMod;
+    actualKey =
+      if hasModifiers
+      then lib.last parts
+      else key;
+  in "bind = ${mods}, ${actualKey}, ${action}";
 
   mkKeybindings = kb: let
     mainMod = kb.mainMod;
@@ -82,13 +87,14 @@
       '';
 
     copyPasteBindings =
-      optionalString (kb.copy != null) ''
-        ${mkBind mainMod kb.copy "exec, wl-copy"}
-      ''
-      + optionalString (kb.paste != null) ''
-        ${mkBind mainMod kb.paste "exec, cliphist list | head -n 1 | cliphist decode | wl-copy && wtype -M ctrl v -m ctrl"}
-      ''
-      + optionalString (kb.floating != null && kb.paste != null) ''
+      # optionalString (kb.copy != null) ''
+      #   ${mkBind mainMod kb.copy "exec, wl-copy"}
+      # ''
+      # + optionalString (kb.paste != null) ''
+      #   ${mkBind mainMod kb.paste "exec, cliphist list | head -n 1 | cliphist decode | wl-copy && wtype -M ctrl v -m ctrl"}
+      # ''
+      # + optionalString (kb.floating != null && kb.paste != null) ''
+      optionalString (kb.floating != null && kb.paste != null) ''
         ${mkBind mainMod "SHIFT ${kb.floating}" "togglefloating,"}
       '';
 
