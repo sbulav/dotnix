@@ -26,8 +26,8 @@
       "claude-sonnet-4-20250514" = {
         name = "Claude Sonnet 4 (2025-05-14)";
       };
-      "claude-3-5-haiku-20241022" = {
-        name = "Claude Haiku 3.5 (2024-10-22)";
+      "claude-haiku-4-5-20251001" = {
+        name = "Claude Haiku 4.5 (2025-10-01)";
         options = {
           max_tokens = 8192;
         };
