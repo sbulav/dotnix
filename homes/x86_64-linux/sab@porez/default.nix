@@ -48,7 +48,10 @@ in {
           enable = true;
           profile = "pc";
         };
-        waybar = enabled;
+        waybar = {
+          enable = true;
+          keyboardName = "kinesis-advantage2-keyboard-1";
+        };
         wlogout = enabled;
         hyprlock = disabled;
         wezterm = enabled;

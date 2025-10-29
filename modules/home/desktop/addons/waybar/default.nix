@@ -14,6 +14,8 @@ in {
   options.custom.desktop.addons.waybar = with types; {
     enable =
       mkBoolOpt false "Whether to enable Waybar in the desktop environment.";
+    keyboardName =
+      mkOpt str "at-translated-set-2-keyboard" "The keyboard device name for language switching.";
   };
 
   config = mkIf cfg.enable {
@@ -177,11 +179,11 @@ in {
             };
           };
           "hyprland/language" = {
-            # "format-dh" = " dh";
-            "format-en" = "  dh";
-            "format-ru" = "  ru";
-            "keyboard-name" = "at-translated-set-2-keyboard";
-            on-click = "${hyprctl} switchxkblayout at-translated-set-2-keyboard next";
+            # "format-dh" = " dh";
+            "format-en" = "  dh";
+            "format-ru" = "  ru";
+            "keyboard-name" = cfg.keyboardName;
+            on-click = "${hyprctl} switchxkblayout ${cfg.keyboardName} next";
           };
           "battery" = {
             # on-click = "cpupower-gui";
