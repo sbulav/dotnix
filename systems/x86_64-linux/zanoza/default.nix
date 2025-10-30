@@ -156,7 +156,7 @@ in {
     {
       job_name = "beez-smartctl";
       static_configs = [
-        {targets = ["192.168.92.194:9633"];}
+        {targets = ["192.168.89.208:9633"];}
       ];
     }
   ];
