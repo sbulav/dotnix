@@ -37,7 +37,7 @@
   networking = {
     useDHCP = lib.mkDefault true;
     hosts = {
-      "192.168.89.207" = ["zanoza" "jellyfin.sbulav.ru" "authelia.sbulav.ru" "home.sbulav.ru" "nextcloud.sbulav.ru" "traefik.sbulav.ru"];
+      "192.168.89.207" = ["zanoza" "jellyfin.sbulav.ru" "authelia.sbulav.ru" "home.sbulav.ru" "nextcloud.sbulav.ru" "traefik.sbulav.ru" "flood.sbulav.ru"];
     };
     # interfaces.wlp3s0.ipv4.routes = [
     #   {
