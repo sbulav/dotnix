@@ -59,7 +59,7 @@ in {
         enable = true;
         port = 9633;
         openFirewall = true;
-        devices = ["/dev/sda"]; # Adjust based on your disks (run lsblk to check)
+        devices = ["/dev/nvme0n1"]; # Adjust based on your disks (run lsblk to check)
       };
     };
   };

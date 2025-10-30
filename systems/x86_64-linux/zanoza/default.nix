@@ -150,7 +150,7 @@ in {
     {
       job_name = "beez-node";
       static_configs = [
-        {targets = ["192.168.92.194:9100"];} # Replace with actual hostname/IP of beez
+        {targets = ["192.168.89.208:9100"];} # Replace with actual hostname/IP of beez
       ];
     }
     {
