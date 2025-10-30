@@ -23,30 +23,30 @@ in {
   suites.develop.enable = false;
   # FIXING NVME power consumption
   # Apply PS1 at boot for every NVMe controller
-  systemd.services.nvme-cap-ps1-nvme0 = {
-    description = "Force NVMe power state PS1 (~2.4W)";
-    wantedBy = ["multi-user.target"];
-    after = ["local-fs.target"];
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = ''
-        /run/current-system/sw/bin/nvme set-feature -f 2 -V 1 /dev/nvme0 || true
-      '';
-    };
-  };
+  # systemd.services.nvme-cap-ps1-nvme0 = {
+  #   description = "Force NVMe power state PS1 (~2.4W)";
+  #   wantedBy = ["multi-user.target"];
+  #   after = ["local-fs.target"];
+  #   serviceConfig = {
+  #     Type = "oneshot";
+  #     ExecStart = ''
+  #       /run/current-system/sw/bin/nvme set-feature -f 2 -V 1 /dev/nvme0 || true
+  #     '';
+  #   };
+  # };
 
-  # Apply PS1 at boot for every NVMe controller
-  systemd.services.nvme-cap-ps1-nvme1 = {
-    description = "Force NVMe power state PS1 (~2.4W)";
-    wantedBy = ["multi-user.target"];
-    after = ["local-fs.target"];
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = ''
-        /run/current-system/sw/bin/nvme set-feature -f 2 -V 1 /dev/nvme1 || true
-      '';
-    };
-  };
+  # # Apply PS1 at boot for every NVMe controller
+  # systemd.services.nvme-cap-ps1-nvme1 = {
+  #   description = "Force NVMe power state PS1 (~2.4W)";
+  #   wantedBy = ["multi-user.target"];
+  #   after = ["local-fs.target"];
+  #   serviceConfig = {
+  #     Type = "oneshot";
+  #     ExecStart = ''
+  #       /run/current-system/sw/bin/nvme set-feature -f 2 -V 1 /dev/nvme1 || true
+  #     '';
+  #   };
+  # };
 
   services.prometheus = {
     exporters = {
@@ -67,14 +67,14 @@ in {
   # Opening ports for prometheus
   networking.firewall.allowedTCPPorts = [9100 9633];
 
-  custom.services.linuxTransparentProxy = {
-    enable = false;
-    v2rayAHost = "192.168.89.207";
-    v2rayAPort = 20170;
-    listenPort = 12345;
-    interface = "enp1s0";
-    tcpPorts = [80 443]; # Or [] for all TCP
-  };
+  # custom.services.linuxTransparentProxy = {
+  #   enable = false;
+  #   v2rayAHost = "192.168.89.207";
+  #   v2rayAPort = 20170;
+  #   listenPort = 12345;
+  #   interface = "enp1s0";
+  #   tcpPorts = [80 443]; # Or [] for all TCP
+  # };
 
   custom.security.sops = {
     enable = true;
