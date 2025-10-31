@@ -18,6 +18,12 @@ in
     rewriteAddress =
       mkOpt str "192.168.89.207"
         "IP address or CNAME to create DNS rewrites(local DNS entries) to";
+    hostMappings = mkOpt (listOf (submodule {
+      options = {
+        hostname = mkOpt str "" "Hostname to resolve";
+        ip = mkOpt str "" "IP address to resolve to";
+      };
+    })) [ ] "Static host DNS mappings (A records)";
   };
 
   imports = [
@@ -94,7 +100,11 @@ in
                     domain = cfg.host;
                     answer = cfg.rewriteAddress;
                   }
-                ];
+                ]
+                ++ (map (host: {
+                  domain = host.hostname;
+                  answer = host.ip;
+                }) cfg.hostMappings);
               };
               statistics.enabled = true;
             };

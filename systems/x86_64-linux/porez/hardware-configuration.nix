@@ -51,6 +51,7 @@
       # To make local resources work under VPN
       "192.168.89.207" = [
         "zanoza"
+        "zanoza.sbulav.ru"
         "jellyfin.sbulav.ru"
         "authelia.sbulav.ru"
         "home.sbulav.ru"
@@ -58,6 +59,10 @@
         "traefik.sbulav.ru"
         "flood.sbulav.ru"
         "grafana.sbulav.ru"
+      ];
+      "192.168.89.208" = [
+        "beez"
+        "beez.sbulav.ru"
       ];
     };
     # interfaces.wlp3s0.ipv4.routes = [

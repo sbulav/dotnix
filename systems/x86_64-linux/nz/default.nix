@@ -36,6 +36,21 @@ in
     podman.enable = true;
   };
 
+  networking.hosts = {
+    "192.168.89.207" = [
+      "zanoza"
+      "zanoza.sbulav.ru"
+    ];
+    "192.168.89.208" = [
+      "beez"
+      "beez.sbulav.ru"
+    ];
+    "192.168.89.200" = [
+      "porez"
+      "porez.sbulav.ru"
+    ];
+  };
+
   # limit systemd journal size
   # https://wiki.archlinux.org/title/Systemd/Journal#Persistent_journals
   services.journald.extraConfig = ''

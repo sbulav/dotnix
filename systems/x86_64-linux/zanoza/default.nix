@@ -115,6 +115,24 @@ in
       rewriteAddress = "192.168.89.207";
       hostAddress = "172.16.64.10";
       localAddress = "172.16.64.104";
+      hostMappings = [
+        {
+          hostname = "beez";
+          ip = "192.168.89.208";
+        }
+        {
+          hostname = "beez.sbulav.ru";
+          ip = "192.168.89.208";
+        }
+        {
+          hostname = "porez";
+          ip = "192.168.89.200";
+        }
+        {
+          hostname = "porez.sbulav.ru";
+          ip = "192.168.89.200";
+        }
+      ];
     };
     flood = {
       enable = true;
