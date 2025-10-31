@@ -3,11 +3,13 @@
   config,
   pkgs,
   ...
-}: let
+}:
+let
   inherit (lib) mkEnableOption mkIf;
 
   cfg = config.custom.apps.obsidian;
-in {
+in
+{
   options.custom.apps.obsidian = {
     enable = mkEnableOption "Enable Obsidian note-taking app";
   };

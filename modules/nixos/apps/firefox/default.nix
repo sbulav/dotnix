@@ -6,9 +6,10 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.apps.firefox;
-  browser = ["firefox.desktop"];
+  browser = [ "firefox.desktop" ];
 
   # XDG MIME types
   associations = {
@@ -20,7 +21,7 @@ with lib.custom; let
     "application/xhtml+xml" = browser;
     "text/html" = browser;
     "x-scheme-handler/about" = browser;
-    "x-scheme-handler/chrome" = ["chromium-browser.desktop"];
+    "x-scheme-handler/chrome" = [ "chromium-browser.desktop" ];
     "x-scheme-handler/ftp" = browser;
     "x-scheme-handler/http" = browser;
     "x-scheme-handler/https" = browser;
@@ -28,7 +29,8 @@ with lib.custom; let
 
     "application/json" = browser;
   };
-in {
+in
+{
   options.custom.apps.firefox = with types; {
     enable = mkBoolOpt false "Whether or not to enable Firefox.";
   };

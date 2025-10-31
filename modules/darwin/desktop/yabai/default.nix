@@ -3,15 +3,19 @@
   pkgs,
   config,
   ...
-}: let
+}:
+let
   cfg = config.custom.desktop.yabai;
 
   inherit (lib) types mkEnableOption mkIf;
   inherit (lib.custom) mkOpt enabled;
-in {
+in
+{
   options.custom.desktop.yabai = {
     enable = mkEnableOption "Yabai";
-    enable-scripting-addition = mkOpt types.bool true "Whether to enable the scripting addition for Yabai. (Requires SIP to be disabled)";
+    enable-scripting-addition =
+      mkOpt types.bool true
+        "Whether to enable the scripting addition for Yabai. (Requires SIP to be disabled)";
   };
 
   config = mkIf cfg.enable {

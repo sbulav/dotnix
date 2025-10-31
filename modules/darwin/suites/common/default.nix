@@ -6,9 +6,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.suites.common;
-in {
+in
+{
   options.custom.suites.common = with types; {
     enable = mkBoolOpt false "Whether or not to enable common configuration.";
   };

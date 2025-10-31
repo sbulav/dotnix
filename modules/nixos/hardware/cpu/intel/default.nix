@@ -4,23 +4,25 @@
   pkgs,
   namespace,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf;
   inherit (lib.${namespace}) mkBoolOpt;
 
   cfg = config.hardware.cpu.intel;
-in {
+in
+{
   options.hardware.cpu.intel = {
     enable = mkBoolOpt false "Whether or not to enable support for intel cpu.";
   };
 
   config = mkIf cfg.enable {
-    environment.systemPackages = with pkgs; [intel-gpu-tools];
+    environment.systemPackages = with pkgs; [ intel-gpu-tools ];
 
     hardware.cpu.intel.updateMicrocode = true;
 
     boot = {
-      kernelModules = ["kvm-intel"];
+      kernelModules = [ "kvm-intel" ];
 
       kernelParams = [
         "i915.fastboot=1"

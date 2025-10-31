@@ -5,10 +5,12 @@
   pkgs,
   lib,
   ...
-}: let
+}:
+let
   system = "x86_64-linux";
   hostName = "beez";
-in {
+in
+{
   imports = [
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
@@ -23,62 +25,58 @@ in {
   suites.develop.enable = false;
   # FIXING NVME power consumption
   # Apply PS1 at boot for every NVMe controller
-  systemd.services.nvme-cap-ps1-nvme0 = {
-    description = "Force NVMe power state PS1 (~2.4W)";
-    wantedBy = ["multi-user.target"];
-    after = ["local-fs.target"];
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = ''
-        /run/current-system/sw/bin/nvme set-feature -f 2 -V 1 /dev/nvme0 || true
-      '';
+  # systemd.services.nvme-cap-ps1-nvme0 = {
+  #   description = "Force NVMe power state PS1 (~2.4W)";
+  #   wantedBy = ["multi-user.target"];
+  #   after = ["local-fs.target"];
+  #   serviceConfig = {
+  #     Type = "oneshot";
+  #     ExecStart = ''
+  #       /run/current-system/sw/bin/nvme set-feature -f 2 -V 1 /dev/nvme0 || true
+  #     '';
+  #   };
+  # };
+
+  # # Apply PS1 at boot for every NVMe controller
+  # systemd.services.nvme-cap-ps1-nvme1 = {
+  #   description = "Force NVMe power state PS1 (~2.4W)";
+  #   wantedBy = ["multi-user.target"];
+  #   after = ["local-fs.target"];
+  #   serviceConfig = {
+  #     Type = "oneshot";
+  #     ExecStart = ''
+  #       /run/current-system/sw/bin/nvme set-feature -f 2 -V 1 /dev/nvme1 || true
+  #     '';
+  #   };
+  # };
+
+  custom.services.prometheus-exporters = {
+    enable = true;
+    node = {
+      enable = true;
+      port = 9100;
+      openFirewall = true;
+    };
+    smartctl = {
+      enable = true;
+      port = 9633;
+      openFirewall = true;
+      devices = [ "/dev/nvme0n1" ];
     };
   };
 
-  # Apply PS1 at boot for every NVMe controller
-  systemd.services.nvme-cap-ps1-nvme1 = {
-    description = "Force NVMe power state PS1 (~2.4W)";
-    wantedBy = ["multi-user.target"];
-    after = ["local-fs.target"];
-    serviceConfig = {
-      Type = "oneshot";
-      ExecStart = ''
-        /run/current-system/sw/bin/nvme set-feature -f 2 -V 1 /dev/nvme1 || true
-      '';
-    };
-  };
-
-  services.prometheus = {
-    exporters = {
-      node = {
-        enable = true;
-        openFirewall = true;
-        port = 9100;
-      };
-      smartctl = {
-        enable = true;
-        port = 9633;
-        openFirewall = true;
-        devices = ["/dev/sda"]; # Adjust based on your disks (run lsblk to check)
-      };
-    };
-  };
-
-  # Opening ports for prometheus
-  networking.firewall.allowedTCPPorts = [9100 9633];
-
-  custom.services.linuxTransparentProxy = {
-    enable = false;
-    v2rayAHost = "192.168.89.207";
-    v2rayAPort = 20170;
-    listenPort = 12345;
-    interface = "enp1s0";
-    tcpPorts = [80 443]; # Or [] for all TCP
-  };
+  # custom.services.linuxTransparentProxy = {
+  #   enable = false;
+  #   v2rayAHost = "192.168.89.207";
+  #   v2rayAPort = 20170;
+  #   listenPort = 12345;
+  #   interface = "enp1s0";
+  #   tcpPorts = [80 443]; # Or [] for all TCP
+  # };
 
   custom.security.sops = {
     enable = true;
-    sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
+    sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
     defaultSopsFile = lib.snowfall.fs.get-file "secrets/beez/default.yaml";
   };
 
@@ -93,7 +91,6 @@ in {
   };
 
   environment.systemPackages = with pkgs; [
-    alejandra
     nixd # LSP for nix
     smartmontools
     ntfs3g

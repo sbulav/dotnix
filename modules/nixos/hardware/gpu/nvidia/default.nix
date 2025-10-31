@@ -4,7 +4,8 @@
   pkgs,
   namespace,
   ...
-}: let
+}:
+let
   inherit (lib) mkDefault mkIf versionOlder;
   inherit (lib.${namespace}) mkBoolOpt;
   cfg = config.hardware.gpu.nvidia;
@@ -14,17 +15,19 @@
   nvBeta = config.boot.kernelPackages.nvidiaPackages.beta.version;
 
   nvidiaPackage =
-    if (versionOlder nvBeta nvStable)
-    then config.boot.kernelPackages.nvidiaPackages.stable
-    else config.boot.kernelPackages.nvidiaPackages.beta;
-in {
+    if (versionOlder nvBeta nvStable) then
+      config.boot.kernelPackages.nvidiaPackages.stable
+    else
+      config.boot.kernelPackages.nvidiaPackages.beta;
+in
+{
   options.hardware.gpu.nvidia = {
     enable = mkBoolOpt false "Whether or not to enable support for nvidia.";
     enableCudaSupport = mkBoolOpt false "Whether or not to enable support for cuda.";
   };
 
   config = mkIf cfg.enable {
-    boot.blacklistedKernelModules = ["nouveau"];
+    boot.blacklistedKernelModules = [ "nouveau" ];
 
     environment.systemPackages = with pkgs; [
       nvfancontrol
@@ -58,8 +61,8 @@ in {
       };
 
       graphics = {
-        extraPackages = with pkgs; [nvidia-vaapi-driver];
-        extraPackages32 = with pkgs.pkgsi686Linux; [nvidia-vaapi-driver];
+        extraPackages = with pkgs; [ nvidia-vaapi-driver ];
+        extraPackages32 = with pkgs.pkgsi686Linux; [ nvidia-vaapi-driver ];
       };
     };
 

@@ -6,9 +6,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.${namespace}.containers.v2raya;
-in {
+in
+{
   options.${namespace}.containers.v2raya = with types; {
     enable = mkBoolOpt false "Enable v2raya nixos-container;";
     dataPath = mkOpt str "/tank/v2raya" "v2raya data path on host machine";
@@ -17,25 +19,26 @@ in {
     localAddress = mkOpt str "172.16.64.108" "With privateNetwork, which address to use in container";
   };
   imports = [
-    (import ../shared/shared-traefik-route.nix
-      {
-        app = "v2raya";
-        host = cfg.host;
-        url = "http://${cfg.localAddress}:2017";
-        route_enabled = cfg.enable;
-        middlewares = ["secure-headers" "allow-lan"];
-      })
-    (import ../shared/shared-adguard-dns-rewrite.nix
-      {
-        host = cfg.host;
-        rewrite_enabled = cfg.enable;
-      })
+    (import ../shared/shared-traefik-route.nix {
+      app = "v2raya";
+      host = cfg.host;
+      url = "http://${cfg.localAddress}:2017";
+      route_enabled = cfg.enable;
+      middlewares = [
+        "secure-headers"
+        "allow-lan"
+      ];
+    })
+    (import ../shared/shared-adguard-dns-rewrite.nix {
+      host = cfg.host;
+      rewrite_enabled = cfg.enable;
+    })
   ];
 
   config = mkIf cfg.enable {
     networking.nat = {
       enable = true;
-      internalInterfaces = ["ve-v2raya"];
+      internalInterfaces = [ "ve-v2raya" ];
       externalInterface = "ens3";
     };
 
@@ -72,23 +75,29 @@ in {
           protocol = "tcp";
         }
       ];
-      config = {...}: {
-        services.v2raya = {
-          enable = true;
-          cliPackage = pkgs.xray;
-        };
-        networking = {
-          firewall = {
-            enable = false;
-            allowedTCPPorts = [2017 20170 20172];
+      config =
+        { ... }:
+        {
+          services.v2raya = {
+            enable = true;
+            cliPackage = pkgs.xray;
           };
-          # Use systemd-resolved inside the container
-          # Workaround for bug https://github.com/NixOS/nixpkgs/issues/162686
-          useHostResolvConf = lib.mkForce false;
+          networking = {
+            firewall = {
+              enable = false;
+              allowedTCPPorts = [
+                2017
+                20170
+                20172
+              ];
+            };
+            # Use systemd-resolved inside the container
+            # Workaround for bug https://github.com/NixOS/nixpkgs/issues/162686
+            useHostResolvConf = lib.mkForce false;
+          };
+          services.resolved.enable = true;
+          system.stateVersion = "24.11";
         };
-        services.resolved.enable = true;
-        system.stateVersion = "24.11";
-      };
     };
   };
 }

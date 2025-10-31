@@ -4,12 +4,14 @@
   pkgs,
   namespace,
   ...
-}: let
+}:
+let
   inherit (lib) types mkIf mkOption;
   inherit (lib.${namespace}) mkBoolOpt mkOpt;
 
   cfg = config.hardware.rgb.openrgb;
-in {
+in
+{
   options.hardware.rgb.openrgb = with types; {
     enable = mkBoolOpt false "Whether or not to enable support for rgb controls.";
     motherboard = mkOption {

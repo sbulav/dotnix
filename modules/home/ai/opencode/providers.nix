@@ -7,12 +7,18 @@
       apiKey = "{env:OPENAI_API_KEY}";
     };
     models = {
-      "gpt-5" = {name = "ChatGPT 5";};
+      "gpt-5" = {
+        name = "ChatGPT 5";
+      };
       "gpt-5-mini" = {
         name = "ChatGPT 5 Mini";
-        options = {reasoning = false;};
+        options = {
+          reasoning = false;
+        };
       };
-      "gpt-4.1" = {name = "ChatGPT 4.1";};
+      "gpt-4.1" = {
+        name = "ChatGPT 4.1";
+      };
     };
   };
 
@@ -26,8 +32,8 @@
       "claude-sonnet-4-20250514" = {
         name = "Claude Sonnet 4 (2025-05-14)";
       };
-      "claude-3-5-haiku-20241022" = {
-        name = "Claude Haiku 3.5 (2024-10-22)";
+      "claude-haiku-4-5-20251001" = {
+        name = "Claude Haiku 4.5 (2025-10-01)";
         options = {
           max_tokens = 8192;
         };
@@ -37,7 +43,9 @@
       apiKey = "{env:OPENAI_API_KEY}";
       baseURL = "https://llmgtw.hhdev.ru/proxy/anthropic/v1";
       max_tokens = 8192;
-      headers = {"anthropic-version" = "2023-06-01";};
+      headers = {
+        "anthropic-version" = "2023-06-01";
+      };
     };
   };
 
@@ -104,9 +112,15 @@
       baseURL = "https://llmgtw.hhdev.ru/proxy/xai";
     };
     models = {
-      "grok-4-0709" = {name = "Grok 4";};
-      "grok-code-fast-1" = {name = "Grok Code Fast 1";};
-      "grok-4-fast-reasoning" = {name = "Grok 4 Fast Reasoning";};
+      "grok-4-0709" = {
+        name = "Grok 4";
+      };
+      "grok-code-fast-1" = {
+        name = "Grok Code Fast 1";
+      };
+      "grok-4-fast-reasoning" = {
+        name = "Grok 4 Fast Reasoning";
+      };
     };
   };
 }

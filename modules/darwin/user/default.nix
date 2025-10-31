@@ -3,7 +3,8 @@
   config,
   pkgs,
   ...
-}: let
+}:
+let
   inherit (lib) types mkIf mkDefault;
   inherit (lib.custom) mkOpt;
 
@@ -12,12 +13,14 @@
   is-linux = pkgs.stdenv.isLinux;
   is-darwin = pkgs.stdenv.isDarwin;
   home-directory =
-    if cfg.name == null
-    then null
-    else if is-darwin
-    then "/Users/${cfg.name}"
-    else "/home/${cfg.name}";
-in {
+    if cfg.name == null then
+      null
+    else if is-darwin then
+      "/Users/${cfg.name}"
+    else
+      "/home/${cfg.name}";
+in
+{
   options.custom.user = {
     name = mkOpt types.str "sab" "The name to use for the user account.";
     fullName = mkOpt types.str "Sergei Bulavintsev" "The full name of the user.";

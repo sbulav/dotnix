@@ -5,9 +5,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.system.locale;
-in {
+in
+{
   options.system.locale = with types; {
     enable = mkBoolOpt false "Whether or not to manage locale settings.";
   };
@@ -26,6 +28,8 @@ in {
       LC_TIME = "ru_RU.UTF-8";
     };
 
-    console = {keyMap = mkForce "us";};
+    console = {
+      keyMap = mkForce "us";
+    };
   };
 }

@@ -6,13 +6,14 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.apps.pcmanfm;
-in {
+in
+{
   options.custom.apps.pcmanfm = with types; {
     enable = mkBoolOpt false "Whether or not to enable pcmanfm.";
   };
 
-  config =
-    mkIf cfg.enable {environment.systemPackages = with pkgs; [pcmanfm];};
+  config = mkIf cfg.enable { environment.systemPackages = with pkgs; [ pcmanfm ]; };
 }

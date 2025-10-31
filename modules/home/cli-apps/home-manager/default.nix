@@ -2,12 +2,14 @@
   lib,
   config,
   ...
-}: let
+}:
+let
   inherit (lib) mkEnableOption mkIf;
   inherit (lib.custom) enabled;
 
   cfg = config.custom.cli-apps.home-manager;
-in {
+in
+{
   options.custom.cli-apps.home-manager = {
     enable = mkEnableOption "home-manager";
   };

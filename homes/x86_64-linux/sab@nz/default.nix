@@ -5,9 +5,11 @@
   pkgs,
   ...
 }:
-with lib.custom; let
+with lib.custom;
+let
   wallpapers = inputs.wallpapers-nix.packages.${pkgs.system}.full;
-in {
+in
+{
   custom = {
     user = {
       enable = true;
@@ -15,7 +17,12 @@ in {
     };
 
     desktop = {
-      hyprland = enabled;
+      hyprland = {
+        enable = true;
+        monitors = [
+          ",preferred,auto,auto"
+        ];
+      };
       addons = {
         hyprpaper = enabled;
         mako = enabled;

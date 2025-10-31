@@ -6,9 +6,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.cli-apps.yazi;
-in {
+in
+{
   options.custom.cli-apps.yazi = {
     enable = mkEnableOption "Yazi Terminal File manager";
   };
@@ -25,7 +27,11 @@ in {
 
       settings = {
         mgr = {
-          layout = [1 3 4];
+          layout = [
+            1
+            3
+            4
+          ];
           linemode = "size";
           show_hidden = false;
           show_symlink = true;

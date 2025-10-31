@@ -7,15 +7,23 @@
   pkgs,
   modulesPath,
   ...
-}: {
+}:
+{
   imports = [
     (modulesPath + "/installer/scan/not-detected.nix")
   ];
 
-  boot.initrd.availableKernelModules = ["xhci_pci" "ahci" "nvme" "usb_storage" "usbhid" "sd_mod"];
-  boot.initrd.kernelModules = [];
-  boot.kernelModules = ["kvm-amd"];
-  boot.extraModulePackages = [];
+  boot.initrd.availableKernelModules = [
+    "xhci_pci"
+    "ahci"
+    "nvme"
+    "usb_storage"
+    "usbhid"
+    "sd_mod"
+  ];
+  boot.initrd.kernelModules = [ ];
+  boot.kernelModules = [ "kvm-amd" ];
+  boot.extraModulePackages = [ ];
 
   fileSystems."/" = {
     device = "/dev/disk/by-uuid/5df0f17d-31bb-4b51-b34d-bbb6f6adf560";
@@ -25,10 +33,13 @@
   fileSystems."/boot" = {
     device = "/dev/disk/by-uuid/D8E2-C155";
     fsType = "vfat";
-    options = ["fmask=0077" "dmask=0077"];
+    options = [
+      "fmask=0077"
+      "dmask=0077"
+    ];
   };
 
-  swapDevices = [];
+  swapDevices = [ ];
 
   # Enables DHCP on each ethernet and wireless interface. In case of scripted networking
   # (the default) this is the recommended approach. When using systemd-networkd it's
@@ -37,7 +48,22 @@
   networking = {
     useDHCP = lib.mkDefault true;
     hosts = {
-      "192.168.89.207" = ["zanoza" "jellyfin.sbulav.ru" "authelia.sbulav.ru" "home.sbulav.ru"];
+      # To make local resources work under VPN
+      "192.168.89.207" = [
+        "zanoza"
+        "zanoza.sbulav.ru"
+        "jellyfin.sbulav.ru"
+        "authelia.sbulav.ru"
+        "home.sbulav.ru"
+        "nextcloud.sbulav.ru"
+        "traefik.sbulav.ru"
+        "flood.sbulav.ru"
+        "grafana.sbulav.ru"
+      ];
+      "192.168.89.208" = [
+        "beez"
+        "beez.sbulav.ru"
+      ];
     };
     # interfaces.wlp3s0.ipv4.routes = [
     #   {
@@ -46,10 +72,16 @@
     #     via = "192.168.88.1";
     #   }
     # ];
-    search = ["sbulav.ru"];
+    search = [ "sbulav.ru" ];
   };
 
   nixpkgs.hostPlatform = lib.mkDefault "x86_64-linux";
   hardware.cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
-  hardware.bluetooth.enable = false;
+  hardware.graphics = {
+    enable = true;
+    extraPackages = with pkgs; [
+      vpl-gpu-rt
+      intel-gpu-tools
+    ];
+  };
 }

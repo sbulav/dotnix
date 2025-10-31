@@ -4,10 +4,12 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.desktop.addons.hyprpaper;
   wallpaper = config.custom.desktop.addons.wallpaper;
-in {
+in
+{
   options.custom.desktop.addons.hyprpaper = with types; {
     enable = mkBoolOpt false "Whether to enable the hyprpaper config";
   };
@@ -17,8 +19,8 @@ in {
       enable = true;
 
       settings = {
-        preload = [wallpaper];
-        wallpaper = [", ${wallpaper}"];
+        preload = [ wallpaper ];
+        wallpaper = [ ", ${wallpaper}" ];
         ipc = true;
       };
     };

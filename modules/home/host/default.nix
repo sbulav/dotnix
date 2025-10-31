@@ -5,10 +5,12 @@
   host ? null,
   format ? "unknown",
   ...
-}: let
+}:
+let
   inherit (lib) types;
   inherit (lib.custom) mkOpt;
-in {
+in
+{
   options.custom.host = {
     name = mkOpt (types.nullOr types.str) host "The host name.";
   };

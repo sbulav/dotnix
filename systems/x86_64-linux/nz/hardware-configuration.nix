@@ -7,15 +7,22 @@
   pkgs,
   modulesPath,
   ...
-}: {
+}:
+{
   imports = [
     (modulesPath + "/installer/scan/not-detected.nix")
   ];
 
-  boot.initrd.availableKernelModules = ["nvme" "xhci_pci" "usb_storage" "sd_mod" "rtsx_pci_sdmmc"];
-  boot.initrd.kernelModules = [];
-  boot.kernelModules = ["kvm-amd"];
-  boot.extraModulePackages = [];
+  boot.initrd.availableKernelModules = [
+    "nvme"
+    "xhci_pci"
+    "usb_storage"
+    "sd_mod"
+    "rtsx_pci_sdmmc"
+  ];
+  boot.initrd.kernelModules = [ ];
+  boot.kernelModules = [ "kvm-amd" ];
+  boot.extraModulePackages = [ ];
   boot.enableContainers = false;
 
   fileSystems."/" = {
@@ -53,7 +60,7 @@
   # };
 
   swapDevices = [
-    {device = "/dev/disk/by-uuid/73002676-c9b2-46e8-a987-5bf002c91cbc";}
+    { device = "/dev/disk/by-uuid/73002676-c9b2-46e8-a987-5bf002c91cbc"; }
   ];
 
   # Enables DHCP on each ethernet and wireless interface. In case of scripted networking
@@ -63,12 +70,16 @@
   networking = {
     useDHCP = lib.mkDefault true;
     hosts = {
-      "10.128.64.100" = ["argocd.it.pyn.ru"];
-      "100.87.128.100" = ["vault-c7.pyn.ru"];
-      "100.91.128.100" = ["vault-c11.pyn.ru"];
-      "100.92.128.100" = ["vault-c12.pyn.ru"];
-      "192.168.89.207" = ["zanoza" "jellyfin.sbulav.ru" "authelia.sbulav.ru" "home.sbulav.ru"];
-      "192.168.92.194" = ["beez"];
+      "100.87.128.100" = [ "vault-c7.pyn.ru" ];
+      "100.91.128.100" = [ "vault-c11.pyn.ru" ];
+      "100.92.128.100" = [ "vault-c12.pyn.ru" ];
+      "192.168.89.207" = [
+        "zanoza"
+        "jellyfin.sbulav.ru"
+        "authelia.sbulav.ru"
+        "home.sbulav.ru"
+      ];
+      "192.168.92.194" = [ "beez" ];
     };
     # interfaces.wlp3s0.ipv4.routes = [
     #   {
@@ -77,7 +88,7 @@
     #     via = "192.168.88.1";
     #   }
     # ];
-    search = ["sbulav.ru"];
+    search = [ "sbulav.ru" ];
     # networking.interfaces.enp2s0f0.useDHCP = lib.mkDefault true;
     # networking.interfaces.enp5s0.useDHCP = lib.mkDefault true;
     # networking.interfaces.wlp3s0.useDHCP = lib.mkDefault true;

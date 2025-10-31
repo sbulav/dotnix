@@ -5,15 +5,17 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.virtualisation.podman;
-in {
+in
+{
   options.custom.virtualisation.podman = {
     enable = mkBoolOpt false "Whether or not to enable Podman.";
   };
 
   config = mkIf cfg.enable {
-    environment.systemPackages = with pkgs; [podman-compose];
+    environment.systemPackages = with pkgs; [ podman-compose ];
 
     custom = {
       user = {

@@ -3,9 +3,9 @@
   config,
   pkgs,
   ...
-}: let
-  inherit
-    (lib)
+}:
+let
+  inherit (lib)
     mkEnableOption
     mkIf
     mkOption
@@ -14,7 +14,8 @@
 
   cfg = config.custom.desktop.addons.waypaper;
   wallpaper = config.custom.desktop.addons.wallpaper;
-in {
+in
+{
   options.custom.desktop.addons.waypaper = {
     enable = mkEnableOption "Waypaper app to change wallpapers";
     wallpaperDirectory = mkOption {

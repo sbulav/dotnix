@@ -4,9 +4,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.desktop.addons.hyprlock;
-in {
+in
+{
   options.custom.desktop.addons.hyprlock = with types; {
     enable = mkBoolOpt false "Whether to enable the hyprlock";
   };

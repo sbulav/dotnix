@@ -3,11 +3,13 @@
   config,
   pkgs,
   ...
-}: let
+}:
+let
   inherit (lib) mkEnableOption mkIf;
 
   cfg = config.custom.ai.mcp-k8s-go;
-in {
+in
+{
   options.custom.ai.mcp-k8s-go = {
     enable = mkEnableOption "Enable MCP server connecting to Kubernetes";
   };

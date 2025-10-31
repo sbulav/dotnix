@@ -4,9 +4,9 @@
   pkgs,
   namespace,
   ...
-}: let
-  inherit
-    (lib)
+}:
+let
+  inherit (lib)
     types
     mkIf
     foldl
@@ -15,10 +15,11 @@
   inherit (lib.${namespace}) mkBoolOpt mkOpt;
 
   cfg = config.${namespace}.services.logrotate;
-in {
+in
+{
   options.${namespace}.services.logrotate = with types; {
     enable = mkBoolOpt false "Whether or not to configure logrotate.";
-    logFiles = mkOpt (listOf str) ["/tank/traefik/logs/*.log"] "The list of log files to rotate";
+    logFiles = mkOpt (listOf str) [ "/tank/traefik/logs/*.log" ] "The list of log files to rotate";
   };
 
   config = mkIf cfg.enable {

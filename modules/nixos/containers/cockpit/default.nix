@@ -6,9 +6,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.${namespace}.containers.cockpit;
-in {
+in
+{
   options.${namespace}.containers.cockpit = with types; {
     enable = mkBoolOpt false "Enable Cockpit server monitoring;";
     host = mkOpt str "cockpit.sbulav.ru" "The host to serve flood on";
@@ -16,24 +18,22 @@ in {
     localAddress = mkOpt str "172.16.64.111" "With privateNetwork, which address to use in container";
   };
   imports = [
-    (import ../shared/shared-traefik-route.nix
-      {
-        app = "cockpit";
-        host = "${cfg.host}";
-        url = "http://${cfg.localAddress}:9090";
-        route_enabled = cfg.enable;
-      })
-    (import ../shared/shared-adguard-dns-rewrite.nix
-      {
-        host = "${cfg.host}";
-        rewrite_enabled = cfg.enable;
-      })
+    (import ../shared/shared-traefik-route.nix {
+      app = "cockpit";
+      host = "${cfg.host}";
+      url = "http://${cfg.localAddress}:9090";
+      route_enabled = cfg.enable;
+    })
+    (import ../shared/shared-adguard-dns-rewrite.nix {
+      host = "${cfg.host}";
+      rewrite_enabled = cfg.enable;
+    })
   ];
 
   config = mkIf cfg.enable {
     networking.nat = {
       enable = true;
-      internalInterfaces = ["ve-cockpit"];
+      internalInterfaces = [ "ve-cockpit" ];
       externalInterface = "ens3";
     };
     containers.cockpit = {
@@ -52,30 +52,32 @@ in {
           protocol = "tcp";
         }
       ];
-      config = {...}: {
-        services.cockpit = {
-          enable = true;
-          settings = {
-            WebService = {
-              # Origins = "https://${cfg.host}";
-              # ProtocolHeader = "X-Forwarded-Proto";
-              AllowUnencrypted = true;
+      config =
+        { ... }:
+        {
+          services.cockpit = {
+            enable = true;
+            settings = {
+              WebService = {
+                # Origins = "https://${cfg.host}";
+                # ProtocolHeader = "X-Forwarded-Proto";
+                AllowUnencrypted = true;
+              };
             };
           };
-        };
 
-        networking = {
-          firewall = {
-            enable = true;
-            allowedTCPPorts = [9090];
+          networking = {
+            firewall = {
+              enable = true;
+              allowedTCPPorts = [ 9090 ];
+            };
+            # Use systemd-resolved inside the container
+            # Workaround for bug https://github.com/NixOS/nixpkgs/issues/162686
+            useHostResolvConf = lib.mkForce false;
           };
-          # Use systemd-resolved inside the container
-          # Workaround for bug https://github.com/NixOS/nixpkgs/issues/162686
-          useHostResolvConf = lib.mkForce false;
+          services.resolved.enable = true;
+          system.stateVersion = "24.11";
         };
-        services.resolved.enable = true;
-        system.stateVersion = "24.11";
-      };
     };
   };
 }

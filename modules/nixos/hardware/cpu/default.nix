@@ -2,9 +2,11 @@
   lib,
   namespace,
   ...
-}: let
+}:
+let
   inherit (lib.${namespace}) mkBoolOpt;
-in {
+in
+{
   options.hardware.cpu = {
     enable = mkBoolOpt false "No-op used for setting up hierarchy.";
   };

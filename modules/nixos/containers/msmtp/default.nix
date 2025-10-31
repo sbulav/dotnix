@@ -6,9 +6,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.${namespace}.containers.msmtp;
-in {
+in
+{
   options.${namespace}.containers.msmtp = with types; {
     enable = mkBoolOpt false "Enable the msmtp email service ;";
     secret_file = mkOpt str "secrets/zanoza/default.yaml" "SOPS secret to get creds from";
@@ -18,7 +20,6 @@ in {
   ];
 
   config = mkIf cfg.enable {
-    
     custom.security.sops.secrets = {
       # Use shared email password (same Gmail account as grafana)
       "shared/email-password" = lib.custom.secrets.services.unifiedEmailPassword 1000 // {
@@ -44,14 +45,13 @@ in {
       '';
     };
 
-  environment.etc = {
-    "aliases" = {
-      text = ''
-        root: zppfan@gmail.com
-      '';
-      mode = "0644";
+    environment.etc = {
+      "aliases" = {
+        text = ''
+          root: zppfan@gmail.com
+        '';
+        mode = "0644";
       };
+    };
   };
-  };
-
 }

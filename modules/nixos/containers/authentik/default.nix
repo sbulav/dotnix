@@ -7,9 +7,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.${namespace}.containers.authentik;
-in {
+in
+{
   options.${namespace}.containers.authentik = with types; {
     enable = mkBoolOpt false "Enable authentik nixos-container;";
     host = mkOpt str "authentik.sbulav.ru" "The host to serve authentik on";
@@ -85,4 +87,3 @@ in {
 #     };
 #   };
 # }
-

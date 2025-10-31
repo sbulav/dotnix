@@ -4,9 +4,21 @@
   pkgs,
   osConfig ? null,
   ...
-}: let
-  inherit (lib) mkIf mkMerge mkDefault types optionalAttrs;
-  inherit (lib.custom) mkBoolOpt mkOpt mkSecretsConfig secrets;
+}:
+let
+  inherit (lib)
+    mkIf
+    mkMerge
+    mkDefault
+    types
+    optionalAttrs
+    ;
+  inherit (lib.custom)
+    mkBoolOpt
+    mkOpt
+    mkSecretsConfig
+    secrets
+    ;
 
   cfg = config.custom.security.sops;
 
@@ -14,40 +26,45 @@
   isDarwin = pkgs.stdenv.isDarwin;
   isHome = config ? home;
 
-  platform =
-    if isDarwin
-    then "darwin"
-    else "linux";
+  platform = if isDarwin then "darwin" else "linux";
   profile =
-    if cfg.profile != "auto"
-    then cfg.profile
-    else if isHome
-    then "home"
-    else "system";
+    if cfg.profile != "auto" then
+      cfg.profile
+    else if isHome then
+      "home"
+    else
+      "system";
 
   hostName =
-    if isHome
-    then config.home.username or "unknown" # Fallback for home-manager
-    else config.networking.hostName or "unknown";
+    if isHome then
+      config.home.username or "unknown" # Fallback for home-manager
+    else
+      config.networking.hostName or "unknown";
 
-  userName =
-    if isHome
-    then config.home.username or "sab"
-    else config.custom.user.name or "sab";
-in {
+  userName = if isHome then config.home.username or "sab" else config.custom.user.name or "sab";
+in
+{
   options.custom.security.sops = with types; {
     enable = mkBoolOpt false "Whether to enable SOPS secrets management.";
 
     # Override auto-detection if needed
-    platform = mkOpt (enum ["linux" "darwin" "auto"]) "auto" "Platform type for SOPS configuration.";
-    profile = mkOpt (enum ["home" "system" "auto"]) "auto" "SOPS profile (home-manager vs system).";
+    platform = mkOpt (enum [
+      "linux"
+      "darwin"
+      "auto"
+    ]) "auto" "Platform type for SOPS configuration.";
+    profile = mkOpt (enum [
+      "home"
+      "system"
+      "auto"
+    ]) "auto" "SOPS profile (home-manager vs system).";
 
     # Legacy compatibility options
     defaultSopsFile = mkOpt (nullOr path) null "Override default SOPS file (legacy).";
-    sshKeyPaths = mkOpt (listOf path) [] "Additional SSH key paths.";
+    sshKeyPaths = mkOpt (listOf path) [ ] "Additional SSH key paths.";
 
     # Simplified secret definitions
-    secrets = mkOpt (attrsOf attrs) {} "Secret definitions with smart defaults.";
+    secrets = mkOpt (attrsOf attrs) { } "Secret definitions with smart defaults.";
 
     # Common secret patterns
     commonSecrets = {
@@ -68,8 +85,7 @@ in {
         ssh-to-age
       ];
 
-      home.sessionVariables.SOPS_AGE_KEY_FILE =
-        "${config.home.homeDirectory}/.config/sops/age/keys.txt";
+      home.sessionVariables.SOPS_AGE_KEY_FILE = "${config.home.homeDirectory}/.config/sops/age/keys.txt";
     })
 
     # SOPS configuration (platform-agnostic)
@@ -77,49 +93,42 @@ in {
       sops =
         mkSecretsConfig {
           inherit hostName userName;
-          platform =
-            if cfg.platform != "auto"
-            then cfg.platform
-            else platform;
-          profile =
-            if cfg.profile != "auto"
-            then cfg.profile
-            else profile;
+          platform = if cfg.platform != "auto" then cfg.platform else platform;
+          profile = if cfg.profile != "auto" then cfg.profile else profile;
         }
         // {
           defaultSopsFile =
-            if cfg.defaultSopsFile != null
-            then cfg.defaultSopsFile
-            else lib.snowfall.fs.get-file "secrets/${userName}/default.yaml";
+            if cfg.defaultSopsFile != null then
+              cfg.defaultSopsFile
+            else
+              lib.snowfall.fs.get-file "secrets/${userName}/default.yaml";
         }
-        // optionalAttrs (cfg.sshKeyPaths != [] && !isHome) {
+        // optionalAttrs (cfg.sshKeyPaths != [ ] && !isHome) {
           age.sshKeyPaths = cfg.sshKeyPaths;
         };
     }
 
     # Common secrets (home-manager only)
     (mkIf (cfg.commonSecrets.enableCredentials && isHome) {
-      sops.secrets.env_credentials =
-        secrets.envCredentials {
-          inherit userName;
-          homeDir = config.home.homeDirectory or null;
-        };
+      sops.secrets.env_credentials = secrets.envCredentials {
+        inherit userName;
+        homeDir = config.home.homeDirectory or null;
+      };
     })
 
     # Custom secrets with smart defaults
-    (mkIf (cfg.secrets != {}) {
-      sops.secrets =
-        lib.mapAttrs (
-          name: secretConfig:
-            secretConfig
-            // optionalAttrs (secretConfig.sopsFile or null == null) {
-              sopsFile =
-                if cfg.defaultSopsFile != null
-                then cfg.defaultSopsFile
-                else lib.snowfall.fs.get-file "secrets/${userName}/default.yaml";
-            }
-        )
-        cfg.secrets;
+    (mkIf (cfg.secrets != { }) {
+      sops.secrets = lib.mapAttrs (
+        name: secretConfig:
+        secretConfig
+        // optionalAttrs (secretConfig.sopsFile or null == null) {
+          sopsFile =
+            if cfg.defaultSopsFile != null then
+              cfg.defaultSopsFile
+            else
+              lib.snowfall.fs.get-file "secrets/${userName}/default.yaml";
+        }
+      ) cfg.secrets;
     })
   ]);
 }

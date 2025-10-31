@@ -5,30 +5,59 @@
   pkgs,
   ...
 }:
-with lib.custom; let
+with lib.custom;
+let
   wallpapers = inputs.wallpapers-nix.packages.${pkgs.system}.full;
-in {
+in
+{
   custom = {
     user = {
       enable = true;
       name = config.snowfallorg.user.name;
     };
-    games.enable = true;
 
     desktop = {
-      hyprland = enabled;
+      hyprland = {
+        enable = true;
+        monitors = [
+          "HDMI-A-1,1920x1080,0x0,1"
+          "DP-2,3840x2560@60,1920x0,2"
+        ];
+        workspaces.monitorBindings = {
+          "1" = "DP-2";
+          "2" = "DP-2";
+          "3" = "DP-2";
+          "4" = "DP-2";
+          "5" = "DP-2";
+          "6" = "DP-2";
+          "7" = "HDMI-A-1";
+          "8" = "HDMI-A-1";
+          "9" = "HDMI-A-1";
+        };
+        keybindings = {
+          copy = "C";
+          paste = "V";
+          clipboard = "SHIFT C";
+        };
+      };
       addons = {
         hyprpaper = enabled;
         mako = enabled;
         rofi = enabled;
         kitty = disabled;
-        swaylock = disabled;
-        hypridle = disabled;
-        waybar = enabled;
+        swaylock = enabled;
+        hypridle = {
+          enable = true;
+          profile = "pc";
+        };
+        waybar = {
+          enable = true;
+          keyboardName = "kinesis-advantage2-keyboard-1";
+        };
         wlogout = enabled;
         hyprlock = disabled;
         wezterm = enabled;
-        wallpaper = "${wallpapers}/share/wallpapers/unorganized/left.jpg";
+        wallpaper = "${wallpapers}/share/wallpapers/cities/1-osaka-jade-bg.jpg";
 
         waypaper = {
           enable = true;
@@ -37,8 +66,15 @@ in {
       };
     };
 
+    ai = {
+      opencode = enabled;
+      mcp-k8s-go = enabled;
+    };
+
     apps = {
-      obsidian = disabled;
+      obsidian = enabled;
+      ktalk = enabled;
+      libreoffice = enabled;
     };
 
     cli-apps = {
@@ -50,28 +86,26 @@ in {
       yazi = enabled;
     };
     tools = {
-      gh = disabled;
-      git = enabled;
       direnv = disabled;
-      k9s = disabled;
+      gh = enabled;
+      git = enabled;
+      k9s = enabled;
+      opentofu = enabled;
+      yandex-cloud = disabled;
     };
     security = {
       rbw = enabled;
-      vault = disabled;
-      openconnect = disabled;
-      # sops = {
-      #   enable = false;
-      #   defaultSopsFile = lib.snowfall.fs.get-file "secrets/sab/default.yaml";
-      #   sshKeyPaths = ["${config.home.homeDirectory}/.ssh/id_ed25519"];
-      # };
+      vault = enabled;
+      openconnect = enabled;
+      sops = {
+        enable = true;
+        # Shared module auto-resolves to secrets/sab/default.yaml
+        commonSecrets.enableCredentials = true;
+        profile = "home";
+      };
     };
   };
 
-  # sops.secrets = {
-  #   env_credentials = {
-  #     sopsFile = lib.snowfall.fs.get-file "secrets/sab/default.yaml";
-  #     path = "${config.home.homeDirectory}/.ssh/sops-env-credentials";
-  #   };
-  # };
+  # env_credentials now handled by commonSecrets.enableCredentials = true
   home.stateVersion = "24.11";
 }

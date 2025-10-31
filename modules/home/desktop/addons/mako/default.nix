@@ -6,9 +6,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.desktop.addons.mako;
-in {
+in
+{
   options.custom.desktop.addons.mako = with types; {
     enable = mkBoolOpt false "Whether to enable Mako in Sway.";
   };
@@ -33,7 +35,7 @@ in {
         icons = true;
         layer = "overlay";
         margin = "5";
-        progress-color = "source #00d4aaee"; #07b5efee
+        progress-color = "source #00d4aaee"; # 07b5efee
         text-color = "#c9d1d9cc";
         max-icon-size = 32;
         "urgency=high" = {

@@ -1,4 +1,4 @@
-inputs @ {
+inputs@{
   options,
   config,
   lib,
@@ -6,9 +6,11 @@ inputs @ {
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.desktop.addons.wezterm;
-in {
+in
+{
   options.custom.desktop.addons.wezterm = with types; {
     enable = mkBoolOpt false "Whether or not to enable wezterm.";
   };

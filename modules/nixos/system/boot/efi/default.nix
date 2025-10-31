@@ -5,16 +5,18 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.system.boot.efi;
-in {
+in
+{
   options.system.boot.efi = with types; {
     enable = mkBoolOpt false "Whether or not to enable efi booting.";
   };
 
   config = mkIf cfg.enable {
     boot.loader.systemd-boot.enable = true;
-    boot.kernelParams = ["ipv6.disable=1"];
+    boot.kernelParams = [ "ipv6.disable=1" ];
     boot.loader.systemd-boot.configurationLimit = 5;
     boot.loader.efi.canTouchEfiVariables = true;
 

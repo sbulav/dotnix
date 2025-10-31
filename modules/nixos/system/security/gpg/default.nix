@@ -7,7 +7,8 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.system.security.gpg;
 
   gpgConf = ''
@@ -21,7 +22,8 @@ with lib.custom; let
     max-cache-ttl 28800
     allow-loopback-pinentry
   '';
-in {
+in
+{
   options.system.security.gpg = with types; {
     enable = mkBoolOpt false "Whether or not to enable GPG.";
     agentTimeout = mkOpt int 5 "The amount of time to wait before continuing with shell init.";

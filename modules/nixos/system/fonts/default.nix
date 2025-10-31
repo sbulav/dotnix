@@ -6,12 +6,14 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.system.fonts;
-in {
+in
+{
   options.system.fonts = with types; {
     enable = mkBoolOpt false "Whether or not to manage fonts.";
-    fonts = mkOpt (listOf package) [] "Custom font packages to install.";
+    fonts = mkOpt (listOf package) [ ] "Custom font packages to install.";
   };
 
   config = mkIf cfg.enable {
@@ -22,7 +24,8 @@ in {
 
     # environment.systemPackages = with pkgs; [font-manager];
 
-    fonts.packages = with pkgs;
+    fonts.packages =
+      with pkgs;
       [
         noto-fonts
         noto-fonts-cjk-sans
@@ -40,9 +43,9 @@ in {
 
     fonts.fontconfig = {
       defaultFonts = {
-        monospace = ["CaskaydiaCove Nerd Font Mono"];
-        sansSerif = ["CascadiaCode Nerd Font"];
-        serif = ["CascadiaCode Nerd Font"];
+        monospace = [ "CaskaydiaCove Nerd Font Mono" ];
+        sansSerif = [ "CascadiaCode Nerd Font" ];
+        serif = [ "CascadiaCode Nerd Font" ];
       };
     };
   };

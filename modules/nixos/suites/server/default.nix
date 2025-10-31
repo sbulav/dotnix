@@ -4,9 +4,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.suites.server;
-in {
+in
+{
   options.suites.server = with types; {
     enable = mkBoolOpt false "Enable the common suite";
   };

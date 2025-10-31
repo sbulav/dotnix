@@ -5,6 +5,11 @@ wezterm.on("window-config-reloaded", function(window)
 			dpi = 384,
 		})
 	end
+	if wezterm.gui.screens().active.name == "DP-2" then
+		window:set_config_overrides({
+			dpi = 384,
+		})
+	end
 end)
 -- Update window title
 -- {{{

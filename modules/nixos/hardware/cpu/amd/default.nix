@@ -4,19 +4,21 @@
   pkgs,
   namespace,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf;
   inherit (lib.${namespace}) mkBoolOpt;
 
   cfg = config.hardware.cpu.amd;
-in {
+in
+{
   options.hardware.cpu.amd = {
     enable = mkBoolOpt false "Whether or not to enable support for amd cpu.";
   };
 
   config = mkIf cfg.enable {
     boot = {
-      extraModulePackages = [config.boot.kernelPackages.zenpower];
+      extraModulePackages = [ config.boot.kernelPackages.zenpower ];
 
       kernelModules = [
         "kvm-amd" # amd virtualization
@@ -25,10 +27,10 @@ in {
         "msr" # x86 CPU MSR access device
       ];
 
-      kernelParams = ["amd_pstate=active"];
+      kernelParams = [ "amd_pstate=active" ];
     };
 
-    environment.systemPackages = [pkgs.amdctl];
+    environment.systemPackages = [ pkgs.amdctl ];
 
     hardware.cpu.amd.updateMicrocode = true;
   };

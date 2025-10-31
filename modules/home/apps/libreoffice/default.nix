@@ -7,16 +7,16 @@
 let
   inherit (lib) mkEnableOption mkIf;
 
-  cfg = config.custom.tools.opentofu;
+  cfg = config.custom.apps.libreoffice;
 in
 {
-  options.custom.tools.opentofu = {
-    enable = mkEnableOption "opentofu";
+  options.custom.apps.libreoffice = {
+    enable = mkEnableOption "Enable libreoffice app";
   };
 
   config = mkIf cfg.enable {
     home.packages = with pkgs; [
-      opentofu
+      libreoffice
     ];
   };
 }

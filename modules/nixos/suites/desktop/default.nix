@@ -6,9 +6,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.suites.desktop;
-in {
+in
+{
   options.suites.desktop = with types; {
     enable = mkBoolOpt false "Enable the desktop suite";
   };
@@ -26,7 +28,7 @@ in {
       apps = {
         firefox = enabled;
         imv = enabled;
-        slack = enabled;
+        slack = disabled;
         zoom-us = disabled;
         telegram = enabled;
         vlc = enabled;

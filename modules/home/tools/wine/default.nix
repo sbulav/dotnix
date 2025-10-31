@@ -4,12 +4,14 @@
   pkgs,
   namespace,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf;
   inherit (lib.${namespace}) mkBoolOpt;
 
   cfg = config.${namespace}.tools.wine;
-in {
+in
+{
   options.${namespace}.tools.wine = {
     enable = mkBoolOpt false "Whether or not to enable Wine.";
   };

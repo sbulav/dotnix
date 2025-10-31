@@ -5,9 +5,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.cli-apps.tmux;
-in {
+in
+{
   options.custom.cli-apps.tmux = {
     enable = mkEnableOption "Tmux";
   };

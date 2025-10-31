@@ -3,12 +3,14 @@
   config,
   pkgs,
   ...
-}: let
+}:
+let
   inherit (lib) mkEnableOption mkIf;
   inherit (lib.custom) enabled;
 
   cfg = config.custom.cli-apps.fastfetch;
-in {
+in
+{
   options.custom.cli-apps.fastfetch = {
     enable = mkEnableOption "Fastfetch";
   };

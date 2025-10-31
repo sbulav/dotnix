@@ -4,12 +4,14 @@
   pkgs,
   namespace,
   ...
-}: let
+}:
+let
   inherit (lib) getExe mkIf;
   inherit (lib.${namespace}) mkBoolOpt;
 
   cfg = config.${namespace}.desktop.addons.gamescope;
-in {
+in
+{
   options.${namespace}.desktop.addons.gamescope = {
     enable = mkBoolOpt false "Whether or not to enable gamescope.";
   };

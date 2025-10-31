@@ -7,15 +7,17 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.tools.lsp;
-in {
+in
+{
   options.custom.tools.lsp = with types; {
     enable = mkBoolOpt false "Whether or not to enable lsp utilities.";
   };
 
   config = mkIf cfg.enable {
-    nix.nixPath = ["nixpkgs=${inputs.nixpkgs}"];
+    nix.nixPath = [ "nixpkgs=${inputs.nixpkgs}" ];
     environment.systemPackages = with pkgs; [
       lua-language-server # LSP for lua
       marksman # LSP for markdown

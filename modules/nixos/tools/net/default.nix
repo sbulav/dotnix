@@ -6,9 +6,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.tools.net;
-in {
+in
+{
   options.custom.tools.net = with types; {
     enable = mkBoolOpt false "Whether or not to enable common utilities.";
   };

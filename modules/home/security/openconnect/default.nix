@@ -6,20 +6,22 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.${namespace}.security.openconnect;
   route_delete_command =
-    if pkgs.stdenv.isLinux
-    then ''
-      sudo ip route del 192.168.0.0/16
-      sudo ip route add 10.8.0.1/32 via 192.168.90.1 #openconnect
-    ''
-    else if pkgs.stdenv.isDarwin
-    then ''
-      sudo route delete -net 192.168.0.0/16
-      sudo route add -net 10.8.0.1/32 192.168.89.1 #openconnect
-    ''
-    else "";
+    if pkgs.stdenv.isLinux then
+      ''
+        sudo ip route del 192.168.0.0/16
+        sudo ip route add 10.8.0.1/32 via 192.168.90.1 #openconnect
+      ''
+    else if pkgs.stdenv.isDarwin then
+      ''
+        sudo route delete -net 192.168.0.0/16
+        sudo route add -net 10.8.0.1/32 192.168.89.1 #openconnect
+      ''
+    else
+      "";
 
   vpnScript = pkgs.writeScriptBin "myvpn" ''
     #! ${pkgs.bash}/bin/sh
@@ -92,7 +94,8 @@ with lib.custom; let
         esac
 
   '';
-in {
+in
+{
   options.custom.security.openconnect = with types; {
     enable = mkBoolOpt false "Whether or not to install openconnect and add script.";
   };

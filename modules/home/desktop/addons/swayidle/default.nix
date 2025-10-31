@@ -6,9 +6,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.desktop.addons.swayidle;
-in {
+in
+{
   options.custom.desktop.addons.swayidle = with types; {
     enable = mkBoolOpt false "Whether to enable the swayidle";
   };

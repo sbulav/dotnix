@@ -5,16 +5,18 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.${namespace}.containers.loki;
-in {
+in
+{
   options.${namespace}.containers.loki = with types; {
     enable = mkBoolOpt false "Enable the loki monitoring service ;";
   };
 
   config = mkIf cfg.enable {
     # Allow grafana to read Loki DS via trusted interface
-    networking.firewall.trustedInterfaces = ["ve-grafana"];
+    networking.firewall.trustedInterfaces = [ "ve-grafana" ];
     services.loki = {
       enable = true;
       configuration = {
@@ -116,14 +118,14 @@ in {
             };
             relabel_configs = [
               {
-                source_labels = ["__journal__systemd_unit"];
+                source_labels = [ "__journal__systemd_unit" ];
                 target_label = "unit";
               }
             ];
           }
           {
             job_name = "system";
-            pipeline_stages = [];
+            pipeline_stages = [ ];
             static_configs = [
               {
                 labels = {

@@ -1,5 +1,6 @@
-{lib, ...}:
-with lib.custom; {
+{ lib, ... }:
+with lib.custom;
+{
   custom = {
     suites = {
       common = enabled;
@@ -13,9 +14,9 @@ with lib.custom; {
     security = {
       sops = {
         enable = true; # sops-nix Darwin compatibility issue resolved
-        sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
+        sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
         defaultSopsFile = lib.snowfall.fs.get-file "secrets/mbp16/default.yaml";
-        
+
         # System SSH key using template (moved from deprecated system module)
         secrets = {
           "mbp16_sab_ssh_key" = lib.custom.secrets.system.sshKey "mbp16_sab" "mbp16" // {

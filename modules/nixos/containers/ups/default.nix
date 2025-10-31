@@ -5,9 +5,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.${namespace}.containers.ups;
-in {
+in
+{
   options.${namespace}.containers.ups = with types; {
     enable = mkBoolOpt false "Enable UPS monitoring";
     driver = mkOpt str "huawei-ups2000" "Driver to use to connect to UPS";
