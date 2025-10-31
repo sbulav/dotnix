@@ -7,6 +7,8 @@
 
     stable.url = "github:nixos/nixpkgs/nixos-25.05";
 
+    determinate.url = "https://flakehub.com/f/DeterminateSystems/determinate/*";
+
     snowfall-lib = {
       url = "github:snowfallorg/lib";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -89,7 +91,10 @@
       systems = {
         modules = {
           darwin = with inputs; [sops-nix-darwin.darwinModules.sops];
-          nixos = with inputs; [sops-nix.nixosModules.sops];
+          nixos = with inputs; [
+            sops-nix.nixosModules.sops
+            determinate.nixosModules.default
+          ];
         };
       };
       deploy = lib.mkDeploy {inherit (inputs) self;};

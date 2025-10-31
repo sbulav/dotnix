@@ -12,7 +12,6 @@ in {
   options.system.nix = with types; {
     enable = mkBoolOpt true "Whether or not to manage nix configuration.";
 
-    package = mkOpt package pkgs.nixVersions.latest "Which nix package to use.";
     default-substituter = {
       url = mkOpt str "https://cache.nixos.org" "The url for the substituter.";
       key = mkOpt str "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY=" "The trusted public key for the substituter.";
@@ -34,8 +33,6 @@ in {
     nix = let
       users = ["root" config.custom.user.name];
     in {
-      inherit (cfg) package;
-
       settings = {
         allowed-users = users;
         auto-optimise-store = true;
@@ -50,6 +47,7 @@ in {
         warn-dirty = false;
         substituters = [
           "https://cache.nixos.org"
+          "https://install.determinate.systems"
           "https://nix-community.cachix.org"
           "https://dotnix.cachix.org"
           "https://nixpkgs-unfree.cachix.org"
@@ -59,6 +57,7 @@ in {
 
         trusted-public-keys = [
           "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY="
+          "cache.flakehub.com-3:hJuILl5sVK4iKm86JzgdXW12Y2Hwd5G07qKtHTOcDCM="
           "dotnix.cachix.org-1:/T5Rhb8DkIIAU5wwL2YnMqMsNUkIcOxCIaHUKSaLAVs="
           "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
           "nixpkgs-unfree.cachix.org-1:hqvoInulhbV4nJ9yJOEr+4wxhDV4xq2d1DK7S6Nj6rs="
