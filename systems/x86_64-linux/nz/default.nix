@@ -2,6 +2,7 @@
   pkgs,
   lib,
   inputs,
+  config,
   ...
 }:
 let
@@ -28,6 +29,13 @@ in
     enable = true;
     sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
     defaultSopsFile = lib.snowfall.fs.get-file "secrets/nz/default.yaml";
+  };
+
+  # Stylix - Centralized Theme Management
+  custom.desktop.stylix = {
+    enable = true;
+    theme = "cyberdream";
+    wallpaper = config.system.wallpaper;
   };
 
   custom.virtualisation = {

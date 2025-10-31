@@ -28,6 +28,11 @@ with lib.custom;
     };
 
     desktop.aerospace = enabled;
+
+    desktop.stylix = {
+      enable = true;
+      theme = "cyberdream";
+    };
   };
 
   # suites.common.enable = true; # Enables the basics, like audio, networking, ssh, etc.

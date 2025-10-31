@@ -56,6 +56,12 @@
       url = "github:serokell/deploy-rs";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Stylix (Theme Management)
+    stylix = {
+      url = "github:danth/stylix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs: let
@@ -86,14 +92,22 @@
 
       homes.modules = with inputs; [
         sops-nix.homeManagerModules.sops
+        stylix.homeManagerModules.stylix
         ./modules/shared/security/sops
+        ./modules/shared/desktop/stylix
       ];
       systems = {
         modules = {
-          darwin = with inputs; [sops-nix-darwin.darwinModules.sops];
+          darwin = with inputs; [
+            sops-nix-darwin.darwinModules.sops
+            stylix.darwinModules.stylix
+            ./modules/shared/desktop/stylix
+          ];
           nixos = with inputs; [
             sops-nix.nixosModules.sops
             determinate.nixosModules.default
+            stylix.nixosModules.stylix
+            ./modules/shared/desktop/stylix
           ];
         };
       };

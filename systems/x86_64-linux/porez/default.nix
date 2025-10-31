@@ -2,6 +2,7 @@
   pkgs,
   lib,
   inputs,
+  config,
   ...
 }:
 let
@@ -43,6 +44,13 @@ in
     virt-manager.enable = false;
     kvm.enable = false;
     podman.enable = false;
+  };
+
+  # Stylix - Centralized Theme Management
+  custom.desktop.stylix = {
+    enable = true;
+    theme = "cyberdream";
+    wallpaper = config.system.wallpaper;
   };
 
   custom.services.prometheus-exporters = {

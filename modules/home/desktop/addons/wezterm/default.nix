@@ -23,7 +23,6 @@ in
         # Generate wezterm.lua; order of files are important
         (builtins.readFile ./wezterm.lua)
         + (builtins.readFile ./mappings.lua)
-        + (builtins.readFile ./colors.lua)
         + (builtins.readFile ./tabs.lua)
         + (builtins.readFile ./events.lua)
         + ''

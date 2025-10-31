@@ -12,27 +12,10 @@ let
 in
 {
   options.custom.desktop.addons.gtk = with types; {
-    enable = mkBoolOpt false "Whether to customize GTK and apply themes.";
+    enable = mkBoolOpt false "Whether to enable GTK configuration.";
 
     home.config = mkIf cfg.enable {
-      gtk = {
-        enable = true;
-        theme = {
-          name = "Adwaita-dark";
-          package = pkgs.gnome.adwaita-icon-theme;
-        };
-        iconTheme = {
-          name = "Adwaita";
-          package = pkgs.gnome.adwaita-icon-theme;
-        };
-        cursorTheme = {
-          name = "Adwaita";
-          package = pkgs.gnome.adwaita-icon-theme;
-        };
-
-        font.name = "System-ui Regular";
-        font.size = 11;
-      };
+      gtk.enable = true;
     };
   };
 }

@@ -528,3 +528,134 @@ nix-instantiate --eval -E '(import ./modules/nixos/{path}/default.nix)'
 - [Home Manager Manual](https://nix-community.github.io/home-manager/)
 - [Nix Darwin Manual](https://daiderd.com/nix-darwin/manual/index.html)
 - [SOPS-Nix](https://github.com/Mic92/sops-nix)
+
+## Stylix Theme Management
+
+This configuration uses **Stylix** for centralized theme management across all systems.
+
+### Quick Start
+
+**Enable Stylix in system config**:
+```nix
+custom.desktop.stylix = {
+  enable = true;
+  theme = "cyberdream";  # Default theme
+  wallpaper = config.system.wallpaper;  # Optional
+};
+```
+
+### Key Files
+- **Module**: `modules/shared/desktop/stylix/default.nix`
+- **Documentation**: `STYLIX.md` (detailed guide)
+- **Flake inputs**: Stylix added in `flake.nix`
+
+### Options Reference
+
+All options under `custom.desktop.stylix`:
+
+- `enable`: boolean - Enable Stylix theming
+- `theme`: string - Theme name ("cyberdream" or base16 scheme)
+- `wallpaper`: path - Wallpaper for color extraction (null for manual colors)
+- `fonts.monospace.{package,name}`: Monospace font configuration
+- `fonts.sansSerif.{package,name}`: UI font configuration
+- `fonts.sizes.{terminal,applications,desktop}`: Font sizes
+- `cursor.{package,name,size}`: Cursor theme
+- `iconTheme.{package,name}`: Icon theme
+
+### Current Theme: Cyberdream
+
+Custom dark theme with neon accents. Colors defined as base16 scheme in the module.
+
+**Fonts**:
+- Monospace: FiraCode Nerd Font (default)
+- Sans-serif: CaskaydiaCove Nerd Font (default)
+
+**Themes**:
+- Icons: Papirus-Dark
+- Cursor: Bibata-Modern-Classic
+
+### Automatically Themed Applications
+
+When Stylix is enabled, colors/fonts are applied to:
+- GTK applications
+- Terminals (WezTerm, Kitty, etc.)
+- Editors (Neovim, Vim, Helix)
+- Tools (Tmux, Fzf, etc.)
+- Window managers (Hyprland, Sway)
+- Notification daemons (Mako)
+- Lock screens (Swaylock)
+
+### Manual Theme Overrides
+
+Some apps keep custom themes by default:
+- **Waybar**: Custom Cyberdream CSS
+- **Rofi**: Custom .rasi files
+- **Regreet**: Custom login manager styling
+
+To use Stylix instead:
+```nix
+stylix.targets.waybar.enable = true;  # Override custom theme
+```
+
+### Changing Themes
+
+Switch to different base16 theme:
+```nix
+custom.desktop.stylix.theme = "catppuccin-mocha";
+# Or: nord, dracula, gruvbox, tokyo-night, etc.
+```
+
+Extract colors from wallpaper:
+```nix
+custom.desktop.stylix = {
+  enable = true;
+  wallpaper = config.system.wallpaper;
+  # Don't set 'theme' to use wallpaper colors
+};
+```
+
+### Per-Application Control
+
+Disable Stylix for specific apps in Home Manager:
+```nix
+stylix.targets = {
+  firefox.enable = false;   # Use default Firefox theme
+  neovim.enable = false;    # Keep custom neovim colorscheme
+};
+```
+
+### System Status
+
+**Stylix enabled on**:
+- nz (x86_64-linux desktop)
+- porez (x86_64-linux gaming)
+- mbp16 (aarch64-darwin)
+
+**Not applicable**:
+- beez, zanoza (servers without desktop)
+
+### Migration Status
+
+Phase 3 completed - Removed hardcoded colors from:
+- Mako (notification colors)
+- Swaylock (lock screen colors)
+- GTK (theme/icon/cursor configs)
+- Hyprland (border colors)
+- WezTerm (color scheme file)
+- Font defaults (system-wide)
+
+**Total reduction**: 159 lines of theme configuration removed.
+
+### Related Files
+
+When working with themes:
+1. Check `STYLIX.md` for detailed documentation
+2. Module at `modules/shared/desktop/stylix/default.nix`
+3. System configs in `systems/{arch}/{hostname}/default.nix`
+4. Custom CSS/themes in `modules/home/desktop/addons/*/`
+
+### See Also
+
+- Detailed theme documentation: `STYLIX.md`
+- Stylix upstream docs: https://stylix.danth.me
+- Base16 schemes: https://github.com/tinted-theming/schemes

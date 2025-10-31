@@ -18,11 +18,8 @@ in
 
   config = mkIf cfg.enable {
     environment.variables = {
-      # Enable icons in tooling since we have nerdfonts.
       LOG_ICONS = "true";
     };
-
-    # environment.systemPackages = with pkgs; [font-manager];
 
     fonts.packages =
       with pkgs;
@@ -31,7 +28,6 @@ in
         noto-fonts-cjk-sans
         noto-fonts-cjk-serif
         noto-fonts-emoji
-        # Nerd Fonts
         nerd-fonts.caskaydia-cove
         nerd-fonts.jetbrains-mono
         nerd-fonts.fira-code
@@ -40,13 +36,5 @@ in
         nerd-fonts.symbols-only
       ]
       ++ cfg.fonts;
-
-    fonts.fontconfig = {
-      defaultFonts = {
-        monospace = [ "CaskaydiaCove Nerd Font Mono" ];
-        sansSerif = [ "CascadiaCode Nerd Font" ];
-        serif = [ "CascadiaCode Nerd Font" ];
-      };
-    };
   };
 }
