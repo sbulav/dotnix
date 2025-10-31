@@ -3,11 +3,13 @@
   config,
   pkgs,
   ...
-}: let
+}:
+let
   inherit (lib) mkEnableOption mkIf;
 
   cfg = config.custom.tools.tea;
-in {
+in
+{
   options.custom.tools.tea = {
     enable = mkEnableOption "tea";
   };

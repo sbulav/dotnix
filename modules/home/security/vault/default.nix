@@ -7,9 +7,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.security.vault;
-in {
+in
+{
   options.custom.security.vault = with types; {
     enable = mkBoolOpt false "Whether or not to enable Hashicorp Vault.";
   };

@@ -5,9 +5,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.desktop.addons.spacebar;
-in {
+in
+{
   options.custom.desktop.addons.spacebar = {
     enable = mkEnableOption "Spacebar";
   };

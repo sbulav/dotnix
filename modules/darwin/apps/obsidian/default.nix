@@ -4,16 +4,18 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.apps.obsidian;
-in {
+in
+{
   options.custom.apps.obsidian = {
     enable = mkEnableOption "Enable Obsidian note-taking app";
   };
 
   config = mkIf cfg.enable {
     homebrew = {
-      casks = ["obsidian"];
+      casks = [ "obsidian" ];
     };
   };
 }

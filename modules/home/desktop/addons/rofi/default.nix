@@ -6,12 +6,13 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.desktop.addons.rofi;
-in {
+in
+{
   options.custom.desktop.addons.rofi = with types; {
-    enable =
-      mkBoolOpt false "Whether to enable Rofi in the desktop environment.";
+    enable = mkBoolOpt false "Whether to enable Rofi in the desktop environment.";
   };
 
   config = mkIf cfg.enable {

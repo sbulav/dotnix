@@ -5,9 +5,11 @@
   pkgs,
   ...
 }:
-with lib.custom; let
+with lib.custom;
+let
   wallpapers = inputs.wallpapers-nix.packages.${pkgs.system}.full;
-in {
+in
+{
   custom = {
     user = {
       enable = true;

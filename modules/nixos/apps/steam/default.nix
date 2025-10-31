@@ -4,19 +4,21 @@
   pkgs,
   namespace,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf;
   inherit (lib.${namespace}) mkBoolOpt;
 
   cfg = config.${namespace}.apps.steam;
-in {
+in
+{
   options.${namespace}.apps.steam = {
     enable = mkBoolOpt false "Whether or not to enable support for Steam.";
   };
 
   config = mkIf cfg.enable {
     environment = {
-      systemPackages = with pkgs; [steamtinkerlaunch];
+      systemPackages = with pkgs; [ steamtinkerlaunch ];
     };
 
     hardware.steam-hardware.enable = true;
@@ -28,7 +30,7 @@ in {
       protontricks.enable = true;
       remotePlay.openFirewall = true;
 
-      extraCompatPackages = [pkgs.proton-ge-bin.steamcompattool];
+      extraCompatPackages = [ pkgs.proton-ge-bin.steamcompattool ];
     };
   };
 }

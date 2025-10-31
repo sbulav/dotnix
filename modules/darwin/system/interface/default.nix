@@ -5,9 +5,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.system.interface;
-in {
+in
+{
   options.custom.system.interface = with types; {
     enable = mkEnableOption "macOS interface";
   };

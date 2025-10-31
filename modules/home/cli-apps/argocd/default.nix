@@ -3,11 +3,13 @@
   config,
   pkgs,
   ...
-}: let
+}:
+let
   inherit (lib) mkEnableOption mkIf;
 
   cfg = config.custom.cli-apps.argocd;
-in {
+in
+{
   options.custom.cli-apps.argocd = {
     enable = mkEnableOption "argocd";
   };

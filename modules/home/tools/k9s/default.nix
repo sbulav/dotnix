@@ -5,9 +5,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.tools.k9s;
-in {
+in
+{
   options.custom.tools.k9s = {
     enable = mkBoolOpt true "Whether or not to enable k9s.";
   };
@@ -24,7 +26,7 @@ in {
           shortCut = "Shift-D";
           description = "Add debug container";
           dangerous = true;
-          scopes = ["containers"];
+          scopes = [ "containers" ];
           command = "bash";
           background = false;
           args = [
@@ -35,7 +37,7 @@ in {
         argocd = {
           shortCut = "s";
           description = "Sync ArgoCD Application";
-          scopes = ["application"];
+          scopes = [ "application" ];
           command = "argocd";
           background = true;
           confirm = true;

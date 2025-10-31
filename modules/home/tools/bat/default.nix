@@ -6,9 +6,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.tools.bat;
-in {
+in
+{
   options.custom.tools.bat = {
     enable = mkBoolOpt true "Whether or not to enable bat.";
   };

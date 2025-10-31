@@ -3,7 +3,8 @@
   config,
   ...
 }:
-with lib.custom; {
+with lib.custom;
+{
   custom = {
     user = {
       enable = true;

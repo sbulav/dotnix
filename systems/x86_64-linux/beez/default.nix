@@ -5,10 +5,12 @@
   pkgs,
   lib,
   ...
-}: let
+}:
+let
   system = "x86_64-linux";
   hostName = "beez";
-in {
+in
+{
   imports = [
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
@@ -48,24 +50,20 @@ in {
   #   };
   # };
 
-  services.prometheus = {
-    exporters = {
-      node = {
-        enable = true;
-        openFirewall = true;
-        port = 9100;
-      };
-      smartctl = {
-        enable = true;
-        port = 9633;
-        openFirewall = true;
-        devices = ["/dev/nvme0n1"]; # Adjust based on your disks (run lsblk to check)
-      };
+  custom.services.prometheus-exporters = {
+    enable = true;
+    node = {
+      enable = true;
+      port = 9100;
+      openFirewall = true;
+    };
+    smartctl = {
+      enable = true;
+      port = 9633;
+      openFirewall = true;
+      devices = [ "/dev/nvme0n1" ];
     };
   };
-
-  # Opening ports for prometheus
-  networking.firewall.allowedTCPPorts = [9100 9633];
 
   # custom.services.linuxTransparentProxy = {
   #   enable = false;
@@ -78,7 +76,7 @@ in {
 
   custom.security.sops = {
     enable = true;
-    sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
+    sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
     defaultSopsFile = lib.snowfall.fs.get-file "secrets/beez/default.yaml";
   };
 
@@ -93,7 +91,6 @@ in {
   };
 
   environment.systemPackages = with pkgs; [
-    alejandra
     nixd # LSP for nix
     smartmontools
     ntfs3g

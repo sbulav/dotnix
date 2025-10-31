@@ -3,11 +3,13 @@
   config,
   pkgs,
   ...
-}: let
+}:
+let
   inherit (lib) mkEnableOption mkIf;
 
   cfg = config.custom.apps.libreoffice;
-in {
+in
+{
   options.custom.apps.libreoffice = {
     enable = mkEnableOption "Enable libreoffice app";
   };

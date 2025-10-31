@@ -6,9 +6,13 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.nix;
-  users = ["root" config.custom.user.name];
+  users = [
+    "root"
+    config.custom.user.name
+  ];
   substitutersList = [
     "https://cache.nixos.org"
     "https://nix-community.cachix.org"
@@ -27,7 +31,8 @@ with lib.custom; let
     "wezterm.cachix.org-1:kAbhjYUC9qvblTE+s7S+kl5XM1zVa4skO+E/1IDWdH0="
   ];
   join = lib.concatStringsSep " ";
-in {
+in
+{
   options.custom.nix = with types; {
     enable = mkBoolOpt true "Whether or not to manage nix configuration.";
     # Unused when nix.enable = false, but kept for interface compatibility
@@ -106,15 +111,14 @@ in {
     #############################################
     # Activation: diff using the nix actually on PATH
     #############################################
-    system.activationScripts.postActivation =
-      {
-        text = ''
-          NIX_BIN_DIR="$(dirname "$(command -v nix)")"
-          ${pkgs.nvd}/bin/nvd --nix-bin-dir="$NIX_BIN_DIR" diff /run/current-system "$systemConfig" || true
-        '';
-      }
-      // lib.optionalAttrs pkgs.stdenv.isLinux {
-        supportsDryActivation = true;
-      };
+    system.activationScripts.postActivation = {
+      text = ''
+        NIX_BIN_DIR="$(dirname "$(command -v nix)")"
+        ${pkgs.nvd}/bin/nvd --nix-bin-dir="$NIX_BIN_DIR" diff /run/current-system "$systemConfig" || true
+      '';
+    }
+    // lib.optionalAttrs pkgs.stdenv.isLinux {
+      supportsDryActivation = true;
+    };
   };
 }

@@ -6,9 +6,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.desktop.addons.kitty;
-in {
+in
+{
   options.custom.desktop.addons.kitty = with types; {
     enable = mkBoolOpt false "Whether to enable the Kitty terminal";
   };

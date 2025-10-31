@@ -7,9 +7,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.security.rbw;
-in {
+in
+{
   options.custom.security.rbw = with types; {
     enable = mkBoolOpt false "Whether or not to enable rbw.";
     lockTimeout = mkOpt int 28800 "The amount of time to wait before continuing with shell init.";

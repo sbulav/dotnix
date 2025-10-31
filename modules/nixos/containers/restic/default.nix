@@ -6,7 +6,8 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.${namespace}.containers.restic;
   mkNtfyScript = status: priority: hostName: ''
     echo "----------------------"
@@ -31,7 +32,8 @@ with lib.custom; let
     ┊ -d "$data" \
     ┊ https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage
   '';
-in {
+in
+{
   options.${namespace}.containers.restic = with types; {
     enable = mkBoolOpt false "Enable the restic backup service ;";
     backup_user = mkOpt str "sab" "The backup user";
@@ -44,13 +46,12 @@ in {
   ];
 
   config = mkIf cfg.enable {
-    
     custom.security.sops.secrets = {
       # Backup repository password using template
       "backups/restic_odroid" = lib.custom.secrets.services.backupPassword "restic_odroid" // {
         sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
       };
-      
+
       # Shared telegram bot token for notifications (UID 1000 for user services)
       "telegram-notifications-bot-token" = lib.custom.secrets.services.sharedTelegramBot 1000 // {
         sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
@@ -63,11 +64,14 @@ in {
         user = cfg.backup_user;
         passwordFile = config.sops.secrets."backups/restic_odroid".path;
         repository = "sftp:${cfg.backup_user}@${cfg.backup_host}:/mnt/ext/backup_zanoza";
-        paths = ["/tank/nextcloud/data/"];
+        paths = [ "/tank/nextcloud/data/" ];
         exclude = [
           "/tank/nextcloud/data/appdata_*"
         ];
-        extraBackupArgs = ["--exclude-caches" "--compression=max"];
+        extraBackupArgs = [
+          "--exclude-caches"
+          "--compression=max"
+        ];
         timerConfig = {
           OnCalendar = "01:05";
           RandomizedDelaySec = "1h";
@@ -83,11 +87,14 @@ in {
         user = cfg.backup_user;
         passwordFile = config.sops.secrets."backups/restic_odroid".path;
         repository = "sftp:${cfg.backup_user}@${cfg.backup_host}:/mnt/ext/backup_zanoza";
-        paths = ["/tank/immich/"];
+        paths = [ "/tank/immich/" ];
         exclude = [
           "/tank/immich/postgresql"
         ];
-        extraBackupArgs = ["--exclude-caches" "--compression=max"];
+        extraBackupArgs = [
+          "--exclude-caches"
+          "--compression=max"
+        ];
         timerConfig = {
           OnCalendar = "02:05";
           RandomizedDelaySec = "1h";
@@ -103,8 +110,11 @@ in {
         user = cfg.backup_user;
         passwordFile = config.sops.secrets."backups/restic_odroid".path;
         repository = "sftp:${cfg.backup_user}@${cfg.backup_host}:/mnt/ext/backup_zanoza";
-        paths = ["/tank/photos/"];
-        extraBackupArgs = ["--exclude-caches" "--compression=max"];
+        paths = [ "/tank/photos/" ];
+        extraBackupArgs = [
+          "--exclude-caches"
+          "--compression=max"
+        ];
         timerConfig = {
           OnCalendar = "03:05";
           RandomizedDelaySec = "1h";
@@ -123,20 +133,20 @@ in {
     };
     systemd.services = {
       restic-backups-tank_immich = {
-        onSuccess = ["restic-ntfy-success.service"];
-        onFailure = ["restic-ntfy-failure.service"];
+        onSuccess = [ "restic-ntfy-success.service" ];
+        onFailure = [ "restic-ntfy-failure.service" ];
       };
       restic-backups-tank_nextcloud = {
-        onSuccess = ["restic-ntfy-success.service"];
-        onFailure = ["restic-ntfy-failure.service"];
+        onSuccess = [ "restic-ntfy-success.service" ];
+        onFailure = [ "restic-ntfy-failure.service" ];
       };
       restic-backups-tank_photos = {
-        onSuccess = ["restic-ntfy-success.service"];
-        onFailure = ["restic-ntfy-failure.service"];
+        onSuccess = [ "restic-ntfy-success.service" ];
+        onFailure = [ "restic-ntfy-failure.service" ];
       };
 
       restic-ntfy-success = {
-        serviceConfig.EnvironmentFile = [config.sops.secrets."telegram-notifications-bot-token".path];
+        serviceConfig.EnvironmentFile = [ config.sops.secrets."telegram-notifications-bot-token".path ];
         script = mkNtfyScript "SUCCESS ✅" "INFO" "${config.system.name}";
         environment = {
           status = "SUCCESS";
@@ -146,7 +156,7 @@ in {
       };
 
       restic-ntfy-failure = {
-        serviceConfig.EnvironmentFile = [config.sops.secrets."telegram-notifications-bot-token".path];
+        serviceConfig.EnvironmentFile = [ config.sops.secrets."telegram-notifications-bot-token".path ];
         script = mkNtfyScript "SUCCESS ✅" "INFO" "${config.system.name}";
         environment = {
           status = "FAILURE";

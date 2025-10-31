@@ -5,16 +5,17 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.tools.git;
   user = config.custom.user;
-in {
+in
+{
   options.custom.tools.git = with types; {
     enable = mkBoolOpt false "Whether or not to install and configure git.";
     userName = mkOpt types.str user.fullName "The name to configure git with.";
     userEmail = mkOpt types.str user.email "The email to configure git with.";
-    signingKey =
-      mkOpt types.str "7C43420F61CEC7FB" "The key ID to sign commits with.";
+    signingKey = mkOpt types.str "7C43420F61CEC7FB" "The key ID to sign commits with.";
   };
 
   config = mkIf cfg.enable {
@@ -31,8 +32,12 @@ in {
         core = {
           pager = "bat";
         };
-        pull = {rebase = true;};
-        push = {autoSetupRemote = true;};
+        pull = {
+          rebase = true;
+        };
+        push = {
+          autoSetupRemote = true;
+        };
         merge = {
           tool = "nvimdiff";
           conflictstyle = "diff3";

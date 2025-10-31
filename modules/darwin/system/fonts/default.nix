@@ -6,12 +6,14 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.system.fonts;
-in {
+in
+{
   options.custom.system.fonts = with types; {
     enable = mkBoolOpt false "Whether or not to manage fonts.";
-    fonts = mkOpt (listOf package) [] "Custom font packages to install.";
+    fonts = mkOpt (listOf package) [ ] "Custom font packages to install.";
   };
 
   config = mkIf cfg.enable {
@@ -21,7 +23,8 @@ in {
     };
 
     fonts = {
-      packages = with pkgs;
+      packages =
+        with pkgs;
         [
           noto-fonts
           dejavu_fonts

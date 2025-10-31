@@ -6,12 +6,16 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.${namespace}.containers.traefik;
-in {
+in
+{
   options.${namespace}.containers.traefik = with types; {
     enable = mkBoolOpt false "Enable Traefik nixos-container;";
-    cf_secret_file = mkOpt str "secrets/serverz/default.yaml" "SOPS secret to get cloudflare creds from";
+    cf_secret_file =
+      mkOpt str "secrets/serverz/default.yaml"
+        "SOPS secret to get cloudflare creds from";
     domain = mkOpt str "" "The domain to get certificates to";
     dataPath = mkOpt str "/tank/traefik" "Traefik data path on host machine";
   };
@@ -23,15 +27,13 @@ in {
     ./middleware_secure-headers.nix
     ./middleware_secure-headers-jellyfin.nix
     ./middleware_nextcloud-redirect.nix
-    (import ../shared/shared-adguard-dns-rewrite.nix
-      {
-        host = "traefik.${cfg.domain}";
-        rewrite_enabled = cfg.enable;
-      })
+    (import ../shared/shared-adguard-dns-rewrite.nix {
+      host = "traefik.${cfg.domain}";
+      rewrite_enabled = cfg.enable;
+    })
   ];
 
   config = mkIf cfg.enable {
-    
     custom.security.sops.secrets = {
       # Cloudflare environment file using template
       "traefik-cf-env" = lib.custom.secrets.containers.cloudflareEnv "traefik" // {
@@ -77,7 +79,10 @@ in {
               routers.traefik-dashboard = {
                 rule = "Host(`traefik.${cfg.domain}`)";
                 service = "api@internal";
-                middlewares = ["secure-headers" "allow-lan"];
+                middlewares = [
+                  "secure-headers"
+                  "allow-lan"
+                ];
                 tls = {
                   certResolver = "production";
                   domains = {

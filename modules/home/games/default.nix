@@ -4,12 +4,14 @@
   pkgs,
   namespace,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf;
   inherit (lib.${namespace}) mkBoolOpt enabled;
 
   cfg = config.${namespace}.games;
-in {
+in
+{
   options.${namespace}.games = {
     enable = mkBoolOpt false "Whether or not to enable common games configuration.";
   };

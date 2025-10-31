@@ -3,7 +3,8 @@
   lib,
   pkgs,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf types;
   inherit (lib.custom) mkBoolOpt mkOpt;
 
@@ -42,15 +43,16 @@
     }
   ];
 
-  listenerConfig =
-    if cfg.profile == "laptop"
-    then laptopListeners
-    else pcListeners;
-in {
+  listenerConfig = if cfg.profile == "laptop" then laptopListeners else pcListeners;
+in
+{
   options.custom.desktop.addons.hypridle = {
     enable = mkBoolOpt false "Whether to enable hypridle in the desktop environment.";
 
-    profile = mkOpt (types.enum ["laptop" "pc"]) "laptop" "Power management profile for hypridle.";
+    profile = mkOpt (types.enum [
+      "laptop"
+      "pc"
+    ]) "laptop" "Power management profile for hypridle.";
   };
 
   config = mkIf cfg.enable {

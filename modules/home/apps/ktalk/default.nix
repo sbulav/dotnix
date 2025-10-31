@@ -4,11 +4,13 @@
   pkgs,
   namespace,
   ...
-}: let
+}:
+let
   inherit (lib) mkEnableOption mkIf;
 
   cfg = config.custom.apps.ktalk;
-in {
+in
+{
   options.custom.apps.ktalk = {
     enable = mkEnableOption "ktalk";
   };

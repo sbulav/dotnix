@@ -2,9 +2,11 @@
   lib,
   namespace,
   ...
-}: let
+}:
+let
   inherit (lib.${namespace}) mkBoolOpt;
-in {
+in
+{
   options.hardware.gpu = {
     enable = mkBoolOpt false "No-op for setting up hierarchy.";
   };

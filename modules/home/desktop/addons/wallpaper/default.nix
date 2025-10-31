@@ -6,11 +6,17 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   # cfg = config.system.wallpaper;
-in {
+in
+{
   options.custom.desktop.addons.wallpaper = mkOption {
-    type = types.oneOf [types.package types.path types.str];
+    type = types.oneOf [
+      types.package
+      types.path
+      types.str
+    ];
     default = inputs.wallpapers-nix.packages.${pkgs.system}.catppuccin;
     description = "The wallpaper to use.";
   };

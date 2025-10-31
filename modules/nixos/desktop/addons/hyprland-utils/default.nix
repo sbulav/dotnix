@@ -7,9 +7,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.desktop.addons.hyprland-utils;
-in {
+in
+{
   options.custom.desktop.addons.hyprland-utils = with types; {
     enable = mkBoolOpt false "Whether or not to add support for hyprland.";
   };

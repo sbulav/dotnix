@@ -6,9 +6,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.tools.homebrew;
-in {
+in
+{
   options.custom.tools.homebrew = {
     enable = mkBoolOpt false "Whether or not to enable homebrew.";
     masEnable = mkBoolOpt false "Whether or not to enable Mac App Store downloads.";

@@ -4,104 +4,115 @@
   lib,
   pkgs,
   ...
-}: let
-  inherit (lib) types mkIf mkOption mkEnableOption mapAttrsToList concatMapStringsSep optionalString;
+}:
+let
+  inherit (lib)
+    types
+    mkIf
+    mkOption
+    mkEnableOption
+    mapAttrsToList
+    concatMapStringsSep
+    optionalString
+    ;
   inherit (lib.custom) mkBoolOpt mkOpt;
 
   cfg = config.custom.desktop.hyprland;
 
-  mkWorkspaceRules = assignments:
+  mkWorkspaceRules =
+    assignments:
     concatMapStringsSep "\n" (
-      ws: let
+      ws:
+      let
         apps = assignments.${ws};
       in
-        concatMapStringsSep "\n" (
-          app: "windowrulev2 = workspace ${ws} silent, class:^(${app})$"
-        )
-        apps
+      concatMapStringsSep "\n" (app: "windowrulev2 = workspace ${ws} silent, class:^(${app})$") apps
     ) (builtins.attrNames assignments);
 
-  mkWorkspaceMonitorBindings = bindings:
-    mapAttrsToList (ws: mon: "${ws},monitor:${mon}") bindings;
+  mkWorkspaceMonitorBindings = bindings: mapAttrsToList (ws: mon: "${ws},monitor:${mon}") bindings;
 
-  mkBind = mainMod: key: action: let
-    parts = lib.splitString " " key;
-    hasModifiers = builtins.length parts > 1;
-    mods =
-      if hasModifiers
-      then "${mainMod} ${lib.concatStringsSep " " (lib.init parts)}"
-      else mainMod;
-    actualKey =
-      if hasModifiers
-      then lib.last parts
-      else key;
-  in "bind = ${mods}, ${actualKey}, ${action}";
+  mkBind =
+    mainMod: key: action:
+    let
+      parts = lib.splitString " " key;
+      hasModifiers = builtins.length parts > 1;
+      mods = if hasModifiers then "${mainMod} ${lib.concatStringsSep " " (lib.init parts)}" else mainMod;
+      actualKey = if hasModifiers then lib.last parts else key;
+    in
+    "bind = ${mods}, ${actualKey}, ${action}";
 
-  mkKeybindings = kb: let
-    mainMod = kb.mainMod;
+  mkKeybindings =
+    kb:
+    let
+      mainMod = kb.mainMod;
 
-    appBindings =
-      optionalString (kb.terminal != null) ''
-        ${mkBind mainMod kb.terminal "exec, wezterm"}
-      ''
-      + optionalString (kb.browser != null) ''
-        ${mkBind mainMod kb.browser "exec, firefox"}
-      ''
-      + optionalString (kb.launcher != null) ''
-        ${mkBind mainMod kb.launcher "exec, rofi -show drun"}
-      ''
-      + optionalString (kb.clipboard != null) ''
-        ${mkBind mainMod kb.clipboard "exec, rofi -show clip -theme-str 'listview { columns: 1; fixed-columns: true; }'"}
-      ''
-      + optionalString (kb.passwords != null) ''
-        ${mkBind mainMod kb.passwords "exec, rofi-rbw"}
-      ''
-      + optionalString (kb.search != null) ''
-        ${mkBind mainMod kb.search ''exec, rofi -dmenu -p "Search" | xargs -I{} xdg-open "https://www.google.com/search?q={}" && hyprctl dispatch focuswindow firefox''}
-      ''
-      + optionalString (kb.lock != null) ''
-        ${mkBind mainMod "SHIFT ${kb.lock}" "exec, swaylock"}
-      ''
-      + optionalString (kb.logout != null) ''
-        ${mkBind mainMod "SHIFT ${kb.logout}" "exec, wlogout"}
-      '';
+      appBindings =
+        optionalString (kb.terminal != null) ''
+          ${mkBind mainMod kb.terminal "exec, wezterm"}
+        ''
+        + optionalString (kb.browser != null) ''
+          ${mkBind mainMod kb.browser "exec, firefox"}
+        ''
+        + optionalString (kb.launcher != null) ''
+          ${mkBind mainMod kb.launcher "exec, rofi -show drun"}
+        ''
+        + optionalString (kb.clipboard != null) ''
+          ${mkBind mainMod kb.clipboard
+            "exec, rofi -show clip -theme-str 'listview { columns: 1; fixed-columns: true; }'"
+          }
+        ''
+        + optionalString (kb.passwords != null) ''
+          ${mkBind mainMod kb.passwords "exec, rofi-rbw"}
+        ''
+        + optionalString (kb.search != null) ''
+          ${mkBind mainMod kb.search
+            ''exec, rofi -dmenu -p "Search" | xargs -I{} xdg-open "https://www.google.com/search?q={}" && hyprctl dispatch focuswindow firefox''
+          }
+        ''
+        + optionalString (kb.lock != null) ''
+          ${mkBind mainMod "SHIFT ${kb.lock}" "exec, swaylock"}
+        ''
+        + optionalString (kb.logout != null) ''
+          ${mkBind mainMod "SHIFT ${kb.logout}" "exec, wlogout"}
+        '';
 
-    windowBindings =
-      optionalString (kb.kill != null) ''
-        ${mkBind mainMod kb.kill "killactive,"}
-      ''
-      + optionalString (kb.exit != null) ''
-        ${mkBind mainMod "SHIFT ${kb.exit}" "exit"}
-      ''
-      + optionalString (kb.fullscreen != null) ''
-        ${mkBind mainMod kb.fullscreen "fullscreen,"}
-      ''
-      + optionalString (kb.floating != null && kb.paste == null) ''
-        ${mkBind mainMod kb.floating "togglefloating,"}
-      ''
-      + optionalString (kb.pseudo != null) ''
-        ${mkBind mainMod kb.pseudo "pseudo,"}
-      ''
-      + optionalString (kb.split != null) ''
-        ${mkBind mainMod kb.split "togglesplit,"}
-      '';
+      windowBindings =
+        optionalString (kb.kill != null) ''
+          ${mkBind mainMod kb.kill "killactive,"}
+        ''
+        + optionalString (kb.exit != null) ''
+          ${mkBind mainMod "SHIFT ${kb.exit}" "exit"}
+        ''
+        + optionalString (kb.fullscreen != null) ''
+          ${mkBind mainMod kb.fullscreen "fullscreen,"}
+        ''
+        + optionalString (kb.floating != null && kb.paste == null) ''
+          ${mkBind mainMod kb.floating "togglefloating,"}
+        ''
+        + optionalString (kb.pseudo != null) ''
+          ${mkBind mainMod kb.pseudo "pseudo,"}
+        ''
+        + optionalString (kb.split != null) ''
+          ${mkBind mainMod kb.split "togglesplit,"}
+        '';
 
-    copyPasteBindings =
-      # optionalString (kb.copy != null) ''
-      #   ${mkBind mainMod kb.copy "exec, wl-copy"}
-      # ''
-      # + optionalString (kb.paste != null) ''
-      #   ${mkBind mainMod kb.paste "exec, cliphist list | head -n 1 | cliphist decode | wl-copy && wtype -M ctrl v -m ctrl"}
-      # ''
-      # + optionalString (kb.floating != null && kb.paste != null) ''
-      optionalString (kb.floating != null && kb.paste != null) ''
-        ${mkBind mainMod "SHIFT ${kb.floating}" "togglefloating,"}
-      '';
+      copyPasteBindings =
+        # optionalString (kb.copy != null) ''
+        #   ${mkBind mainMod kb.copy "exec, wl-copy"}
+        # ''
+        # + optionalString (kb.paste != null) ''
+        #   ${mkBind mainMod kb.paste "exec, cliphist list | head -n 1 | cliphist decode | wl-copy && wtype -M ctrl v -m ctrl"}
+        # ''
+        # + optionalString (kb.floating != null && kb.paste != null) ''
+        optionalString (kb.floating != null && kb.paste != null) ''
+          ${mkBind mainMod "SHIFT ${kb.floating}" "togglefloating,"}
+        '';
 
-    extraBindings = concatMapStringsSep "\n" (binding: "bind = ${binding}") kb.extra;
-  in
+      extraBindings = concatMapStringsSep "\n" (binding: "bind = ${binding}") kb.extra;
+    in
     appBindings + windowBindings + copyPasteBindings + extraBindings;
-in {
+in
+{
   options.custom.desktop.hyprland = {
     enable = mkBoolOpt false "Whether or not to install Hyprland and dependencies.";
 
@@ -111,17 +122,30 @@ in {
 
     workspaces = {
       assignments = mkOpt (types.attrsOf (types.listOf types.str)) {
-        "1" = ["wezterm" "org.wezfurlong.wezterm"];
-        "2" = ["firefox"];
-        "3" = ["Slack" "obsidian"];
-        "4" = ["org.telegram.desktop" "zoom"];
-        "5" = ["mpv" "vlc" "mpdevil"];
-        "6" = ["virt-manager"];
+        "1" = [
+          "wezterm"
+          "org.wezfurlong.wezterm"
+        ];
+        "2" = [ "firefox" ];
+        "3" = [
+          "Slack"
+          "obsidian"
+        ];
+        "4" = [
+          "org.telegram.desktop"
+          "zoom"
+        ];
+        "5" = [
+          "mpv"
+          "vlc"
+          "mpdevil"
+        ];
+        "6" = [ "virt-manager" ];
       } "Workspace to application class mappings";
 
       monitorBindings =
-        mkOpt (types.attrsOf types.str) {}
-        "Workspace to monitor bindings (workspace ID -> monitor name)";
+        mkOpt (types.attrsOf types.str) { }
+          "Workspace to monitor bindings (workspace ID -> monitor name)";
     };
 
     keybindings = {
@@ -146,7 +170,7 @@ in {
       copy = mkOpt (types.nullOr types.str) null "Copy to clipboard keybinding";
       paste = mkOpt (types.nullOr types.str) null "Paste from clipboard keybinding";
 
-      extra = mkOpt (types.listOf types.str) [] "Additional custom keybindings";
+      extra = mkOpt (types.listOf types.str) [ ] "Additional custom keybindings";
     };
   };
 

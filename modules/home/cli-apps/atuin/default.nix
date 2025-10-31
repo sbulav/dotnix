@@ -2,13 +2,15 @@
   lib,
   config,
   namespace,
-  osConfig ? {},
+  osConfig ? { },
   ...
-}: let
+}:
+let
   inherit (lib) mkEnableOption mkIf;
 
   cfg = config.custom.cli-apps.atuin;
-in {
+in
+{
   options.custom.cli-apps.atuin = {
     enable = mkEnableOption "atuin";
   };
@@ -30,8 +32,7 @@ in {
         invert = false;
         #TODO:(atuin) disable when comfortable
         show_help = true;
-        key_path = lib.mkIf config.custom.security.sops.enable 
-                     config.sops.secrets.atuin_key.path;
+        key_path = lib.mkIf config.custom.security.sops.enable config.sops.secrets.atuin_key.path;
 
         # This came from https://github.com/nifoc/dotfiles/blob/ce5f9e935db1524d008f97e04c50cfdb41317766/home/programs/atuin.nix#L2
         history_filter = [

@@ -4,7 +4,8 @@
   pkgs,
   namespace,
   ...
-}: let
+}:
+let
   inherit (lib.${namespace}) mkBoolOpt mkOpt;
 
   cfg = config.${namespace}.desktop.addons.gamemode;
@@ -16,23 +17,27 @@
   defaultEndScript = ''
     ${lib.getExe' pkgs.libnotify "notify-send"} 'GameMode ended'
   '';
-in {
+in
+{
   options.${namespace}.desktop.addons.gamemode = with lib.types; {
     enable = mkBoolOpt false "Whether or not to enable gamemode.";
     endscript = mkOpt (nullOr str) null "The script to run when disabling gamemode.";
     startscript = mkOpt (nullOr str) null "The script to run when enabling gamemode.";
   };
 
-  config = let
-    startScript =
-      if (cfg.startscript == null)
-      then pkgs.writeShellScript "gamemode-start" defaultStartScript
-      else pkgs.writeShellScript "gamemode-start" cfg.startscript;
-    endScript =
-      if (cfg.endscript == null)
-      then pkgs.writeShellScript "gamemode-end" defaultEndScript
-      else pkgs.writeShellScript "gamemode-end" cfg.endscript;
-  in
+  config =
+    let
+      startScript =
+        if (cfg.startscript == null) then
+          pkgs.writeShellScript "gamemode-start" defaultStartScript
+        else
+          pkgs.writeShellScript "gamemode-start" cfg.startscript;
+      endScript =
+        if (cfg.endscript == null) then
+          pkgs.writeShellScript "gamemode-end" defaultEndScript
+        else
+          pkgs.writeShellScript "gamemode-end" cfg.endscript;
+    in
     lib.mkIf cfg.enable {
       programs.gamemode = {
         enable = true;

@@ -7,12 +7,11 @@ mkShell {
   packages = with pkgs; [
     black
     (python3.withPackages (
-      ps:
-        with ps; [
-          flake8
-          pip
-          pytest
-        ]
+      ps: with ps; [
+        flake8
+        pip
+        pytest
+      ]
     ))
     ruff
   ];

@@ -6,9 +6,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.virtualisation.virt-manager;
-in {
+in
+{
   options.custom.virtualisation.virt-manager = with types; {
     enable = mkBoolOpt false "Whether or not to enable virt-manager.";
   };

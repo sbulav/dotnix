@@ -6,9 +6,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.system.security;
-in {
+in
+{
   options.custom.system.security = with types; {
     enable = mkEnableOption "MacOS security settings";
   };

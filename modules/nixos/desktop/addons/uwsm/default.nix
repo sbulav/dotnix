@@ -3,12 +3,14 @@
   lib,
   namespace,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf;
   inherit (lib.${namespace}) mkBoolOpt;
 
   cfg = config.${namespace}.desktop.addons.uwsm;
-in {
+in
+{
   options.${namespace}.desktop.addons.uwsm = {
     # Universal Wayland Session Manager is a recommended way to start Hyprland
     # session on systemd distros.

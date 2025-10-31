@@ -3,11 +3,13 @@
   config,
   pkgs,
   ...
-}: let
+}:
+let
   inherit (lib) mkEnableOption mkIf;
 
   cfg = config.custom.tools.opentofu;
-in {
+in
+{
   options.custom.tools.opentofu = {
     enable = mkEnableOption "opentofu";
   };

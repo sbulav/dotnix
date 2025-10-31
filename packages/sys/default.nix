@@ -1,4 +1,4 @@
-{writeShellScriptBin, ...}:
+{ writeShellScriptBin, ... }:
 writeShellScriptBin "sys" ''
 
   cmd_rebuild() {

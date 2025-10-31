@@ -4,11 +4,13 @@
   pkgs,
   namespace,
   ...
-}: let
+}:
+let
   inherit (lib.${namespace}) mkBoolOpt mkOpt;
 
   cfg = config.${namespace}.security.keyring;
-in {
+in
+{
   options.${namespace}.security.keyring = with lib.types; {
     enable = mkBoolOpt false "Whether to enable gnome keyring.";
   };

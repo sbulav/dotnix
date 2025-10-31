@@ -6,9 +6,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.suites.common;
-in {
+in
+{
   options.suites.common = with types; {
     enable = mkBoolOpt false "Enable the common suite";
   };
@@ -34,7 +36,7 @@ in {
     programs.dconf.enable = true;
 
     # add sys custom build package
-    environment.systemPackages = [pkgs.custom.sys];
+    environment.systemPackages = [ pkgs.custom.sys ];
 
     custom.tools = {
       http.enable = true;

@@ -3,10 +3,12 @@
   lib,
   inputs,
   ...
-}: let
+}:
+let
   wallpapers = inputs.wallpapers-nix.packages.${pkgs.system}.full;
-in {
-  imports = [./hardware-configuration.nix];
+in
+{
+  imports = [ ./hardware-configuration.nix ];
   system.wallpaper = "${wallpapers}/share/wallpapers/cities/1-osaka-jade-bg.jpg";
   # Enable Bootloader
   system.boot.efi.enable = true;
@@ -33,7 +35,7 @@ in {
   services.ssh.enable = true;
   custom.security.sops = {
     enable = true;
-    sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
+    sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
     defaultSopsFile = lib.snowfall.fs.get-file "secrets/porez/default.yaml";
   };
 
@@ -41,6 +43,21 @@ in {
     virt-manager.enable = false;
     kvm.enable = false;
     podman.enable = false;
+  };
+
+  custom.services.prometheus-exporters = {
+    enable = true;
+    node = {
+      enable = true;
+      port = 9100;
+      openFirewall = true;
+    };
+    smartctl = {
+      enable = true;
+      port = 9633;
+      openFirewall = true;
+      devices = [ "/dev/nvme0n1" ];
+    };
   };
 
   # limit systemd journal size

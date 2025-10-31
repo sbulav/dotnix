@@ -4,12 +4,14 @@
   pkgs,
   namespace,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf;
   inherit (lib.${namespace}) mkBoolOpt;
 
   cfg = config.hardware.gpu.amd;
-in {
+in
+{
   options.hardware.gpu.amd = {
     enable = mkBoolOpt false "Whether or not to enable support for amdgpu.";
     enableRocmSupport = mkBoolOpt false "Whether or not to enable support for rocm.";
@@ -18,8 +20,8 @@ in {
   config = mkIf cfg.enable {
     # enable amdgpu kernel module
     boot = {
-      initrd.kernelModules = ["amdgpu"]; # load amdgpu kernel module as early as initrd
-      kernelModules = ["amdgpu"]; # if loading somehow fails during initrd but the boot continues, try again later
+      initrd.kernelModules = [ "amdgpu" ]; # load amdgpu kernel module as early as initrd
+      kernelModules = [ "amdgpu" ]; # if loading somehow fails during initrd but the boot continues, try again later
     };
 
     environment.systemPackages = with pkgs; [

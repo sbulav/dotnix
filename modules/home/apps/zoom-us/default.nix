@@ -3,11 +3,13 @@
   config,
   pkgs,
   ...
-}: let
+}:
+let
   inherit (lib) mkEnableOption mkIf;
 
   cfg = config.custom.apps.zoom-us;
-in {
+in
+{
   options.custom.apps.zoom-us = {
     enable = mkEnableOption "zoom";
   };

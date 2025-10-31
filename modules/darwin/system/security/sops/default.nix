@@ -5,20 +5,22 @@
   lib,
   namespace,
   ...
-}: let
+}:
+let
   inherit (lib.${namespace}) mkBoolOpt mkOpt;
   cfg = config.${namespace}.security.sops;
-in {
+in
+{
   options.${namespace}.security.sops = with lib.types; {
     enable = mkBoolOpt false "Whether to enable sops.";
     defaultSopsFile = mkOpt path null "Default sops file.";
-    sshKeyPaths = mkOpt (listOf path) ["/etc/ssh/ssh_host_ed25519_key"] "SSH Key paths to use.";
-    secrets = mkOpt (attrsOf attrs) {} "Secret definitions (handled by system config now).";
+    sshKeyPaths = mkOpt (listOf path) [ "/etc/ssh/ssh_host_ed25519_key" ] "SSH Key paths to use.";
+    secrets = mkOpt (attrsOf attrs) { } "Secret definitions (handled by system config now).";
   };
 
-   config = lib.mkIf cfg.enable {
-     warnings = [
-       "modules/darwin/system/security/sops is deprecated - use shared SOPS patterns in system configurations"
-     ];
-   };
+  config = lib.mkIf cfg.enable {
+    warnings = [
+      "modules/darwin/system/security/sops is deprecated - use shared SOPS patterns in system configurations"
+    ];
+  };
 }

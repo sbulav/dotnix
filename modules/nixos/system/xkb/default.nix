@@ -5,9 +5,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.system.xkb;
-in {
+in
+{
   options.system.xkb = with types; {
     enable = mkBoolOpt false "Whether or not to configure xkb.";
   };
@@ -20,7 +22,7 @@ in {
       options = "terminate:ctrl_alt_bksp";
       extraLayouts.dh = {
         description = "Colemak-DH ergo";
-        languages = ["eng"];
+        languages = [ "eng" ];
         symbolsFile = ./symbols/colemak_dh;
       };
     };

@@ -5,9 +5,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.${namespace}.services.ipcamCleanup;
-in {
+in
+{
   options.${namespace}.services.ipcamCleanup = with types; {
     enable = mkBoolOpt false "Enable hourly cleanup of /tank/ipcam and .dav→.dav.mp4 hardlinks";
   };
@@ -19,7 +21,7 @@ in {
         OnCalendar = "hourly";
         Persistent = true;
       };
-      wantedBy = ["timers.target"];
+      wantedBy = [ "timers.target" ];
     };
 
     systemd.services."ipcam-cleanup" = {

@@ -6,20 +6,22 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.apps.imv;
 
   # XDG MIME types
   associations = {
-    "image/*" = ["imv.desktop"];
+    "image/*" = [ "imv.desktop" ];
   };
-in {
+in
+{
   options.custom.apps.imv = with types; {
     enable = mkBoolOpt false "Whether or not to enable imv.";
   };
 
   config = mkIf cfg.enable {
-    environment.systemPackages = with pkgs; [imv];
+    environment.systemPackages = with pkgs; [ imv ];
 
     xdg = {
       mime = {

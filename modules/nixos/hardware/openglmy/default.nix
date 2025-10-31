@@ -4,12 +4,14 @@
   pkgs,
   namespace,
   ...
-}: let
+}:
+let
   inherit (lib) mkIf;
   inherit (lib.${namespace}) mkBoolOpt;
 
   cfg = config.hardware.openglmy;
-in {
+in
+{
   options.hardware.openglmy = {
     enable = mkBoolOpt false "Whether or not to enable support for opengl.";
   };

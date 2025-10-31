@@ -6,16 +6,18 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.desktop.addons.waybar;
   hyprctl = "${pkgs.hyprland}/bin/hyprctl";
   blueberry = "${pkgs.blueberry}/bin/blueberry";
-in {
+in
+{
   options.custom.desktop.addons.waybar = with types; {
-    enable =
-      mkBoolOpt false "Whether to enable Waybar in the desktop environment.";
+    enable = mkBoolOpt false "Whether to enable Waybar in the desktop environment.";
     keyboardName =
-      mkOpt str "at-translated-set-2-keyboard" "The keyboard device name for language switching.";
+      mkOpt str "at-translated-set-2-keyboard"
+        "The keyboard device name for language switching.";
   };
 
   config = mkIf cfg.enable {
@@ -151,7 +153,13 @@ in {
             hwmon-path = "/sys/class/hwmon/hwmon1/temp1_input";
             critical-threshold = 80;
             format = "{icon} {temperatureC}°C";
-            format-icons = ["" "" "" "" ""];
+            format-icons = [
+              ""
+              ""
+              ""
+              ""
+              ""
+            ];
           };
           "custom/kernel" = {
             interval = "once";
@@ -175,7 +183,11 @@ in {
             format-bluetooth = "󰂯 {icon} {volume}%";
             format-muted = "󰝟 0%";
             format-icons = {
-              default = ["" "" " "];
+              default = [
+                ""
+                ""
+                " "
+              ];
             };
           };
           "hyprland/language" = {
@@ -197,9 +209,17 @@ in {
             format-charging = " {capacity}%";
             format-plugged = " {capacity}%";
             format-alt = "{time} {icon}";
-            format-icons = [" " " " " " " " " "];
+            format-icons = [
+              " "
+              " "
+              " "
+              " "
+              " "
+            ];
           };
-          "tray" = {spacing = 10;};
+          "tray" = {
+            spacing = 10;
+          };
           "custom/power" = {
             format = "";
             on-click = "wlogout -p layer-shell";

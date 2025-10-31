@@ -4,9 +4,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.system.input;
-in {
+in
+{
   options.custom.system.input = with types; {
     enable = mkEnableOption "macOS input";
   };

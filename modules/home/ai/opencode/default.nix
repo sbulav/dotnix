@@ -3,9 +3,9 @@
   config,
   pkgs,
   ...
-}: let
-  inherit
-    (lib)
+}:
+let
+  inherit (lib)
     mkEnableOption
     mkIf
     mkOption
@@ -32,86 +32,89 @@
   # Helper function to process config directories
   # dirPath: path to directory containing .nix files
   # Returns: attrset of name -> config for all valid .nix files
-  processConfigDir = dirPath: let
-    files = builtins.readDir dirPath;
-    nixFiles = filterAttrs (name: _: lib.hasSuffix ".nix" name) files;
-  in
-    lib.mapAttrs' (name: _: let
-      filePath = dirPath + "/${name}";
+  processConfigDir =
+    dirPath:
+    let
+      files = builtins.readDir dirPath;
+      nixFiles = filterAttrs (name: _: lib.hasSuffix ".nix" name) files;
     in
-      if builtins.pathExists filePath
-      then let
-        fileName = lib.removeSuffix ".nix" name;
-        config = import filePath;
+    lib.mapAttrs' (
+      name: _:
+      let
+        filePath = dirPath + "/${name}";
       in
+      if builtins.pathExists filePath then
+        let
+          fileName = lib.removeSuffix ".nix" name;
+          config = import filePath;
+        in
         nameValuePair fileName config
       else
         # Skip missing files without error
-        null)
-    nixFiles;
+        null
+    ) nixFiles;
 
   # Import configurations from directories
   agents = processConfigDir agentDir;
   commands = processConfigDir commandDir;
 
   # Process physical tool scripts from tools directory
-  physicalTools = let
-    files = builtins.readDir toolsDir;
-  in
-    lib.mapAttrs' (name: _: let
-      filePath = toolsDir + "/${name}";
+  physicalTools =
+    let
+      files = builtins.readDir toolsDir;
     in
-      if builtins.pathExists filePath
-      then let
-        content = builtins.readFile filePath;
+    lib.mapAttrs' (
+      name: _:
+      let
+        filePath = toolsDir + "/${name}";
       in
+      if builtins.pathExists filePath then
+        let
+          content = builtins.readFile filePath;
+        in
         nameValuePair name content
-      else null)
-    files;
+      else
+        null
+    ) files;
 
   # Helper functions to convert Nix to YAML/Markdown
 
   # Convert optional value to YAML field, skipping null/empty
   # key: string, value: any -> string
-  optionalYamlField = key: value:
-    if value != null && value != ""
-    then "${key}: ${builtins.toJSON value}"
-    else "";
+  optionalYamlField =
+    key: value: if value != null && value != "" then "${key}: ${builtins.toJSON value}" else "";
 
   # Convert tools attrset to YAML format
   # tools: attrset of name -> enabled -> string
-  toolsToYaml = tools:
-    if tools == {}
-    then ""
-    else let
-      toolLines =
-        lib.mapAttrsToList
-        (name: enabled: "  ${name}: ${builtins.toJSON enabled}")
-        tools;
-    in
+  toolsToYaml =
+    tools:
+    if tools == { } then
+      ""
+    else
+      let
+        toolLines = lib.mapAttrsToList (name: enabled: "  ${name}: ${builtins.toJSON enabled}") tools;
+      in
       "tools:\n" + lib.concatStringsSep "\n" toolLines;
 
   # Convert permissions attrset to YAML format
   # permission: attrset of name -> value or subattrset -> string
-  permissionToYaml = permission:
-    if permission == {}
-    then ""
-    else let
-      permLines =
-        lib.mapAttrsToList (
+  permissionToYaml =
+    permission:
+    if permission == { } then
+      ""
+    else
+      let
+        permLines = lib.mapAttrsToList (
           name: value:
-            if builtins.isAttrs value
-            then let
-              subLines =
-                lib.mapAttrsToList
-                (subName: subValue: "      \"${subName}\": \"${subValue}\"")
-                value;
+          if builtins.isAttrs value then
+            let
+              subLines = lib.mapAttrsToList (subName: subValue: "      \"${subName}\": \"${subValue}\"") value;
             in
-              "  ${name}:\n" + lib.concatStringsSep "\n" subLines
-            else "  ${name}: \"${value}\""
-        )
-        permission;
-    in
+            "  ${name}:\n" + lib.concatStringsSep "\n" subLines
+          else
+            "  ${name}: \"${value}\""
+        ) permission;
+      in
       "permission:\n" + lib.concatStringsSep "\n" permLines;
 
   # Generate common YAML header for markdown
@@ -128,8 +131,8 @@
     ${optionalYamlField "mode" (config.mode or null)}
     ${optionalYamlField "model" (config.model or null)}
     ${optionalYamlField "temperature" (config.temperature or null)}
-    ${toolsToYaml (config.tools or {})}
-    ${permissionToYaml (config.permission or {})}
+    ${toolsToYaml (config.tools or { })}
+    ${permissionToYaml (config.permission or { })}
     ---
     ${config.system_prompt or ""}
   '';
@@ -164,19 +167,20 @@
 
   # Final settings with user overrides
   finalSettings = lib.recursiveUpdate defaultSettings cfg.settings;
-in {
+in
+{
   options.custom.ai.opencode = {
     enable = mkEnableOption "Enable opencode AI assistant";
 
     settings = mkOption {
       type = types.attrs;
-      default = {};
+      default = { };
       description = "Configuration for opencode.json";
     };
 
     tools = mkOption {
       type = types.attrsOf types.lines;
-      default = {};
+      default = { };
       description = "Tool scripts placed in the tools directory";
     };
   };
@@ -186,28 +190,30 @@ in {
       opencode
     ];
 
-    xdg.configFile =
-      {
-        "opencode/opencode.json".text = builtins.toJSON finalSettings;
+    xdg.configFile = {
+      "opencode/opencode.json".text = builtins.toJSON finalSettings;
+    }
+    # Agent markdown files
+    // lib.mapAttrs' (
+      name: value:
+      nameValuePair "opencode/agent/${name}.md" {
+        text = toMarkdownAgent name value;
       }
-      # Agent markdown files
-      // lib.mapAttrs' (name: value:
-        nameValuePair "opencode/agent/${name}.md" {
-          text = toMarkdownAgent name value;
-        })
-      agents
-      # Command markdown files
-      // lib.mapAttrs' (name: value:
-        nameValuePair "opencode/command/${name}.md" {
-          text = toMarkdownCommand name value;
-        })
-      commands
-      # Tool scripts (from both options and physical files)
-      // lib.mapAttrs' (name: value:
-        nameValuePair "opencode/tools/${name}" {
-          text = value;
-          executable = true;
-        })
-      (cfg.tools // physicalTools);
+    ) agents
+    # Command markdown files
+    // lib.mapAttrs' (
+      name: value:
+      nameValuePair "opencode/command/${name}.md" {
+        text = toMarkdownCommand name value;
+      }
+    ) commands
+    # Tool scripts (from both options and physical files)
+    // lib.mapAttrs' (
+      name: value:
+      nameValuePair "opencode/tools/${name}" {
+        text = value;
+        executable = true;
+      }
+    ) (cfg.tools // physicalTools);
   };
 }

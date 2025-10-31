@@ -6,9 +6,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.tools.gh;
-in {
+in
+{
   options.custom.tools.gh = with types; {
     enable = mkBoolOpt false "Whether or not to install and configure gh.";
   };

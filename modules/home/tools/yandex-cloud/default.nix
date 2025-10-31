@@ -3,11 +3,13 @@
   config,
   pkgs,
   ...
-}: let
+}:
+let
   inherit (lib) mkEnableOption mkIf;
 
   cfg = config.custom.tools.yandex-cloud;
-in {
+in
+{
   options.custom.tools.yandex-cloud = {
     enable = mkEnableOption "yandex-cloud";
   };

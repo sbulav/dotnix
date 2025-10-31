@@ -7,9 +7,11 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.${namespace}.containers.nextcloud;
-in {
+in
+{
   options.${namespace}.containers.nextcloud = with types; {
     enable = mkBoolOpt false "Enable nextcloud nixos-container;";
     secret_file = mkOpt str "secrets/serverz/default.yaml" "SOPS secret to get creds from";
@@ -20,59 +22,62 @@ in {
   };
 
   imports = [
-    (import ../shared/shared-traefik-clientip-route.nix
-      {
-        app = "nextcloud";
-        host = cfg.host;
-        url = "http://${cfg.localAddress}:80";
-        route_enabled = cfg.enable;
-        middleware = ["secure-headers" "allow-lan"];
-        clientips = "ClientIP(`172.16.64.0/24`) || ClientIP(`192.168.80.0/20`)";
-      })
+    (import ../shared/shared-traefik-clientip-route.nix {
+      app = "nextcloud";
+      host = cfg.host;
+      url = "http://${cfg.localAddress}:80";
+      route_enabled = cfg.enable;
+      middleware = [
+        "secure-headers"
+        "allow-lan"
+      ];
+      clientips = "ClientIP(`172.16.64.0/24`) || ClientIP(`192.168.80.0/20`)";
+    })
     # TODO: fix this workaround for accessing mobile devices
-    (import ../shared/shared-traefik-bypass-route.nix
-      {
-        app = "nextcloud";
-        host = "${cfg.host}";
-        url = "http://${cfg.localAddress}:80";
-        route_enabled = cfg.enable;
-        middleware = ["nextcloud-redirect"];
-        pathregexp = "/api/|/status.php|/remote.php/(dav|direct)/|/ocs/v2.php/|/index.php/|/core|/apps";
-      })
-    (import ../shared/shared-traefik-route.nix
-      {
-        app = "nextcloud";
-        host = "${cfg.host}";
-        url = "http://${cfg.localAddress}:80";
-        route_enabled = cfg.enable;
-        middleware = ["nextcloud-redirect" "secure-headers" "authelia"];
-      })
-    (import ../shared/shared-adguard-dns-rewrite.nix
-      {
-        host = "${cfg.host}";
-        rewrite_enabled = cfg.enable;
-      })
+    (import ../shared/shared-traefik-bypass-route.nix {
+      app = "nextcloud";
+      host = "${cfg.host}";
+      url = "http://${cfg.localAddress}:80";
+      route_enabled = cfg.enable;
+      middleware = [ "nextcloud-redirect" ];
+      pathregexp = "/api/|/status.php|/remote.php/(dav|direct)/|/ocs/v2.php/|/index.php/|/core|/apps";
+    })
+    (import ../shared/shared-traefik-route.nix {
+      app = "nextcloud";
+      host = "${cfg.host}";
+      url = "http://${cfg.localAddress}:80";
+      route_enabled = cfg.enable;
+      middleware = [
+        "nextcloud-redirect"
+        "secure-headers"
+        "authelia"
+      ];
+    })
+    (import ../shared/shared-adguard-dns-rewrite.nix {
+      host = "${cfg.host}";
+      rewrite_enabled = cfg.enable;
+    })
   ];
   config = mkIf cfg.enable {
     networking.nat = {
       enable = true;
-      internalInterfaces = ["ve-nextcloud"];
+      internalInterfaces = [ "ve-nextcloud" ];
       externalInterface = "ens3";
     };
-    
+
     custom.security.sops.secrets = {
       # Admin password (follows template pattern but custom name)
       "nextcloud-admin-pass" = {
         sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
         uid = 999;
-        restartUnits = ["container@nextcloud.service"];
+        restartUnits = [ "container@nextcloud.service" ];
       };
-      
+
       # Secret file (app-specific)
       "nextcloud-secretFile" = {
         sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
         uid = 999;
-        restartUnits = ["container@nextcloud.service"];
+        restartUnits = [ "container@nextcloud.service" ];
       };
     };
     containers.nextcloud = {
@@ -126,132 +131,136 @@ in {
         inherit inputs;
       };
 
-      config = {
-        config,
-        inputs,
-        pkgs,
-        ...
-      }: {
-        systemd.tmpfiles.rules = [
-          "d /var/lib/nextcloud 750 nextcloud nextcloud -"
-          "d /var/lib/postgresql 700 postgres postgres -"
-        ];
+      config =
+        {
+          config,
+          inputs,
+          pkgs,
+          ...
+        }:
+        {
+          systemd.tmpfiles.rules = [
+            "d /var/lib/nextcloud 750 nextcloud nextcloud -"
+            "d /var/lib/postgresql 700 postgres postgres -"
+          ];
 
-        networking.hosts = {
-          "${cfg.hostAddress}" = ["authelia.sbulav.ru"];
-        };
-        services = {
-          nextcloud = {
-            enable = true;
-            package = inputs.stable.legacyPackages.x86_64-linux.nextcloud31;
-            hostName = cfg.host;
-            secretFile = "/run/secrets/nextcloud-secretFile";
+          networking.hosts = {
+            "${cfg.hostAddress}" = [ "authelia.sbulav.ru" ];
+          };
+          services = {
+            nextcloud = {
+              enable = true;
+              package = inputs.stable.legacyPackages.x86_64-linux.nextcloud31;
+              hostName = cfg.host;
+              secretFile = "/run/secrets/nextcloud-secretFile";
 
-            https = true;
-            maxUploadSize = "16G";
-            configureRedis = true;
-            datadir = "/var/lib/nextcloud";
-            database.createLocally = true;
-            # As recommended by admin panel
-            phpOptions."opcache.interned_strings_buffer" = "24";
+              https = true;
+              maxUploadSize = "16G";
+              configureRedis = true;
+              datadir = "/var/lib/nextcloud";
+              database.createLocally = true;
+              # As recommended by admin panel
+              phpOptions."opcache.interned_strings_buffer" = "24";
 
-            autoUpdateApps.enable = true;
-            extraAppsEnable = true;
-            extraApps = {
-              inherit
-                (config.services.nextcloud.package.packages.apps)
-                previewgenerator
-                notes
-                ;
-              oidc_login = pkgs.fetchNextcloudApp {
-                license = "agpl3Plus";
-                url = "https://github.com/pulsejet/nextcloud-oidc-login/releases/download/v3.2.2/oidc_login.tar.gz";
-                sha256 = "sha256-RLYquOE83xquzv+s38bahOixQ+y4UI6OxP9HfO26faI=";
+              autoUpdateApps.enable = true;
+              extraAppsEnable = true;
+              extraApps = {
+                inherit (config.services.nextcloud.package.packages.apps)
+                  previewgenerator
+                  notes
+                  ;
+                oidc_login = pkgs.fetchNextcloudApp {
+                  license = "agpl3Plus";
+                  url = "https://github.com/pulsejet/nextcloud-oidc-login/releases/download/v3.2.2/oidc_login.tar.gz";
+                  sha256 = "sha256-RLYquOE83xquzv+s38bahOixQ+y4UI6OxP9HfO26faI=";
+                };
               };
-            };
 
-            config = {
-              adminuser = "admin";
-              adminpassFile = "/run/secrets/nextcloud-admin-pass";
-              dbtype = "pgsql";
-            };
+              config = {
+                adminuser = "admin";
+                adminpassFile = "/run/secrets/nextcloud-admin-pass";
+                dbtype = "pgsql";
+              };
 
-            settings = {
-              log_type = "file";
-              loglevel = 1;
-              trusted_proxies = ["${cfg.hostAddress}"];
-              # TODO: make this dynamic, second entry for homepage
-              trusted_domains = ["${cfg.host}" "172.16.64.106"];
-              default_phone_region = "US";
-              enable_previews = true;
-              maintenance_window_start = 4; # Run jobs at 4am UTC
-              enabledPreviewProviders = [
-                "OC\\Preview\\BMP"
-                "OC\\Preview\\GIF"
-                "OC\\Preview\\JPEG"
-                "OC\\Preview\\Krita"
-                "OC\\Preview\\MarkDown"
-                "OC\\Preview\\MP3"
-                "OC\\Preview\\OpenDocument"
-                "OC\\Preview\\PNG"
-                "OC\\Preview\\TXT"
-                "OC\\Preview\\XBitmap"
-                # Not included by default
-                "OC\\Preview\\HEIC"
-                "OC\\Preview\\Movie"
-                "OC\\Preview\\MP4"
-              ];
-              user_oidc = {
-                single_logout = false;
-                auto_provision = true;
-                soft_auto_provision = true;
+              settings = {
+                log_type = "file";
+                loglevel = 1;
+                trusted_proxies = [ "${cfg.hostAddress}" ];
+                # TODO: make this dynamic, second entry for homepage
+                trusted_domains = [
+                  "${cfg.host}"
+                  "172.16.64.106"
+                ];
+                default_phone_region = "US";
+                enable_previews = true;
+                maintenance_window_start = 4; # Run jobs at 4am UTC
+                enabledPreviewProviders = [
+                  "OC\\Preview\\BMP"
+                  "OC\\Preview\\GIF"
+                  "OC\\Preview\\JPEG"
+                  "OC\\Preview\\Krita"
+                  "OC\\Preview\\MarkDown"
+                  "OC\\Preview\\MP3"
+                  "OC\\Preview\\OpenDocument"
+                  "OC\\Preview\\PNG"
+                  "OC\\Preview\\TXT"
+                  "OC\\Preview\\XBitmap"
+                  # Not included by default
+                  "OC\\Preview\\HEIC"
+                  "OC\\Preview\\Movie"
+                  "OC\\Preview\\MP4"
+                ];
+                user_oidc = {
+                  single_logout = false;
+                  auto_provision = true;
+                  soft_auto_provision = true;
+                };
+                allow_user_to_change_display_name = false;
+                lost_password_link = "disabled";
+                oidc_login_provider_url = "https://authelia.sbulav.ru";
+                oidc_login_client_id = "nextcloud";
+                oidc_login_auto_redirect = false;
+                oidc_login_end_session_redirect = false;
+                oidc_login_button_text = "Log in with Authelia";
+                oidc_login_hide_password_form = false;
+                oidc_login_use_id_token = true;
+                oidc_login_attributes = {
+                  id = "preferred_username";
+                  name = "name";
+                  mail = "email";
+                  groups = "groups";
+                };
+                oidc_login_default_group = "oidc";
+                oidc_login_use_external_storage = false;
+                oidc_login_scope = "openid profile email groups";
+                oidc_login_proxy_ldap = false;
+                oidc_login_disable_registration = false; # different from doc, to enable auto creation of new users
+                oidc_login_redir_fallback = false;
+                oidc_login_tls_verify = true;
+                oidc_create_groups = false;
+                oidc_login_webdav_enabled = false;
+                oidc_login_password_authentication = false;
+                oidc_login_public_key_caching_time = 86400;
+                oidc_login_min_time_between_jwks_requests = 20;
+                oidc_login_well_known_caching_time = 86400;
+                oidc_login_update_avatar = false;
+                oidc_login_code_challenge_method = "S256";
               };
-              allow_user_to_change_display_name = false;
-              lost_password_link = "disabled";
-              oidc_login_provider_url = "https://authelia.sbulav.ru";
-              oidc_login_client_id = "nextcloud";
-              oidc_login_auto_redirect = false;
-              oidc_login_end_session_redirect = false;
-              oidc_login_button_text = "Log in with Authelia";
-              oidc_login_hide_password_form = false;
-              oidc_login_use_id_token = true;
-              oidc_login_attributes = {
-                id = "preferred_username";
-                name = "name";
-                mail = "email";
-                groups = "groups";
-              };
-              oidc_login_default_group = "oidc";
-              oidc_login_use_external_storage = false;
-              oidc_login_scope = "openid profile email groups";
-              oidc_login_proxy_ldap = false;
-              oidc_login_disable_registration = false; # different from doc, to enable auto creation of new users
-              oidc_login_redir_fallback = false;
-              oidc_login_tls_verify = true;
-              oidc_create_groups = false;
-              oidc_login_webdav_enabled = false;
-              oidc_login_password_authentication = false;
-              oidc_login_public_key_caching_time = 86400;
-              oidc_login_min_time_between_jwks_requests = 20;
-              oidc_login_well_known_caching_time = 86400;
-              oidc_login_update_avatar = false;
-              oidc_login_code_challenge_method = "S256";
             };
           };
-        };
 
-        networking = {
-          firewall = {
-            enable = true;
-            allowedTCPPorts = [80];
+          networking = {
+            firewall = {
+              enable = true;
+              allowedTCPPorts = [ 80 ];
+            };
+            # Use systemd-resolved inside the container
+            # Workaround for bug https://github.com/NixOS/nixpkgs/issues/162686
+            useHostResolvConf = lib.mkForce true;
           };
-          # Use systemd-resolved inside the container
-          # Workaround for bug https://github.com/NixOS/nixpkgs/issues/162686
-          useHostResolvConf = lib.mkForce true;
+          services.resolved.enable = false;
+          system.stateVersion = "24.11";
         };
-        services.resolved.enable = false;
-        system.stateVersion = "24.11";
-      };
     };
   };
 }

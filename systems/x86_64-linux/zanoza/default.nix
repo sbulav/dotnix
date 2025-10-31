@@ -5,10 +5,12 @@
   pkgs,
   lib,
   ...
-}: let
+}:
+let
   system = "x86_64-linux";
   hostName = "zanoza";
-in {
+in
+{
   imports = [
     # Include the results of the hardware scan.
     ./hardware-configuration.nix
@@ -24,7 +26,7 @@ in {
 
   custom.security.sops = {
     enable = true;
-    sshKeyPaths = ["/etc/ssh/ssh_host_ed25519_key"];
+    sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
     defaultSopsFile = lib.snowfall.fs.get-file "secrets/zanoza/default.yaml";
   };
 
@@ -59,7 +61,13 @@ in {
     prometheus = {
       enable = true;
       host = "prometheus.sbulav.ru";
-      smartctl_devices = ["/dev/nvme0n1" "/dev/sda" "/dev/sdb" "/dev/sdc" "/dev/sdd"];
+      smartctl_devices = [
+        "/dev/nvme0n1"
+        "/dev/sda"
+        "/dev/sdb"
+        "/dev/sdc"
+        "/dev/sdd"
+      ];
     };
     msmtp = {
       enable = true;
@@ -75,8 +83,12 @@ in {
     };
     nfs = {
       enable = true;
-      filesystems = ["/tank/torrents" "/tank/video" "/tank/ipcam"];
-      restrictedClients = ["192.168.80.0/20"];
+      filesystems = [
+        "/tank/torrents"
+        "/tank/video"
+        "/tank/ipcam"
+      ];
+      restrictedClients = [ "192.168.80.0/20" ];
     };
     traefik = {
       enable = true;
@@ -148,21 +160,38 @@ in {
 
   services.prometheus.scrapeConfigs = [
     {
-      job_name = "beez-node";
+      job_name = "beez";
       static_configs = [
-        {targets = ["192.168.89.208:9100"];} # Replace with actual hostname/IP of beez
+        {
+          targets = [
+            "beez:9100"
+            "beez:9633"
+          ];
+          labels = {
+            instance = "beez";
+            role = "server";
+          };
+        }
       ];
     }
     {
-      job_name = "beez-smartctl";
+      job_name = "porez";
       static_configs = [
-        {targets = ["192.168.89.208:9633"];}
+        {
+          targets = [
+            "porez:9100"
+            "porez:9633"
+          ];
+          labels = {
+            instance = "porez";
+            role = "desktop";
+          };
+        }
       ];
     }
   ];
 
   environment.systemPackages = with pkgs; [
-    alejandra
     nixd # LSP for nix
     smartmontools
   ];

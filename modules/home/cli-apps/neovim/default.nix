@@ -3,11 +3,13 @@
   config,
   pkgs,
   ...
-}: let
+}:
+let
   inherit (lib) mkEnableOption mkIf;
 
   cfg = config.custom.cli-apps.neovim;
-in {
+in
+{
   options.custom.cli-apps.neovim = {
     enable = mkEnableOption "Neovim";
   };
