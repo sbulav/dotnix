@@ -1,6 +1,6 @@
 { ... }:
 final: prev: {
-  opencode = prev.opencode.overrideAttrs (
+  opencode = (prev.opencode.overrideAttrs (
     oldAttrs:
     let
       version = "0.15.23";
@@ -33,6 +33,9 @@ final: prev: {
 
         runHook postBuild
       '';
+      
+      # Remove passthru to prevent auto-import of incompatible HM module
+      passthru = { };
     }
-  );
+  ));
 }

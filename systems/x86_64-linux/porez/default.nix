@@ -47,11 +47,18 @@ in
   };
 
   # Stylix - Centralized Theme Management
-  custom.desktop.stylix = {
-    enable = true;
-    theme = "cyberdream";
-    wallpaper = config.system.wallpaper;
-  };
+  # TODO: Fix stylix base16 duplication error
+  # Issue: stylix.base16 is calculated twice (once for system, once for home-manager)
+  # causing "The option `home-manager.users.sab.stylix.base16' is read-only, but it's set multiple times"
+  # Temporarily disabled until resolved
+  # custom.desktop.stylix = {
+  #   enable = true;
+  #   theme = "cyberdream";
+  #   wallpaper = config.system.wallpaper;
+  # };
+  
+  # Disable grub theming (system-level only option)
+  # stylix.targets.grub.enable = false;
 
   custom.services.prometheus-exporters = {
     enable = true;

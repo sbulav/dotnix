@@ -94,7 +94,15 @@
         sops-nix.homeManagerModules.sops
         stylix.homeManagerModules.stylix
         ./modules/shared/security/sops
-        ./modules/shared/desktop/stylix
+        # Disable home-manager's built-in opencode module and provide a stub
+        ({lib, ...}: {
+          disabledModules = [ "programs/opencode.nix" ];
+          options.programs.opencode = lib.mkOption {
+            type = lib.types.attrs;
+            default = {};
+            description = "Stub for opencode - use custom.ai.opencode instead";
+          };
+        })
       ];
       systems = {
         modules = {

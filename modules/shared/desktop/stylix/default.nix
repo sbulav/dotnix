@@ -4,11 +4,14 @@
   lib,
   pkgs,
   ...
-}:
+} @ args:
 with lib;
 with lib.custom;
 let
   cfg = config.custom.desktop.stylix;
+  # osConfig is provided when this module runs in home-manager context under NixOS
+  # Check if osConfig exists in the args
+  isSystemLevel = !(args ? osConfig);
 in
 {
   options.custom.desktop.stylix = with types; {
@@ -48,11 +51,12 @@ in
     };
   };
 
-  config = mkIf cfg.enable {
-    stylix = {
-      enable = true;
-
-      image = cfg.wallpaper;
+  config = mkMerge [
+    # System-level stylix configuration
+    (mkIf (cfg.enable && isSystemLevel) {
+      stylix = {
+        enable = true;
+        image = cfg.wallpaper;
 
       base16Scheme = mkIf (cfg.theme == "cyberdream") {
         base00 = "0f1113";
@@ -97,11 +101,17 @@ in
         size = cfg.cursor.size;
       };
 
-      targets = {
-        grub.enable = mkDefault false;
-        gtk.enable = mkDefault true;
-        gnome.enable = mkDefault false;
+        targets = {
+          gtk.enable = mkDefault true;
+          gnome.enable = mkDefault false;
+        };
       };
-    };
-  };
+    })
+    
+    # Home-manager level: disable stylix to prevent duplicate base16 calculation
+    # The system-level stylix config will still apply to home-manager apps via environment
+    (mkIf (cfg.enable && !isSystemLevel) {
+      stylix.enable = mkForce false;
+    })
+  ];
 }
