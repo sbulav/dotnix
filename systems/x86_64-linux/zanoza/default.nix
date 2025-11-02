@@ -118,11 +118,11 @@ in
       hostMappings = [
         {
           hostname = "beez";
-          ip = "192.168.89.208";
+          ip = "192.168.92.194";
         }
         {
           hostname = "beez.sbulav.ru";
-          ip = "192.168.89.208";
+          ip = "192.168.92.194";
         }
         {
           hostname = "porez";

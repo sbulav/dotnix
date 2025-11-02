@@ -60,7 +60,7 @@
         "flood.sbulav.ru"
         "grafana.sbulav.ru"
       ];
-      "192.168.89.208" = [
+      "192.168.92.194" = [
         "beez"
         "beez.sbulav.ru"
       ];

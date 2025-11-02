@@ -48,20 +48,20 @@
     "d /tank 0755 sab sab -"
   ];
 
-  # fileSystems."/mnt/ext" = {
-  #   device = "/dev/disk/by-uuid/B62873392872F7A7";
-  #   fsType = "ntfs-3g";
-  #   # Automount means: don’t block boot; mount on first access
-  #   options = [
-  #     "x-systemd.automount"
-  #     "nofail"
-  #     "x-systemd.idle-timeout=60s"
-  #     # optional ownership/permissions if you want user-writable:
-  #     "uid=1000"
-  #     "gid=100"
-  #     "umask=022"
-  #   ];
-  # };
+  fileSystems."/mnt/ext" = {
+    device = "/dev/disk/by-uuid/B62873392872F7A7";
+    fsType = "ntfs-3g";
+    # Automount means: don’t block boot; mount on first access
+    options = [
+      "x-systemd.automount"
+      "nofail"
+      "x-systemd.idle-timeout=60s"
+      # optional ownership/permissions if you want user-writable:
+      "uid=1000"
+      "gid=100"
+      "umask=022"
+    ];
+  };
 
   # Enables DHCP on each ethernet and wireless interface. In case of scripted networking
   # (the default) this is the recommended approach. When using systemd-networkd it's
