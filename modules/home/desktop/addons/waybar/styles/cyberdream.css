@@ -21,6 +21,7 @@
 @define-color cyan      #5ef1ff;
 @define-color teal      #41e0c9;
 @define-color green     #78f093;
+@define-color mygreen   #128555;
 @define-color yellow    #ffd76b;
 @define-color orange    #ffb86b;
 @define-color red       #ff6b82;
@@ -112,7 +113,7 @@ widget image {
 
 /* only ACTIVE gets a soft pill to anchor the eye; keep it subtle */
 #workspaces button.active {
-  background-color: @blue;
+  background-color: @mygreen;
   color: @cyan;
   border-radius: 10px;
   padding: 0 6px;

@@ -179,6 +179,7 @@ in
       packages = with pkgs; [
         brightnessctl
         wtype
+        hyprpicker
       ];
     };
 

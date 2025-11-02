@@ -23,6 +23,7 @@ in
 
   config = mkIf cfg.enable {
     home.packages = with pkgs; [
+      nwg-look
       gnome-themes-extra
       adwaita-icon-theme
       gsettings-desktop-schemas
