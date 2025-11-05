@@ -18,7 +18,7 @@ in
     bluetooth.enable = true;
     bluetoothmy.enable = true;
     cpu.amd.enable = true;
-    gpu.amd.enable = true;
+    gpu.intel.enable = true;
     openglmy.enable = true;
     rgb.openrgb.enable = true;
   };
