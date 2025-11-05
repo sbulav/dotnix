@@ -25,6 +25,7 @@ in
       fzf
       jq
       killall
+      nvme-cli
       ripgrep
       rsync
       tree
