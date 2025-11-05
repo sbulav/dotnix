@@ -45,6 +45,10 @@ in
     podman.enable = false;
   };
 
+  # Enable for printing, configure on http://localhost:631/printers/Pantum_M6550NW_series
+  custom.services.avahi.enable = false;
+  custom.services.printing.enable = false;
+
   custom.services.prometheus-exporters = {
     enable = true;
     node = {
