@@ -127,10 +127,6 @@ in
           "org.wezfurlong.wezterm"
         ];
         "2" = [ "firefox" ];
-        "3" = [
-          "Slack"
-          "obsidian"
-        ];
         "4" = [
           "org.telegram.desktop"
           "zoom"
@@ -141,6 +137,11 @@ in
           "mpdevil"
         ];
         "6" = [ "virt-manager" ];
+        "7" = [
+          "Slack"
+          "obsidian"
+          "ktalk"
+        ];
       } "Workspace to application class mappings";
 
       monitorBindings =

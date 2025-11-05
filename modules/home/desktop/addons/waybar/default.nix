@@ -48,17 +48,30 @@ in
           ];
           modules-right = [
             "hyprland/language"
-            "cpu"
-            "memory"
-            "temperature"
+            "group/stats"
             "pulseaudio"
-            "bluetooth"
-            "network"
+            "group/network"
             "tray"
             "battery"
             "custom/power"
           ];
 
+          "group/stats" = {
+            orientation = "horizontal";
+            modules = [
+              "cpu"
+              "memory"
+              "disk"
+              "temperature"
+            ];
+          };
+          "group/network" = {
+            orientation = "horizontal";
+            modules = [
+              "bluetooth"
+              "network"
+            ];
+          };
           bluetooth = {
             "format" = "󰂯";
             "format-disabled" = "󰂲";
@@ -73,6 +86,8 @@ in
             format = "{icon} {windows}";
             on-click = "activate";
             all-outputs = false;
+            on-scroll-up = "${getExe' config.wayland.windowManager.hyprland.package "hyprctl"} dispatch workspace e+1";
+            on-scroll-down = "${getExe' config.wayland.windowManager.hyprland.package "hyprctl"} dispatch workspace e-1";
             active-only = "false";
             format-icons = {
               "1" = "󰎤";
@@ -99,6 +114,8 @@ in
               "class<Slack>" = "󰒱";
               "class<zoom>" = "󱋒";
               "class<Zoom Meeting>" = "󱋒";
+              "class<ktalk>" = "☎️";
+              "class<obsidian>" = "📓";
               "class<code>" = "󰨞";
               "code-url-handler" = "󰨞";
               "class<discord>" = "󰙯";
@@ -131,7 +148,7 @@ in
             separate-outputs = true;
           };
           "cpu" = {
-            format = "󰌢 {load}";
+            format = " {usage}%";
             tooltip = false;
             on-click = "wezterm -e btm";
           };
@@ -139,7 +156,7 @@ in
             format = " {}%";
           };
           "disk" = {
-            interval = 600;
+            interval = 30;
             format = " {percentage_used}%";
             path = "/";
           };

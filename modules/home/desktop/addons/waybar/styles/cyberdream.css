@@ -83,6 +83,7 @@ widget image {
 #temperature:hover,
 #cpu:hover,
 #memory:hover,
+#disk:hover,
 #custom-power:hover {
   box-shadow: inset 0 -2px 0 0 rgba(94,161,255,0.35); /* blue underline */
 }
@@ -126,8 +127,10 @@ widget image {
 }
 
 /* ---- Accents by function (text only, no backgrounds) ------------------- */
+#language    { color: @green; }
 #cpu         { color: @purple; }
 #memory      { color: @purple; }
+#disk        { color: @purple; }
 #temperature { color: @orange; }
 #network     { color: @blue; }
 #pulseaudio  { color: @green; }
