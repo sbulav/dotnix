@@ -24,6 +24,7 @@ in
         ];
       };
       addons = {
+        gtk = enabled;
         hyprpaper = enabled;
         mako = enabled;
         rofi = enabled;

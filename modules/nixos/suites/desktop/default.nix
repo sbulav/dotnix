@@ -19,7 +19,6 @@ in
     custom = {
       desktop.addons = {
         keyring = enabled;
-        gtk = enabled;
         regreet = enabled;
         xdg-portal = enabled;
         hyprland-utils = enabled;
