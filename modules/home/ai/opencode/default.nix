@@ -20,7 +20,7 @@ let
   # Constants for paths and settings
   agentDir = ./agent;
   commandDir = ./command;
-  toolsDir = ./tools;
+  utilsDir = ./utils;
   providersPath = ./providers.nix;
   mcpServersPath = ./mcp-servers.nix;
   configSchema = "https://opencode.ai/config.json";
@@ -58,15 +58,15 @@ let
   agents = processConfigDir agentDir;
   commands = processConfigDir commandDir;
 
-  # Process physical tool scripts from tools directory
-  physicalTools =
+  # Process physical utility scripts from utils directory
+  physicalUtils =
     let
-      files = builtins.readDir toolsDir;
+      files = builtins.readDir utilsDir;
     in
     lib.mapAttrs' (
       name: _:
       let
-        filePath = toolsDir + "/${name}";
+        filePath = utilsDir + "/${name}";
       in
       if builtins.pathExists filePath then
         let
@@ -178,10 +178,10 @@ in
       description = "Configuration for opencode.json";
     };
 
-    tools = mkOption {
+    utils = mkOption {
       type = types.attrsOf types.lines;
       default = { };
-      description = "Tool scripts placed in the tools directory";
+      description = "Utility scripts placed in the utils directory";
     };
   };
 
@@ -207,13 +207,13 @@ in
         text = toMarkdownCommand name value;
       }
     ) commands
-    # Tool scripts (from both options and physical files)
+    # Utility scripts (from both options and physical files)
     // lib.mapAttrs' (
       name: value:
-      nameValuePair "opencode/tools/${name}" {
+      nameValuePair "opencode/utils/${name}" {
         text = value;
         executable = true;
       }
-    ) (cfg.tools // physicalTools);
+    ) (cfg.utils // physicalUtils);
   };
 }

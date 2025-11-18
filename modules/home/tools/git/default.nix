@@ -21,9 +21,12 @@ in
   config = mkIf cfg.enable {
     programs.git = {
       enable = true;
-      inherit (cfg) userName userEmail;
       lfs = enabled;
-      extraConfig = {
+      settings = {
+        user = {
+          name = cfg.userName;
+          email = cfg.userEmail;
+        };
         init = {
           defaultBranch = "master";
           templatedir = "~/.git_template";

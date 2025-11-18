@@ -25,7 +25,7 @@ let
     };
   };
   propagatedIcon =
-    pkgs.runCommandNoCC "propagated-icon" { passthru = { inherit (cfg.icon) fileName; }; }
+    pkgs.runCommand "propagated-icon" { passthru = { inherit (cfg.icon) fileName; }; }
       ''
         local target="$out/share/icons/user/${cfg.name}"
         mkdir -p "$target"
