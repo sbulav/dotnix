@@ -5,7 +5,7 @@
   ...
 }:
 let
-  wallpapers = inputs.wallpapers-nix.packages.${pkgs.system}.full;
+  wallpapers = inputs.wallpapers-nix.packages.${pkgs.stdenv.hostPlatform.system}.full;
 in
 {
   imports = [ ./hardware-configuration.nix ];

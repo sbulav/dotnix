@@ -17,7 +17,7 @@ in
       types.path
       types.str
     ];
-    default = inputs.wallpapers-nix.packages.${pkgs.system}.catppuccin;
+    default = inputs.wallpapers-nix.packages.${pkgs.stdenv.hostPlatform.system}.catppuccin;
     description = "The wallpaper to use.";
   };
 }

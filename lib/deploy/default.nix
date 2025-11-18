@@ -22,7 +22,7 @@ let
         let
           host = hosts.${name};
           user = host.config.${namespace}.user.name or null;
-          system = host.pkgs.system;
+          system = host.pkgs.stdenv.hostPlatform.system;
           override = overrides.${name} or { };
           # Only inject checks = false for Darwin systems
           checksOpt = if isDarwin system then { checks = false; } else { };
