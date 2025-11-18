@@ -107,5 +107,5 @@ in
   };
 
   # env_credentials now handled by commonSecrets.enableCredentials = true
-  home.stateVersion = "24.11";
+  home.stateVersion = "25.11";
 }
