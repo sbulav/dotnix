@@ -18,6 +18,24 @@ in
     keyboardName =
       mkOpt str "at-translated-set-2-keyboard"
         "The keyboard device name for language switching.";
+
+    temperature = {
+      enable = mkBoolOpt true "Whether to display temperature in the stats group.";
+      hwmonPath =
+        mkOpt str "/sys/class/hwmon/hwmon0/temp1_input"
+          "Path to the hwmon temperature sensor (e.g., /sys/class/hwmon/hwmon0/temp1_input for k10temp).";
+      thermalZone = mkOpt int 0 "Thermal zone index to use if hwmonPath is not specified (fallback).";
+      criticalThreshold = mkOpt int 80 "Temperature threshold in Celsius for critical warning state.";
+      format = mkOpt str "{icon} {temperatureC}°C" "Format string for temperature display.";
+      formatIcons = mkOpt (listOf str) [
+        ""
+        ""
+        ""
+        ""
+        ""
+      ] "Icons to display based on temperature levels.";
+      tooltip = mkBoolOpt false "Whether to show tooltip on hover.";
+    };
   };
 
   config = mkIf cfg.enable {
@@ -62,8 +80,8 @@ in
               "cpu"
               "memory"
               "disk"
-              "temperature"
-            ];
+            ]
+            ++ lib.optionals cfg.temperature.enable [ "temperature" ];
           };
           "group/network" = {
             orientation = "horizontal";
@@ -165,18 +183,13 @@ in
             tooltip-format = "<b><big>{:%Y %B}</big></b>\n\n<tt>{calendar}</tt>";
             format-alt = "{:%Y-%m-%d}";
           };
-          "temperature" = {
-            thermal-zone = 0;
-            hwmon-path = "/sys/class/hwmon/hwmon1/temp1_input";
-            critical-threshold = 80;
-            format = "{icon} {temperatureC}°C";
-            format-icons = [
-              ""
-              ""
-              ""
-              ""
-              ""
-            ];
+          "temperature" = lib.mkIf cfg.temperature.enable {
+            thermal-zone = cfg.temperature.thermalZone;
+            hwmon-path = cfg.temperature.hwmonPath;
+            critical-threshold = cfg.temperature.criticalThreshold;
+            format = cfg.temperature.format;
+            format-icons = cfg.temperature.formatIcons;
+            tooltip = cfg.temperature.tooltip;
           };
           "custom/kernel" = {
             interval = "once";
