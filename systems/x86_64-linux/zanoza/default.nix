@@ -125,11 +125,11 @@ in
           ip = "192.168.92.194";
         }
         {
-          hostname = "porez";
+          hostname = "mz";
           ip = "192.168.89.200";
         }
         {
-          hostname = "porez.sbulav.ru";
+          hostname = "mz.sbulav.ru";
           ip = "192.168.89.200";
         }
       ];
@@ -193,15 +193,15 @@ in
       ];
     }
     {
-      job_name = "porez";
+      job_name = "mz";
       static_configs = [
         {
           targets = [
-            "porez:9100"
-            "porez:9633"
+            "mz:9100"
+            "mz:9633"
           ];
           labels = {
-            instance = "porez";
+            instance = "mz";
             role = "desktop";
           };
         }

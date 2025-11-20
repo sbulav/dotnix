@@ -18,11 +18,11 @@ This guide provides comprehensive instructions for AI agents and developers work
 
 ### System Operations
 - **Build NixOS system**: `nix build .#nixosConfigurations.{hostname}.config.system.build.toplevel`
-  - Available hosts: `nz`, `zanoza`, `porez`, `beez`
+  - Available hosts: `nz`, `zanoza`, `mz`, `beez`
 - **Build Darwin system**: `nix build .#darwinConfigurations.mbp16.config.system.build.toplevel`
 - **Rebuild NixOS locally**: `sudo nixos-rebuild switch --flake .#{hostname}`
 - **Rebuild Darwin locally**: `darwin-rebuild switch --flake .#mbp16`
-- **Deploy to remote**: `nix run .#deploy.{hostname}` (zanoza, nz, porez)
+- **Deploy to remote**: `nix run .#deploy.{hostname}` (zanoza, nz, mz)
 
 ### Development & Validation
 - **Format code**: `nix fmt` (uses nixfmt)

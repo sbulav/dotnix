@@ -46,8 +46,8 @@ in
       "beez.sbulav.ru"
     ];
     "192.168.89.200" = [
-      "porez"
-      "porez.sbulav.ru"
+      "mz"
+      "mz.sbulav.ru"
     ];
   };
 
