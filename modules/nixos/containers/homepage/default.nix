@@ -40,6 +40,13 @@ in
       host = "${cfg.host}";
       rewrite_enabled = cfg.enable;
     })
+    (import ../shared/shared-adguard-dns-client.nix {
+      inherit lib;
+      container_name = "homepage";
+      use_adguard_dns = cfg.enable;
+      adguard_ip = "172.16.64.104";
+      fallback_dns = [ "1.1.1.1" "1.0.0.1" ];
+    })
   ];
   config = mkIf cfg.enable {
     custom.security.sops.secrets = {
@@ -181,11 +188,7 @@ in
               enable = true;
               allowedTCPPorts = [ 8082 ];
             };
-            # Use systemd-resolved inside the container
-            # Workaround for bug https://github.com/NixOS/nixpkgs/issues/162686
-            useHostResolvConf = lib.mkForce true;
           };
-          services.resolved.enable = false;
           system.stateVersion = "24.11";
         };
     };
