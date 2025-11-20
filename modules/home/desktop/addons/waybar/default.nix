@@ -28,11 +28,11 @@ in
       criticalThreshold = mkOpt int 80 "Temperature threshold in Celsius for critical warning state.";
       format = mkOpt str "{icon} {temperatureC}°C" "Format string for temperature display.";
       formatIcons = mkOpt (listOf str) [
-        "<U+F2CB>"
-        "<U+F2CA>"
-        "<U+F2C9>"
-        "<U+F2C8>"
-        "<U+F2C7>"
+        ""
+        ""
+        ""
+        ""
+        ""
       ] "Icons to display based on temperature levels.";
       tooltip = mkBoolOpt false "Whether to show tooltip on hover.";
     };
