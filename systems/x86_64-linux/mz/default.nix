@@ -60,7 +60,10 @@ in
       enable = true;
       port = 9633;
       openFirewall = true;
-      devices = [ "/dev/nvme0n1" ];
+      devices = [
+        "/dev/nvme0n1"
+        "/dev/nvme1n1"
+      ];
     };
   };
 
