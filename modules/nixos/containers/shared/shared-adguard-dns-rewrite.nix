@@ -6,16 +6,20 @@
   ...
 }:
 {
-  containers.adguard.config.services.adguardhome.settings.filtering =
-    if rewrite_enabled then
-      {
-        rewrites = [
-          {
-            domain = "${host}";
-            answer = "${url}";
-          }
-        ];
-      }
-    else
-      { };
+  config,
+  lib,
+  namespace,
+  ...
+}:
+{
+  config = lib.mkIf (rewrite_enabled && config.${namespace}.containers.adguard.enable) {
+    containers.adguard.config.services.adguardhome.settings.filtering = {
+      rewrites = [
+        {
+          domain = "${host}";
+          answer = "${url}";
+        }
+      ];
+    };
+  };
 }
