@@ -131,7 +131,7 @@ in
               sso-authentication-plugin = pkgs.fetchzip {
                 stripRoot = false;
                 url = "https://github.com/9p4/jellyfin-plugin-sso/releases/download/v4.0.0.3/sso-authentication_4.0.0.3.zip";
-                hash = "sha256:de0951255bec4ed646037641e7e0aa1210b3a00a141406548087bed994cb9bdd";
+                hash = "sha256-Jkuc+Ua7934iSutf/zTY1phTxaltUkfiujOkCi7BW8w=";
               };
               ssoConfig = pkgs.writeTextFile {
                 name = "SSO-Auth.xml";
