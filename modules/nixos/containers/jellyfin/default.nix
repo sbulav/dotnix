@@ -50,7 +50,10 @@ in
       container_name = "jellyfin";
       use_adguard_dns = cfg.enable;
       adguard_ip = "172.16.64.104";
-      fallback_dns = [ "1.1.1.1" "1.0.0.1" ];
+      fallback_dns = [
+        "1.1.1.1"
+        "1.0.0.1"
+      ];
     })
   ];
 
@@ -82,36 +85,37 @@ in
         }
       ];
 
-       bindMounts = {
-         "${config.sops.secrets."jellyfin/oidc_client_secret".path}" = {
-           isReadOnly = true;
-         };
-         "/var/lib/jellyfin/config/" = {
-           hostPath = "${cfg.dataPath}/config/";
-           isReadOnly = false;
-         };
-         "/var/lib/jellyfin/" = {
-           hostPath = "${cfg.dataPath}/";
-           isReadOnly = false;
-         };
-         "/var/lib/jellyfin/log/" = {
-           "hostPath" = "${cfg.dataPath}/log/";
-           isReadOnly = false;
-         };
-         "/var/lib/jellyfin/video/" = {
-           "hostPath" = "/tank/video/";
-           isReadOnly = false;
-         };
-         "/var/lib/jellyfin/video/ipcam" = {
-           "hostPath" = "/tank/ipcam";
-           isReadOnly = false;
-         };
-       } // lib.optionalAttrs cfg.enableGPU {
-         "/dev/dri" = {
-           hostPath = "/dev/dri";
-           isReadOnly = false;
-         };
-       };
+      bindMounts = {
+        "${config.sops.secrets."jellyfin/oidc_client_secret".path}" = {
+          isReadOnly = true;
+        };
+        "/var/lib/jellyfin/config/" = {
+          hostPath = "${cfg.dataPath}/config/";
+          isReadOnly = false;
+        };
+        "/var/lib/jellyfin/" = {
+          hostPath = "${cfg.dataPath}/";
+          isReadOnly = false;
+        };
+        "/var/lib/jellyfin/log/" = {
+          "hostPath" = "${cfg.dataPath}/log/";
+          isReadOnly = false;
+        };
+        "/var/lib/jellyfin/video/" = {
+          "hostPath" = "/tank/video/";
+          isReadOnly = false;
+        };
+        "/var/lib/jellyfin/video/ipcam" = {
+          "hostPath" = "/tank/ipcam";
+          isReadOnly = false;
+        };
+      }
+      // lib.optionalAttrs cfg.enableGPU {
+        "/dev/dri" = {
+          hostPath = "/dev/dri";
+          isReadOnly = false;
+        };
+      };
 
       config =
         { pkgs, ... }:
@@ -126,8 +130,8 @@ in
             let
               sso-authentication-plugin = pkgs.fetchzip {
                 stripRoot = false;
-                url = "https://github.com/9p4/jellyfin-plugin-sso/releases/download/v3.5.2.4/sso-authentication_3.5.2.4.zip";
-                hash = "sha256-e+w5m6/7vRAynStDj34eBexfCIEgDJ09huHzi5gQEbo=";
+                url = "https://github.com/9p4/jellyfin-plugin-sso/releases/download/v4.0.0.3/sso-authentication_4.0.0.3.zip";
+                hash = "sha256:de0951255bec4ed646037641e7e0aa1210b3a00a141406548087bed994cb9bdd";
               };
               ssoConfig = pkgs.writeTextFile {
                 name = "SSO-Auth.xml";
