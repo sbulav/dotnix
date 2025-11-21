@@ -30,7 +30,10 @@ in
       kernelParams = [ "amd_pstate=active" ];
     };
 
-    environment.systemPackages = [ pkgs.amdctl ];
+    environment.systemPackages = [
+      pkgs.amdctl
+      pkgs.lm_sensors
+    ];
 
     hardware.cpu.amd.updateMicrocode = true;
   };
