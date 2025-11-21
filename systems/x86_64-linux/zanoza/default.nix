@@ -19,6 +19,11 @@ in
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = true;
+  hardware = {
+    fingerprint.enable = false;
+    cpu.amd.enable = true;
+    openglmy.enable = true;
+  };
 
   suites.server.enable = true; # Enables the basics, like neovim, ssh, etc.
   suites.desktop.enable = false;
