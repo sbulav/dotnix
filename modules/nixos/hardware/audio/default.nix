@@ -20,16 +20,27 @@ in
     services.pipewire = {
       alsa.enable = true;
       alsa.support32Bit = true;
+      audio.enable = true;
       enable = true;
-      jack.enable = false;
+      jack.enable = true;
       pulse.enable = true;
       wireplumber.enable = true;
+
+      extraConfig.pipewire."99-akg-mic-fix" = {
+        context.properties = {
+          default.clock.rate = 48000;
+          default.clock.quantum = 256;
+          default.clock.min-quantum = 256;
+          default.clock.max-quantum = 256;
+        };
+      };
     };
-    programs.noisetorch.enable = true;
+    programs.noisetorch.enable = false;
 
     environment.systemPackages = with pkgs; [
-      pamixer
       pavucontrol
+      pulsemixer
+      helvum
     ];
   };
 }
