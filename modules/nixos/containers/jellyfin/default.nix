@@ -17,6 +17,7 @@ in
     hostAddress = mkOpt str "172.16.64.10" "With private network, which address to use on Host";
     localAddress = mkOpt str "172.16.64.107" "With privateNetwork, which address to use in container";
     secret_file = mkOpt str "secrets/serverz/default.yaml" "SOPS secret to get creds from";
+    enableGPU = mkBoolOpt false "Enable GPU device passthrough for hardware video acceleration";
   };
   imports = [
     (import ../shared/shared-traefik-clientip-route.nix {
@@ -81,31 +82,36 @@ in
         }
       ];
 
-      bindMounts = {
-        "${config.sops.secrets."jellyfin/oidc_client_secret".path}" = {
-          isReadOnly = true;
-        };
-        "/var/lib/jellyfin/config/" = {
-          hostPath = "${cfg.dataPath}/config/";
-          isReadOnly = false;
-        };
-        "/var/lib/jellyfin/" = {
-          hostPath = "${cfg.dataPath}/";
-          isReadOnly = false;
-        };
-        "/var/lib/jellyfin/log/" = {
-          "hostPath" = "${cfg.dataPath}/log/";
-          isReadOnly = false;
-        };
-        "/var/lib/jellyfin/video/" = {
-          "hostPath" = "/tank/video/";
-          isReadOnly = false;
-        };
-        "/var/lib/jellyfin/video/ipcam" = {
-          "hostPath" = "/tank/ipcam";
-          isReadOnly = false;
-        };
-      };
+       bindMounts = {
+         "${config.sops.secrets."jellyfin/oidc_client_secret".path}" = {
+           isReadOnly = true;
+         };
+         "/var/lib/jellyfin/config/" = {
+           hostPath = "${cfg.dataPath}/config/";
+           isReadOnly = false;
+         };
+         "/var/lib/jellyfin/" = {
+           hostPath = "${cfg.dataPath}/";
+           isReadOnly = false;
+         };
+         "/var/lib/jellyfin/log/" = {
+           "hostPath" = "${cfg.dataPath}/log/";
+           isReadOnly = false;
+         };
+         "/var/lib/jellyfin/video/" = {
+           "hostPath" = "/tank/video/";
+           isReadOnly = false;
+         };
+         "/var/lib/jellyfin/video/ipcam" = {
+           "hostPath" = "/tank/ipcam";
+           isReadOnly = false;
+         };
+       } // lib.optionalAttrs cfg.enableGPU {
+         "/dev/dri" = {
+           hostPath = "/dev/dri";
+           isReadOnly = false;
+         };
+       };
 
       config =
         { pkgs, ... }:

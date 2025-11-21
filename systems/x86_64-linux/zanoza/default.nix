@@ -154,6 +154,7 @@ in
     };
     jellyfin = {
       enable = true;
+      enableGPU = true;
       host = "jellyfin.sbulav.ru";
       secret_file = "secrets/zanoza/default.yaml";
       hostAddress = "172.16.64.10";
