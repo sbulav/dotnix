@@ -174,6 +174,7 @@ in
                             </OidScopes>
                             <CanonicalLinks></CanonicalLinks>
                             <DisableHttps>false</DisableHttps>
+                            <DisablePushedAuthorization>true</DisablePushedAuthorization>
                             <DoNotValidateEndpoints>false</DoNotValidateEndpoints>
                             <DoNotValidateIssuerName>false</DoNotValidateIssuerName>
                           </PluginConfiguration>
