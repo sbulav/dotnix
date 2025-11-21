@@ -74,6 +74,11 @@ in
   #   tcpPorts = [80 443]; # Or [] for all TCP
   # };
 
+  services.journald.extraConfig = ''
+    SystemMaxUse=200M
+    RuntimeMaxUse=100M
+    SystemMaxFileSize=100M
+  '';
   custom.security.sops = {
     enable = true;
     sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
