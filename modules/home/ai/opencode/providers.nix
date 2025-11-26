@@ -29,8 +29,8 @@
       "claude-sonnet-4-5-20250929" = {
         name = "Claude Sonnet 4.5 (2025-09-29)";
       };
-      "claude-sonnet-4-20250514" = {
-        name = "Claude Sonnet 4 (2025-05-14)";
+      "claude-opus-4-5-20251101" = {
+        name = "Claude Opus 4.5 (2025-11-01)";
       };
       "claude-haiku-4-5-20251001" = {
         name = "Claude Haiku 4.5 (2025-10-01)";
