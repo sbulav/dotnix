@@ -27,7 +27,7 @@ let
 
   # Import separate configuration files
   providers = import providersPath;
-  mcpServers = import mcpServersPath;
+  mcpServers = import mcpServersPath { inherit config; };
 
   # Helper function to process config directories
   # dirPath: path to directory containing .nix files
