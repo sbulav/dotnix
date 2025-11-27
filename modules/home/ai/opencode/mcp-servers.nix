@@ -17,6 +17,7 @@
     ];
     enabled = true;
   };
+  # No TPL for now
   # hh-jira-mcp = {
   #   type = "remote";
   #   url = "https://lobechat.pyn.ru/mcp_servers/jira_mcp/mcp";
