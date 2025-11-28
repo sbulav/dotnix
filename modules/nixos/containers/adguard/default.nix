@@ -99,6 +99,7 @@ in
                   {
                     domain = cfg.host;
                     answer = cfg.rewriteAddress;
+                    enabled = true;
                   }
                 ]
                 ++ (map (host: {
