@@ -7,6 +7,7 @@
 }:
 with lib;
 with lib.custom;
+
 let
   cfg = config.${namespace}.containers.flood;
 in
@@ -18,6 +19,7 @@ in
     hostAddress = mkOpt str "172.16.64.10" "With private network, which address to use on Host";
     localAddress = mkOpt str "172.16.64.105" "With privateNetwork, which address to use in container";
   };
+
   imports = [
     (import ../shared/shared-traefik-clientip-route.nix {
       app = "flood";
@@ -48,11 +50,11 @@ in
       internalInterfaces = [ "ve-flood" ];
       externalInterface = "ens3";
     };
+
     containers.flood = {
       ephemeral = true;
       autoStart = true;
 
-      # Mounting Cloudflare creds(email and dns api token) as file
       bindMounts = {
         "/var/lib/torrents/log/" = {
           hostPath = "${cfg.dataPath}/log/";
@@ -63,23 +65,35 @@ in
           isReadOnly = false;
         };
       };
+
       privateNetwork = true;
-      # Need to add 172.16.64.0/18 on router
       hostAddress = cfg.hostAddress;
       localAddress = cfg.localAddress;
 
       config =
-        { ... }:
+        {
+          pkgs,
+          lib,
+          config,
+          ...
+        }:
         {
           systemd.tmpfiles.rules = [
             "d /var/lib/torrents/log 700 rtorrent rtorrent -"
+            "d /var/lib/torrents/session 700 rtorrent rtorrent -"
           ];
+
+          ##################################################################
+          # rTorrent configuration
+          ##################################################################
           services.rtorrent = {
             enable = true;
             dataDir = "/var/lib/torrents";
-            # package = pkgs.jesec-rtorrent;
-            # Using upstream rtorrent pkg, config below is required
-            # https://github.com/jesec/flood?tab=readme-ov-file#rtorrent-notes
+
+            # NEW: move socket to shared persistent directory
+            rpcSocket = "/var/lib/torrents/rtorrent.sock";
+
+            # Keep same config text as before
             configText = ''
               method.redirect=load.throw,load.normal
               method.redirect=load.start_throw,load.start
@@ -87,32 +101,49 @@ in
               method.insert=d.down.sequential.set,value|const,0
             '';
           };
+
+          ##################################################################
+          # Flood configuration
+          ##################################################################
           services.flood = {
             enable = true;
             host = cfg.localAddress;
             port = 3000;
+
+            # Updated to use new socket path
             extraArgs = [
               "--noauth"
-              "--rtsocket=${config.services.rtorrent.rpcSocket}"
+              "--rtsocket=/var/lib/torrents/rtorrent.sock"
               "--allowedpath=/var/lib/torrents/"
               "--allowedpath=/var/lib/torrents/completed"
               "--allowedpath=/var/lib/torrents/download"
+              "--verbose"
             ];
           };
+
+          ##################################################################
+          # Fix Flood service permissions
+          ##################################################################
           systemd.services.flood = {
             wantedBy = [ "multi-user.target" ];
             wants = [ "rtorrent.service" ];
             after = [ "rtorrent.service" ];
+
             serviceConfig = {
               User = "rtorrent";
+              Group = "rtorrent";
               SupplementaryGroups = [ "rtorrent" ];
               ReadWritePaths = [
+                "/var/lib/torrents"
                 "/var/lib/torrents/download"
                 "/var/lib/torrents/completed"
               ];
             };
           };
 
+          ##################################################################
+          # Networking and system settings
+          ##################################################################
           networking = {
             firewall = {
               enable = true;
@@ -136,6 +167,7 @@ in
               DNS=172.16.64.104
             '';
           };
+
           system.stateVersion = "24.11";
         };
     };
