@@ -252,7 +252,12 @@ in
             # Workaround for bug https://github.com/NixOS/nixpkgs/issues/162686
             useHostResolvConf = lib.mkForce false;
           };
-          services.resolved.enable = true;
+          services.resolved = {
+            enable = true;
+            extraConfig = ''
+              DNS=172.16.64.104
+            '';
+          };
           system.stateVersion = "24.11";
         };
     };

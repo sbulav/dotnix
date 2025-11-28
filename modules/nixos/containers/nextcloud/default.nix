@@ -62,7 +62,10 @@ in
       container_name = "nextcloud";
       use_adguard_dns = cfg.enable;
       adguard_ip = "172.16.64.104";
-      fallback_dns = [ "1.1.1.1" "1.0.0.1" ];
+      fallback_dns = [
+        "1.1.1.1"
+        "1.0.0.1"
+      ];
     })
   ];
   config = mkIf cfg.enable {
@@ -151,9 +154,9 @@ in
             "d /var/lib/postgresql 700 postgres postgres -"
           ];
 
-          networking.hosts = {
-            "${cfg.hostAddress}" = [ "authelia.sbulav.ru" ];
-          };
+          # networking.hosts = {
+          #   "${cfg.hostAddress}" = [ "authelia.sbulav.ru" ];
+          # };
           services = {
             nextcloud = {
               enable = true;
@@ -261,6 +264,15 @@ in
               enable = true;
               allowedTCPPorts = [ 80 ];
             };
+
+            useHostResolvConf = lib.mkForce false;
+          };
+
+          services.resolved = {
+            enable = true;
+            extraConfig = ''
+              DNS=172.16.64.104
+            '';
           };
           system.stateVersion = "24.11";
         };

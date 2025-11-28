@@ -104,8 +104,17 @@ in
           };
         };
 
-        # We are using Host network
-        networking.firewall.enable = false;
+        # We are using Host network↲
+        networking = {
+          firewall.enable = false;
+          useHostResolvConf = lib.mkForce false;
+        };
+        services.resolved = {
+          enable = true;
+          extraConfig = ''
+            DNS=172.16.64.104
+          '';
+        };
         system.stateVersion = "24.11";
       };
     };

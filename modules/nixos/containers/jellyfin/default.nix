@@ -225,12 +225,12 @@ in
             '';
 
           networking = {
-            hosts = {
-              #TODO: remove this once migrated
-              "${cfg.hostAddress}" = [
-                "authelia.sbulav.ru"
-              ];
-            };
+            # hosts = {
+            #   #TODO: remove this once migrated
+            #   "${cfg.hostAddress}" = [
+            #     "authelia.sbulav.ru"
+            #   ];
+            # };
             firewall = {
               enable = true;
               # https://jellyfin.org/docs/general/networking/index.html#port-bindings
@@ -243,6 +243,14 @@ in
                 7359
               ];
             };
+            useHostResolvConf = lib.mkForce false;
+          };
+
+          services.resolved = {
+            enable = true;
+            extraConfig = ''
+              DNS=172.16.64.104
+            '';
           };
           system.stateVersion = "24.11";
         };

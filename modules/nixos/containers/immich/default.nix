@@ -57,7 +57,10 @@ in
       container_name = "immich";
       use_adguard_dns = cfg.enable;
       adguard_ip = "172.16.64.104";
-      fallback_dns = [ "1.1.1.1" "1.0.0.1" ];
+      fallback_dns = [
+        "1.1.1.1"
+        "1.0.0.1"
+      ];
     })
   ];
 
@@ -125,6 +128,14 @@ in
               enable = true;
               allowedTCPPorts = [ 2283 ];
             };
+            useHostResolvConf = lib.mkForce false;
+          };
+
+          services.resolved = {
+            enable = true;
+            extraConfig = ''
+              DNS=172.16.64.104
+            '';
           };
           system.stateVersion = "24.11";
         };
