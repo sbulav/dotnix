@@ -5,7 +5,7 @@
   lib,
   container_name,
   adguard_ip ? "172.16.64.104",
-  use_adguard_dns ? false,
+  use_adguard_dns ? true,
   fallback_dns ? [
     "1.1.1.1"
     "1.0.0.1"

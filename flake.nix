@@ -3,7 +3,7 @@
 
   inputs = {
     # Nixpkgs
-    nixpkgs.url = "github:nixos/nixpkgs/nixos-unstable";
+    nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
 
     stable.url = "github:nixos/nixpkgs/nixos-25.05";
 
@@ -58,21 +58,23 @@
     };
   };
 
-  outputs = inputs: let
-    lib = inputs.snowfall-lib.mkLib {
-      inherit inputs;
-      src = ./.;
+  outputs =
+    inputs:
+    let
+      lib = inputs.snowfall-lib.mkLib {
+        inherit inputs;
+        src = ./.;
 
-      snowfall = {
-        meta = {
-          name = "dotfiles";
-          title = "dotfiles";
+        snowfall = {
+          meta = {
+            name = "dotfiles";
+            title = "dotfiles";
+          };
+
+          namespace = "custom";
         };
-
-        namespace = "custom";
       };
-    };
-  in
+    in
     lib.mkFlake {
       inherit inputs;
       src = ./.;
@@ -82,7 +84,7 @@
         # allowBroken = true;
       };
 
-      overlays = with inputs; [];
+      overlays = with inputs; [ ];
 
       homes.modules = with inputs; [
         sops-nix.homeManagerModules.sops
@@ -90,13 +92,13 @@
       ];
       systems = {
         modules = {
-          darwin = with inputs; [sops-nix-darwin.darwinModules.sops];
+          darwin = with inputs; [ sops-nix-darwin.darwinModules.sops ];
           nixos = with inputs; [
             sops-nix.nixosModules.sops
             determinate.nixosModules.default
           ];
         };
       };
-      deploy = lib.mkDeploy {inherit (inputs) self;};
+      deploy = lib.mkDeploy { inherit (inputs) self; };
     };
 }

@@ -40,13 +40,6 @@ in
       host = cfg.host;
       rewrite_enabled = cfg.enable;
     })
-    (import ../shared/shared-adguard-dns-client.nix {
-      inherit lib;
-      container_name = "flood";
-      use_adguard_dns = cfg.enable;
-      adguard_ip = "172.16.64.104";
-      fallback_dns = [ "1.1.1.1" "1.0.0.1" ];
-    })
   ];
 
   config = mkIf cfg.enable {
@@ -133,6 +126,15 @@ in
                 138
               ];
             };
+
+            useHostResolvConf = lib.mkForce false;
+          };
+
+          services.resolved = {
+            enable = true;
+            extraConfig = ''
+              DNS=172.16.64.104
+            '';
           };
           system.stateVersion = "24.11";
         };
