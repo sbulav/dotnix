@@ -105,6 +105,7 @@ in
                 ++ (map (host: {
                   domain = host.hostname;
                   answer = host.ip;
+                  enabled = true;
                 }) cfg.hostMappings);
               };
               statistics.enabled = true;
