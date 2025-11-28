@@ -74,6 +74,10 @@ in
     RuntimeMaxUse=50M
     SystemMaxFileSize=50M
   '';
+  # Allow control of lian li galahad II
+  services.udev.extraRules = ''
+    SUBSYSTEM=="usb", ATTR{idVendor}=="0416", ATTR{idProduct}=="7395", MODE="0666", GROUP="users"
+  '';
 
   # ======================== DO NOT CHANGE THIS ========================
   system.stateVersion = "25.11";
