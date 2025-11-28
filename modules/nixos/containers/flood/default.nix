@@ -89,17 +89,21 @@ in
           services.rtorrent = {
             enable = true;
             dataDir = "/var/lib/torrents";
-
-            # NEW: move socket to shared persistent directory
-            rpcSocket = "/var/lib/torrents/rtorrent.sock";
-
-            # Keep same config text as before
             configText = ''
               method.redirect=load.throw,load.normal
               method.redirect=load.start_throw,load.start
               method.insert=d.down.sequential,value|const,0
               method.insert=d.down.sequential.set,value|const,0
             '';
+          };
+          # Override systemd service config instead of read-only option
+          systemd.services.rtorrent.serviceConfig = {
+            Environment = [ "RTORRENT_SOCKET=/var/lib/torrents/rtorrent.sock" ];
+            ExecStartPost = lib.mkAfter [
+              # ensure correct permissions for Flood
+              "${pkgs.coreutils}/bin/chmod 0660 /var/lib/torrents/rtorrent.sock"
+              "${pkgs.coreutils}/bin/chown rtorrent:rtorrent /var/lib/torrents/rtorrent.sock"
+            ];
           };
 
           ##################################################################
