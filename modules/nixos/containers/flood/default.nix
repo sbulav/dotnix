@@ -73,11 +73,11 @@ in
         {
           systemd.tmpfiles.rules = [
             "d /var/lib/torrents/log 700 rtorrent rtorrent -"
+            "d /run/rtorrent 700 rtorrent rtorrent -"
           ];
           services.rtorrent = {
             enable = true;
             dataDir = "/var/lib/torrents";
-            rpcSocket = "/var/lib/torrents/rtorrent.sock";
             # package = pkgs.jesec-rtorrent;
             # Using upstream rtorrent pkg, config below is required
             # https://github.com/jesec/flood?tab=readme-ov-file#rtorrent-notes
