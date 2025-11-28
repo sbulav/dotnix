@@ -18,6 +18,7 @@
         {
           domain = "${host}";
           answer = "${url}";
+          enabled = true;
         }
       ];
     };
