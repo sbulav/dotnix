@@ -83,6 +83,7 @@ in
             cliPackage = pkgs.xray;
           };
           networking = {
+            enableIPv6 = false;
             firewall = {
               enable = false;
               allowedTCPPorts = [
