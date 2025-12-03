@@ -75,6 +75,12 @@ in
         }
       ];
 
+      allowedDevices = [
+        {
+          node = "/dev/dri/renderD128";
+          modifier = "rw";
+        }
+      ];
       bindMounts = {
         "${config.sops.secrets."jellyfin/oidc_client_secret".path}" = {
           isReadOnly = true;
@@ -110,109 +116,149 @@ in
       config =
         { pkgs, ... }:
         {
+
+          hardware.graphics.enable = true;
           systemd.tmpfiles.rules = [
             "d /var/lib/jellyfin 700 jellyfin jellyfin -"
           ];
+
+          # Install VAAPI drivers and utilities
+          environment.systemPackages = lib.optionals cfg.enableGPU [
+            pkgs.jellyfin-ffmpeg
+            pkgs.libva-utils # For vainfo
+            pkgs.mesa.drivers # AMD/Intel VAAPI drivers
+          ];
+
+          # Create symlink for applications expecting standard path
+          system.activationScripts.vaapiSetup = lib.mkIf cfg.enableGPU ''
+            mkdir -p /run/opengl-driver/lib/dri
+            ln -sf ${pkgs.mesa.drivers}/lib/dri/* /run/opengl-driver/lib/dri/ 2>/dev/null || true
+          '';
+
           services.jellyfin = {
             enable = true;
           };
-          systemd.services.jellyfin.preStart =
-            let
-              sso-authentication-plugin = pkgs.fetchzip {
-                stripRoot = false;
-                url = "https://github.com/9p4/jellyfin-plugin-sso/releases/download/v4.0.0.3/sso-authentication_4.0.0.3.zip";
-                hash = "sha256-Jkuc+Ua7934iSutf/zTY1phTxaltUkfiujOkCi7BW8w=";
+
+          # Add jellyfin user to video/render groups for device access
+          users.users.jellyfin.extraGroups = lib.optionals cfg.enableGPU [
+            "video"
+            "render"
+          ];
+
+          systemd.services.jellyfin = lib.mkMerge [
+            (lib.mkIf cfg.enableGPU {
+              serviceConfig.Environment = [
+                "LIBVA_DRIVER_NAME=radeonsi"
+                "LIBVA_DRIVERS_PATH=${pkgs.mesa.drivers}/lib/dri"
+              ];
+
+              # Alternatively, use environment.extraConfig for NixOS 24.11+
+              environment = {
+                LIBVA_DRIVER_NAME = "radeonsi";
+                LIBVA_DRIVERS_PATH = "${pkgs.mesa.drivers}/lib/dri";
               };
-              ssoConfig = pkgs.writeTextFile {
-                name = "SSO-Auth.xml";
-                text = ''
-                  <?xml version="1.0" encoding="utf-8"?>
-                  <PluginConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-                    <SamlConfigs />
-                    <OidConfigs>
-                      <item>
-                        <key>
-                          <string>authelia</string>
-                        </key>
-                        <value>
-                          <PluginConfiguration>
-                            <OidEndpoint>https://${config.${namespace}.containers.authelia.host}</OidEndpoint>
-                            <OidClientId>jellyfin</OidClientId>
-                            <OidSecret>CLIENT_SECRET_REPLACE</OidSecret>
-                            <Enabled>true</Enabled>
-                            <EnableAuthorization>true</EnableAuthorization>
-                            <EnableAllFolders>true</EnableAllFolders>
-                            <EnabledFolders />
-                            <AdminRoles>
-                              <string>jellyfin-admins</string>
-                              <string>admins</string>
-                            </AdminRoles>
-                            <Roles>
-                              <string>jellyfin-users</string>
-                              <string>dev</string>
-                            </Roles>
-                            <EnableFolderRoles>false</EnableFolderRoles>
-                            <EnableLiveTvRoles>false</EnableLiveTvRoles>
-                            <EnableLiveTv>false</EnableLiveTv>
-                            <EnableLiveTvManagement>false</EnableLiveTvManagement>
-                            <LiveTvRoles />
-                            <LiveTvManagementRoles />
-                            <FolderRoleMappings />
-                            <RoleClaim>groups</RoleClaim>
-                            <OidScopes>
-                              <string>groups</string>
-                            </OidScopes>
-                            <CanonicalLinks></CanonicalLinks>
-                            <DisableHttps>false</DisableHttps>
-                            <DisablePushedAuthorization>true</DisablePushedAuthorization>
-                            <DoNotValidateEndpoints>false</DoNotValidateEndpoints>
-                            <DoNotValidateIssuerName>false</DoNotValidateIssuerName>
-                          </PluginConfiguration>
-                        </value>
-                      </item>
-                    </OidConfigs>
-                  </PluginConfiguration>
+
+            })
+            {
+              preStart =
+                let
+                  sso-authentication-plugin = pkgs.fetchzip {
+                    stripRoot = false;
+                    url = "https://github.com/9p4/jellyfin-plugin-sso/releases/download/v4.0.0.3/sso-authentication_4.0.0.3.zip";
+                    hash = "sha256-Jkuc+Ua7934iSutf/zTY1phTxaltUkfiujOkCi7BW8w=";
+                  };
+                  ssoConfig = pkgs.writeTextFile {
+                    name = "SSO-Auth.xml";
+                    text = ''
+                      <?xml version="1.0" encoding="utf-8"?>
+                      <PluginConfiguration xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+                        <SamlConfigs />
+                        <OidConfigs>
+                          <item>
+                            <key>
+                              <string>authelia</string>
+                            </key>
+                            <value>
+                              <PluginConfiguration>
+                                <OidEndpoint>https://${config.${namespace}.containers.authelia.host}</OidEndpoint>
+                                <OidClientId>jellyfin</OidClientId>
+                                <OidSecret>CLIENT_SECRET_REPLACE</OidSecret>
+                                <Enabled>true</Enabled>
+                                <EnableAuthorization>true</EnableAuthorization>
+                                <EnableAllFolders>true</EnableAllFolders>
+                                <EnabledFolders />
+                                <AdminRoles>
+                                  <string>jellyfin-admins</string>
+                                  <string>admins</string>
+                                </AdminRoles>
+                                <Roles>
+                                  <string>jellyfin-users</string>
+                                  <string>dev</string>
+                                </Roles>
+                                <EnableFolderRoles>false</EnableFolderRoles>
+                                <EnableLiveTvRoles>false</EnableLiveTvRoles>
+                                <EnableLiveTv>false</EnableLiveTv>
+                                <EnableLiveTvManagement>false</EnableLiveTvManagement>
+                                <LiveTvRoles />
+                                <LiveTvManagementRoles />
+                                <FolderRoleMappings />
+                                <RoleClaim>groups</RoleClaim>
+                                <OidScopes>
+                                  <string>groups</string>
+                                </OidScopes>
+                                <CanonicalLinks></CanonicalLinks>
+                                <DisableHttps>false</DisableHttps>
+                                <DisablePushedAuthorization>true</DisablePushedAuthorization>
+                                <DoNotValidateEndpoints>false</DoNotValidateEndpoints>
+                                <DoNotValidateIssuerName>false</DoNotValidateIssuerName>
+                              </PluginConfiguration>
+                            </value>
+                          </item>
+                        </OidConfigs>
+                      </PluginConfiguration>
+                    '';
+                    executable = false;
+                  };
+
+                  brandingConfig = pkgs.writeTextFile {
+                    name = "brandingConfig.xml";
+                    text = ''
+                      <?xml version="1.0" encoding="utf-8"?>
+                      <BrandingOptions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
+                        <LoginDisclaimer>&lt;form action="https://${cfg.host}/sso/OID/start/authelia"&gt;
+                        &lt;button class="raised block emby-button button-submit"&gt;
+                          Sign in with SSO
+                        &lt;/button&gt;
+                      &lt;/form&gt;</LoginDisclaimer>
+                        <CustomCss>a.raised.emby-button {
+                        padding: 0.9em 1em;
+                        color: inherit !important;
+                      }
+
+                      .disclaimerContainer {
+                        display: block;
+                      }</CustomCss>
+                        <SplashscreenEnabled>true</SplashscreenEnabled>
+                      </BrandingOptions>
+                    '';
+                    executable = false;
+                  };
+                in
+                ''
+                  # Setting up SSO integration
+                  mkdir -p /var/lib/jellyfin/plugins/configurations
+                  CLIENT_SECRET="$(cat ${config.sops.secrets."jellyfin/oidc_client_secret".path})"
+                  sed "s/CLIENT_SECRET_REPLACE/$CLIENT_SECRET/" ${ssoConfig} > /var/lib/jellyfin/plugins/configurations/SSO-Auth.xml
+                  cat ${brandingConfig} > /var/lib/jellyfin/config/branding.xml
+
+                  # Setting up SSO plugin
+                  rm -rf /var/lib/jellyfin/plugins/sso-authentication-plugin
+                  mkdir -p /var/lib/jellyfin/plugins/sso-authentication-plugin
+                  cp ${sso-authentication-plugin}/* /var/lib/jellyfin/plugins/sso-authentication-plugin/
+                  chmod -R 770 /var/lib/jellyfin/plugins/sso-authentication-plugin
                 '';
-                executable = false;
-              };
-
-              brandingConfig = pkgs.writeTextFile {
-                name = "brandingConfig.xml";
-                text = ''
-                  <?xml version="1.0" encoding="utf-8"?>
-                  <BrandingOptions xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xmlns:xsd="http://www.w3.org/2001/XMLSchema">
-                    <LoginDisclaimer>&lt;form action="https://${cfg.host}/sso/OID/start/authelia"&gt;
-                    &lt;button class="raised block emby-button button-submit"&gt;
-                      Sign in with SSO
-                    &lt;/button&gt;
-                  &lt;/form&gt;</LoginDisclaimer>
-                    <CustomCss>a.raised.emby-button {
-                    padding: 0.9em 1em;
-                    color: inherit !important;
-                  }
-
-                  .disclaimerContainer {
-                    display: block;
-                  }</CustomCss>
-                    <SplashscreenEnabled>true</SplashscreenEnabled>
-                  </BrandingOptions>
-                '';
-                executable = false;
-              };
-            in
-            ''
-              # Setting up SSO integration
-              mkdir -p /var/lib/jellyfin/plugins/configurations
-              CLIENT_SECRET="$(cat ${config.sops.secrets."jellyfin/oidc_client_secret".path})"
-              sed "s/CLIENT_SECRET_REPLACE/$CLIENT_SECRET/" ${ssoConfig} > /var/lib/jellyfin/plugins/configurations/SSO-Auth.xml
-              cat ${brandingConfig} > /var/lib/jellyfin/config/branding.xml
-
-              # Setting up SSO plugin
-              rm -rf /var/lib/jellyfin/plugins/sso-authentication-plugin
-              mkdir -p /var/lib/jellyfin/plugins/sso-authentication-plugin
-              cp ${sso-authentication-plugin}/* /var/lib/jellyfin/plugins/sso-authentication-plugin/
-              chmod -R 770 /var/lib/jellyfin/plugins/sso-authentication-plugin
-            '';
+            }
+          ];
 
           networking = {
             # hosts = {
