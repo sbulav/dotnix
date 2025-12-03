@@ -56,6 +56,7 @@ in
           fi
 
           tmpfile="$(mktemp "$(dirname "$jpgfile")/$(basename "$jpgfile").tmp.XXXXXX")"
+          chown nobody:nogroup "$tmpfile" 2>/dev/null || true
 
           # printf '%s -copy none %s > %s\n' "$JPEGTRAN" "$jpgfile" "$tmpfile"
 
