@@ -57,7 +57,7 @@ in
 
           tmpfile="$(mktemp "$(dirname "$jpgfile")/$(basename "$jpgfile").tmp.XXXXXX")"
 
-          printf '%s -copy none %s > %s\n' "$JPEGTRAN" "$jpgfile" "$tmpfile"
+          # printf '%s -copy none %s > %s\n' "$JPEGTRAN" "$jpgfile" "$tmpfile"
 
           # Run jpegtran and capture exit status
           "$JPEGTRAN" -copy none "$jpgfile" > "$tmpfile" 2>/dev/null
@@ -71,7 +71,7 @@ in
 
             if /run/current-system/sw/bin/cmp -s "$jpgfile" "$tmpfile"; then
               rm -f -- "$tmpfile"
-              printf 'Unchanged: %s\n' "$jpgfile"
+              # printf 'Unchanged: %s\n' "$jpgfile"
             else
               touch -r "$jpgfile" "$tmpfile" || true
 
@@ -80,7 +80,7 @@ in
                 chmod --reference="$tmpfile" "$jpgfile" 2>/dev/null || true
                 chown --reference="$tmpfile" "$jpgfile" 2>/dev/null || true
                 converted=$((converted + 1))
-                printf 'Converted: %s\n' "$jpgfile"
+                # printf 'Converted: %s\n' "$jpgfile"
               else
                 printf 'Error: Failed to overwrite original: %s\n' "$jpgfile" >&2
                 failed=$((failed + 1))
