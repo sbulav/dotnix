@@ -77,8 +77,8 @@ in
 
               if cat "$tmpfile" > "$jpgfile"; then
                 touch -r "$tmpfile" "$jpgfile" || true
-                chmod --reference="$tmpfile" "$jpgfile" 2>/dev/null || true
-                chown --reference="$tmpfile" "$jpgfile" 2>/dev/null || true
+                # chmod --reference="$tmpfile" "$jpgfile" 2>/dev/null || true
+                chown nobody:nogroup "$jpgfile" 2>/dev/null || true
                 converted=$((converted + 1))
                 # printf 'Converted: %s\n' "$jpgfile"
               else
