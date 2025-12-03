@@ -64,9 +64,9 @@ in
             exitcode=$?
             # Treat 0 and 2 as OK; 2 = "file already optimal"
             if [ "$exitcode" -eq 2 ]; then
-              echo "Info: jpegtran reported already optimal: $jpgfile"
-              rm -f "''${tmpfile}"
-              continue
+              # echo "Info: jpegtran reported already optimal: $jpgfile"
+              mv "''${tmpfile}" "''${jpgfile}"
+              converted=$((converted + 1))
             fi
 
             # Any other exit code is failure
