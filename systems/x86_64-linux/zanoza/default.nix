@@ -47,6 +47,7 @@ in
 
   custom.services = {
     ipcamCleanup.enable = true;
+    ipcamJpegFix.enable = true;
     logrotate = {
       enable = true;
       logFiles = [
