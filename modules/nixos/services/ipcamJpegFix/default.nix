@@ -44,7 +44,8 @@ in
         failed=0
 
         # Find all JPEG files modified in the last 30 minutes
-        find /tank/ipcam/hcam -type f \( -name '*.jpg' -o -name '*.jpeg' \) -mmin -30 | while IFS= read -r jpgfile; do
+        # Use process substitution to avoid subshell scope issues with variable assignments
+        while IFS= read -r jpgfile; do
           ((processed++))
 
           # Skip if file is empty (shouldn't happen but be safe)
@@ -58,7 +59,6 @@ in
 
           # Convert with jpegtran to fix proprietary bits
           # -copy none: strips all non-essential markers
-          # -perfect: fails if transformation is not perfect
           if ${pkgs.libjpeg_turbo}/bin/jpegtran -copy none "''${jpgfile}" > "''${tmpfile}" 2>/dev/null; then
             # Move temp file over original
             mv "''${tmpfile}" "''${jpgfile}"
@@ -68,7 +68,7 @@ in
             rm -f "''${tmpfile}"
             ((failed++))
           fi
-        done
+        done < <(find /tank/ipcam/hcam -type f \( -name '*.jpg' -o -name '*.jpeg' \) -mmin -30)
 
         # Print summary
         echo "JPEG Fix Summary:"
