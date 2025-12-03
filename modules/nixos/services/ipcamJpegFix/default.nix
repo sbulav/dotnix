@@ -38,10 +38,21 @@ in
         #!/usr/bin/env bash
         set -euo pipefail
 
+        # Initialize counters
+        processed=0
+        converted=0
+        failed=0
+
         # Find all JPEG files modified in the last 30 minutes
         find /tank/ipcam/hcam -type f \( -name '*.jpg' -o -name '*.jpeg' \) -mmin -30 | while IFS= read -r jpgfile; do
+          ((processed++))
+
           # Skip if file is empty (shouldn't happen but be safe)
-          [ -s "$jpgfile" ] || continue
+          if [ ! -s "$jpgfile" ]; then
+            echo "Warning: Skipping empty file: $jpgfile"
+            ((failed++))
+            continue
+          fi
 
           tmpfile="''${jpgfile}.tmp"
 
@@ -51,11 +62,19 @@ in
           if ${pkgs.libjpeg_turbo}/bin/jpegtran -copy none "''${jpgfile}" > "''${tmpfile}" 2>/dev/null; then
             # Move temp file over original
             mv "''${tmpfile}" "''${jpgfile}"
+            ((converted++))
           else
             # Clean up temp file on error
             rm -f "''${tmpfile}"
+            ((failed++))
           fi
         done
+
+        # Print summary
+        echo "JPEG Fix Summary:"
+        echo "  Processed: $processed files"
+        echo "  Converted: $converted files"
+        echo "  Failed:    $failed files"
       '';
       serviceConfig = {
         Type = "oneshot";
