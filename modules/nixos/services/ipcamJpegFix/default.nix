@@ -43,43 +43,64 @@ in
         converted=0
         failed=0
 
-        # Find all JPEG files modified in the last 30 minutes
-        while IFS= read -r jpgfile; do
+        JPEGTRAN=/nix/store/54rrraasls3cass3hzry95wb8hm75vqq-libjpeg-turbo-3.1.2-bin/bin/jpegtran
+        SEARCH_DIR="/tank/ipcam/hcam"
+
+        while IFS= read -r -d "" jpgfile; do
           processed=$((processed + 1))
 
-          # Skip if file is empty (shouldn't happen but be safe)
           if [ ! -s "$jpgfile" ]; then
-            echo "Warning: Skipping empty file: $jpgfile"
+            printf 'Warning: Skipping empty file: %s\n' "$jpgfile"
             failed=$((failed + 1))
             continue
           fi
 
-          tmpfile="''${jpgfile}.tmp"
+          tmpfile="$(mktemp "$(dirname "$jpgfile")/$(basename "$jpgfile").tmp.XXXXXX")"
 
-          # Run jpegtran and capture exit code
-          if ${pkgs.libjpeg_turbo}/bin/jpegtran -copy none "''${jpgfile}" > "''${tmpfile}" 2>/dev/null; then
-            mv "''${tmpfile}" "''${jpgfile}"
-            converted=$((converted + 1))
-          else
-            exitcode=$?
-            # Treat 0 and 2 as OK; 2 = "file already optimal"
-            if [ "$exitcode" -eq 2 ]; then
-              # echo "Info: jpegtran reported already optimal: $jpgfile"
-              mv "''${tmpfile}" "''${jpgfile}"
-              converted=$((converted + 1))
+          printf '%s -copy none %s > %s\n' "$JPEGTRAN" "$jpgfile" "$tmpfile"
+
+          # Run jpegtran and capture exit status
+          "$JPEGTRAN" -copy none "$jpgfile" > "$tmpfile" 2>/dev/null
+          status=$?
+
+          # jpegtran exit codes:
+          #   0 = success
+          #   1 = fatal error
+          #   2 = warning but output is valid
+          if [ $status -eq 0 ] || [ $status -eq 2 ]; then
+
+            if cmp -s "$jpgfile" "$tmpfile"; then
+              rm -f -- "$tmpfile"
+              printf 'Unchanged: %s\n' "$jpgfile"
+            else
+              touch -r "$jpgfile" "$tmpfile" || true
+
+              if cat "$tmpfile" > "$jpgfile"; then
+                touch -r "$tmpfile" "$jpgfile" || true
+                chmod --reference="$tmpfile" "$jpgfile" 2>/dev/null || true
+                chown --reference="$tmpfile" "$jpgfile" 2>/dev/null || true
+                converted=$((converted + 1))
+                printf 'Converted: %s\n' "$jpgfile"
+              else
+                printf 'Error: Failed to overwrite original: %s\n' "$jpgfile" >&2
+                failed=$((failed + 1))
+              fi
+
+              rm -f -- "$tmpfile"
             fi
 
-            # Any other exit code is failure
-            rm -f "''${tmpfile}"
+          else
+            printf 'Error: jpegtran failed (%d) for %s\n' "$status" "$jpgfile" >&2
+            rm -f -- "$tmpfile"
             failed=$((failed + 1))
           fi
-        done < <(find /tank/ipcam/hcam -type f \( -name '*.jpg' -o -name '*.jpeg' \) -mmin -30 || true)
 
-        # Print summary
-        echo "JPEG Fix Summary:"
-        echo "  Processed: $processed files"
-        echo "  Converted: $converted files"
-        echo "  Failed:    $failed files"
+        done < <(find "$SEARCH_DIR" -type f \( -iname '*.jpg' -o -iname '*.jpeg' \) -mmin -30 -print0 || true)
+
+        printf '\nJPEG Fix Summary:\n'
+        printf '  Processed: %d files\n' "$processed"
+        printf '  Converted: %d files\n' "$converted"
+        printf '  Failed:    %d files\n' "$failed"
       '';
       serviceConfig = {
         Type = "oneshot";
