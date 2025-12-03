@@ -69,7 +69,7 @@ in
           #   2 = warning but output is valid
           if [ $status -eq 0 ] || [ $status -eq 2 ]; then
 
-            if cmp -s "$jpgfile" "$tmpfile"; then
+            if /run/current-system/sw/bin/cmp -s "$jpgfile" "$tmpfile"; then
               rm -f -- "$tmpfile"
               printf 'Unchanged: %s\n' "$jpgfile"
             else
