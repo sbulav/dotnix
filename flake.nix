@@ -5,7 +5,7 @@
     # Nixpkgs
     nixpkgs.url = "github:nixos/nixpkgs/nixos-25.11";
 
-    stable.url = "github:nixos/nixpkgs/nixos-25.05";
+    unstable.url = "github:nixos/nixpkgs/nixos-unstable";
 
     determinate.url = "https://flakehub.com/f/DeterminateSystems/determinate/*";
 
@@ -42,7 +42,7 @@
     # Sops (Secrets)
     sops-nix = {
       url = "github:Mic92/sops-nix";
-      inputs.nixpkgs.follows = "stable";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     sops-nix-darwin = {
@@ -84,7 +84,15 @@
         # allowBroken = true;
       };
 
-      overlays = with inputs; [ ];
+      overlays = with inputs; [
+        # Expose unstable packages via pkgs.unstable
+        (final: prev: {
+          unstable = import unstable {
+            system = final.system;
+            config.allowUnfree = true;
+          };
+        })
+      ];
 
       homes.modules = with inputs; [
         sops-nix.homeManagerModules.sops
