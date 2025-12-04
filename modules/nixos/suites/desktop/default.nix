@@ -26,8 +26,8 @@ in
       };
       apps = {
         firefox = enabled;
-        imv = disabled;
-        feh = enabled;
+        imv = enabled;
+        feh = disabled;
         slack = disabled;
         zoom-us = disabled;
         telegram = enabled;
