@@ -150,7 +150,7 @@ in
           services = {
             nextcloud = {
               enable = true;
-              package = inputs.stable.legacyPackages.x86_64-linux.nextcloud32;
+              package = pkgs.nextcloud32;
               hostName = cfg.host;
               secretFile = "/run/secrets/nextcloud-secretFile";
 
