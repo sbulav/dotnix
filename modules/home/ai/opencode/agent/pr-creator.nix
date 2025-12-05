@@ -27,7 +27,7 @@
       "git log*" = "allow";
       "sed *" = "allow";
       "head *" = "allow";
-      "$HOME/.config/opencode/tools/pr-creator.sh *" = "allow";
+      "$HOME/.config/opencode/utils/pr-creator.sh *" = "allow";
     };
   };
 
@@ -74,10 +74,10 @@
          строк если это повысит читаемость.
        * Если диапазон пустой — сообщи пользователю, что нет новых коммитов, и остановись.
 
-    5. Вызови helper-скрипт `~/.config/opencode/tools/pr-creator.sh` с параметрами:
+    5. Вызови helper-скрипт `~/.config/opencode/utils/pr-creator.sh` с параметрами:
 
        ```bash
-       $HOME/.config/opencode/tools/pr-creator.sh \
+       $HOME/.config/opencode/utils/pr-creator.sh \
          --host "$HOST" \
          --owner "$OWNER" \
          --repo "$REPO" \
