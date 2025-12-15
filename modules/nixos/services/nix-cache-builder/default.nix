@@ -37,9 +37,7 @@ in
     ] "List of NixOS hosts to build configurations for";
 
     # Scheduling
-    buildSchedule = mkOpt str "daily" "When to run builds (systemd calendar format)";
-
-    buildTime = mkOpt str "02:00" "Specific time to run daily builds";
+    buildTime = mkOpt str "*-*-* 02:00:00" "When to run daily builds (systemd OnCalendar format)";
 
     # Storage
     cacheDir = mkOpt str "/var/cache/nix-builds" "Directory to store build results";
@@ -263,17 +261,16 @@ in
         };
       };
 
-      # Build timer: Schedule daily builds
-      systemd.timers."nix-cache-builder" = {
-        description = "Daily NixOS configuration builds with flake update";
-        timerConfig = {
-          OnCalendar = cfg.buildSchedule;
-          OnCalendar = cfg.buildTime;
-          Persistent = true;
-          RandomizedDelaySec = "5m";
-        };
-        wantedBy = [ "timers.target" ];
-      };
+       # Build timer: Schedule daily builds
+       systemd.timers."nix-cache-builder" = {
+         description = "Daily NixOS configuration builds with flake update";
+         timerConfig = {
+           OnCalendar = cfg.buildTime;
+           Persistent = true;
+           RandomizedDelaySec = "5m";
+         };
+         wantedBy = [ "timers.target" ];
+       };
 
       # Cleanup service: Monitor cache size
       systemd.services."nix-cache-cleanup" = mkIf (cfg.maxCacheSize > 0) {
