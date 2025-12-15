@@ -60,7 +60,8 @@ in
     # Base configuration
     {
       # Ensure SSH is available for git operations
-      programs.ssh.startAgent = true;
+      # Use mkForce to override GPG module's SSH agent configuration
+      programs.ssh.startAgent = mkForce true;
       
       # Disable GPG SSH support to avoid conflicts with standard SSH agent
       programs.gnupg.agent.enableSSHSupport = mkForce false;

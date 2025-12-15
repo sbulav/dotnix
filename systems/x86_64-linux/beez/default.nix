@@ -6,6 +6,7 @@
   lib,
   ...
 }:
+with lib;
 let
   system = "x86_64-linux";
   hostName = "beez";
@@ -23,6 +24,9 @@ in
   suites.server.enable = true; # Enables the basics, like neovim, ssh, etc.
   suites.desktop.enable = false;
   suites.develop.enable = false;
+
+  # Disable GPG since nix-cache-builder needs standard SSH agent
+  system.security.gpg.enable = mkForce false;
   # FIXING NVME power consumption
   # Apply PS1 at boot for every NVMe controller
   # systemd.services.nvme-cap-ps1-nvme0 = {
