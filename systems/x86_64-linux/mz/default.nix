@@ -38,42 +38,46 @@ in
   # ];
 
   # Suites managed by nix, see suites by home-manager in homes
-  suites.common.enable = true; # Enables the basics, like audio, networking, ssh, etc.
-  suites.desktop.enable = true;
-  suites.develop.enable = true;
-  suites.games.enable = true;
-  services.ssh.enable = true;
-  custom.security.sops = {
-    enable = true;
-    sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
-    defaultSopsFile = lib.snowfall.fs.get-file "secrets/mz/default.yaml";
+  suites = {
+    common.enable = true; # Enables the basics, like audio, networking, ssh, etc.
+    desktop.enable = true;
+    develop.enable = true;
+    games.enable = true;
+    ssh.enable = true;
   };
-
-  custom.virtualisation = {
-    virt-manager.enable = false;
-    kvm.enable = false;
-    podman.enable = false;
-  };
-
-  # Enable for printing, configure on http://localhost:631/printers/Pantum_M6550NW_series
-  custom.services.avahi.enable = true;
-  custom.services.printing.enable = true;
-
-  custom.services.prometheus-exporters = {
-    enable = true;
-    node = {
+  custom = {
+    security.sops = {
       enable = true;
-      port = 9100;
-      openFirewall = true;
+      sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
+      defaultSopsFile = lib.snowfall.fs.get-file "secrets/mz/default.yaml";
     };
-    smartctl = {
+
+    virtualisation = {
+      virt-manager.enable = true;
+      kvm.enable = false;
+      podman.enable = false;
+    };
+
+    # Enable for printing, configure on http://localhost:631/printers/Pantum_M6550NW_series
+    services.avahi.enable = true;
+    services.printing.enable = true;
+
+    services.prometheus-exporters = {
       enable = true;
-      port = 9633;
-      openFirewall = true;
-      devices = [
-        "/dev/nvme0n1"
-        "/dev/nvme1n1"
-      ];
+      node = {
+        enable = true;
+        port = 9100;
+        openFirewall = true;
+      };
+      smartctl = {
+        enable = true;
+        port = 9633;
+        openFirewall = true;
+        devices = [
+          "/dev/nvme0n1"
+          "/dev/nvme1n1"
+        ];
+      };
     };
   };
 

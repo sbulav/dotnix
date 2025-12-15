@@ -25,9 +25,21 @@ in
     openglmy.enable = true;
   };
 
-  suites.server.enable = true; # Enables the basics, like neovim, ssh, etc.
-  suites.desktop.enable = false;
-  suites.develop.enable = false;
+  system = {
+    nix.cache-servers = [
+      {
+        url = "http://beez.sbulav.ru:5000";
+        key = "beez.sbulav.ru:g3AGSm7ZgXhEvJCO/z7TPsykfj/F+aHGO4h7QcUGTD8=";
+        priority = 40;
+      }
+    ];
+  };
+
+  suites = {
+    server.enable = true; # Enables the basics, like neovim, ssh, etc.
+    desktop.enable = false;
+    develop.enable = false;
+  };
 
   custom.security.sops = {
     enable = true;

@@ -9,10 +9,21 @@ let
 in
 {
   imports = [ ./hardware-configuration.nix ];
-  system.wallpaper = "${wallpapers}/share/wallpapers/cities/1-osaka-jade-bg.jpg";
-  # Enable Bootloader
-  system.boot.efi.enable = true;
-  system.battery.enable = true; # Only for laptops, they will still work without it, just improves battery life
+  system = {
+    wallpaper = "${wallpapers}/share/wallpapers/cities/1-osaka-jade-bg.jpg";
+    # Enable Bootloader
+    boot.efi.enable = true;
+    battery.enable = true; # Only for laptops, they will still work without it, just improves battery life
+
+    nix.cache-servers = [
+      {
+        url = "http://beez.sbulav.ru:5000";
+        key = "beez.sbulav.ru:g3AGSm7ZgXhEvJCO/z7TPsykfj/F+aHGO4h7QcUGTD8=";
+        priority = 40;
+      }
+    ];
+  };
+
   hardware.fingerprint.enable = true;
   hardware.bluetoothmy.enable = true;
 
@@ -24,16 +35,19 @@ in
   suites.common.enable = true; # Enables the basics, like audio, networking, ssh, etc.
   suites.desktop.enable = true;
   suites.develop.enable = true;
-  custom.security.sops = {
-    enable = true;
-    sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
-    defaultSopsFile = lib.snowfall.fs.get-file "secrets/nz/default.yaml";
-  };
 
-  custom.virtualisation = {
-    virt-manager.enable = true;
-    kvm.enable = false;
-    podman.enable = true;
+  custom = {
+    security.sops = {
+      enable = true;
+      sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
+      defaultSopsFile = lib.snowfall.fs.get-file "secrets/nz/default.yaml";
+    };
+
+    virtualisation = {
+      virt-manager.enable = true;
+      kvm.enable = false;
+      podman.enable = true;
+    };
   };
 
   networking.hosts = {
