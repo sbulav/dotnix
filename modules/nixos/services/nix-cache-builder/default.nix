@@ -73,20 +73,7 @@ in
         };
       };
 
-       # Assertions
-       assertions = [
-         {
-           assertion =
-             cfg.enable
-             -> (builtins.pathExists "/root/.ssh/id_ed25519" || builtins.pathExists "/root/.ssh/id_rsa");
-           message = ''
-             nix-cache-builder requires an SSH key at /root/.ssh/id_ed25519 or /root/.ssh/id_rsa
-             to clone from GitHub. Please generate one with:
-               sudo ssh-keygen -t ed25519 -C "root@beez" -f /root/.ssh/id_ed25519
-             And add the public key to your GitHub account as a deploy key (read-only).
-           '';
-         }
-       ];
+
 
       # Create cache directory with proper permissions
       systemd.tmpfiles.rules = [
