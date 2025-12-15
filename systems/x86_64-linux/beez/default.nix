@@ -73,6 +73,16 @@ in
   #   interface = "enp1s0";
   #   tcpPorts = [80 443]; # Or [] for all TCP
   # };
+  custom.services.nix-cache-builder = {
+    enable = true;
+    hosts = [
+      "nz"
+      "zanoza"
+      "mz"
+      "beez"
+    ];
+    cacheServer.enable = true;
+  };
 
   services.journald.extraConfig = ''
     SystemMaxUse=200M
