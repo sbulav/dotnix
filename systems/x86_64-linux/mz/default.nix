@@ -9,10 +9,20 @@ let
 in
 {
   imports = [ ./hardware-configuration.nix ];
-  system.wallpaper = "${wallpapers}/share/wallpapers/cities/1-osaka-jade-bg.jpg";
-  # Enable Bootloader
-  system.boot.efi.enable = true;
-  system.battery.enable = false; # Only for laptops, they will still work without it, just improves battery life
+  system = {
+    wallpaper = "${wallpapers}/share/wallpapers/cities/1-osaka-jade-bg.jpg";
+    # Enable Bootloader
+    boot.efi.enable = true;
+    battery.enable = false; # Only for laptops, they will still work without it, just improves battery life
+
+    nix.cache-servers = [
+      {
+        url = "http://beez.sbulav.ru:5000";
+        key = "beez.sbulav.ru:g3AGSm7ZgXhEvJCO/z7TPsykfj/F+aHGO4h7QcUGTD8=";
+        priority = 40;
+      }
+    ];
+  };
   hardware = {
     fingerprint.enable = false;
     bluetooth.enable = true;
