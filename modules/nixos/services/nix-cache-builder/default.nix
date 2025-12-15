@@ -62,7 +62,7 @@ in
       # Ensure SSH is available for git operations
       # Use mkForce to override GPG module's SSH agent configuration
       programs.ssh.startAgent = mkForce true;
-      
+
       # Disable GPG SSH support to avoid conflicts with standard SSH agent
       programs.gnupg.agent.enableSSHSupport = mkForce false;
 
@@ -73,8 +73,6 @@ in
           publicKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIOMqqnkVzrm0SdG6UOoqKLsabgH5C9okWi0dh2l9GKJl";
         };
       };
-
-
 
       # Create cache directory with proper permissions
       systemd.tmpfiles.rules = [
@@ -252,16 +250,16 @@ in
         };
       };
 
-       # Build timer: Schedule daily builds
-       systemd.timers."nix-cache-builder" = {
-         description = "Daily NixOS configuration builds with flake update";
-         timerConfig = {
-           OnCalendar = cfg.buildTime;
-           Persistent = true;
-           RandomizedDelaySec = "5m";
-         };
-         wantedBy = [ "timers.target" ];
-       };
+      # Build timer: Schedule daily builds
+      systemd.timers."nix-cache-builder" = {
+        description = "Daily NixOS configuration builds with flake update";
+        timerConfig = {
+          OnCalendar = cfg.buildTime;
+          Persistent = true;
+          RandomizedDelaySec = "5m";
+        };
+        wantedBy = [ "timers.target" ];
+      };
 
       # Cleanup service: Monitor cache size
       systemd.services."nix-cache-cleanup" = mkIf (cfg.maxCacheSize > 0) {
@@ -307,20 +305,20 @@ in
       networking.firewall = {
         allowedTCPPorts = [ cfg.cacheServer.port ];
 
-        # Restrict to LAN only (192.168.0.0/16)
-        extraCommands = ''
-          # Allow only local networks to access cache server
-          iptables -I nixos-fw -p tcp --dport ${toString cfg.cacheServer.port} \
-            -s 192.168.0.0/16 -j nixos-fw-accept
-          iptables -I nixos-fw -p tcp --dport ${toString cfg.cacheServer.port} -j nixos-fw-refuse
-        '';
+        # # Restrict to LAN only (192.168.0.0/16)
+        # extraCommands = ''
+        #   # Allow only local networks to access cache server
+        #   iptables -I nixos-fw -p tcp --dport ${toString cfg.cacheServer.port} \
+        #     -s 192.168.0.0/16 -j nixos-fw-accept
+        #   iptables -I nixos-fw -p tcp --dport ${toString cfg.cacheServer.port} -j nixos-fw-refuse
+        # '';
 
-        extraStopCommands = ''
-          iptables -D nixos-fw -p tcp --dport ${toString cfg.cacheServer.port} \
-            -s 192.168.0.0/16 -j nixos-fw-accept 2>/dev/null || true
-          iptables -D nixos-fw -p tcp --dport ${toString cfg.cacheServer.port} \
-            -j nixos-fw-refuse 2>/dev/null || true
-        '';
+        # extraStopCommands = ''
+        #   iptables -D nixos-fw -p tcp --dport ${toString cfg.cacheServer.port} \
+        #     -s 192.168.0.0/16 -j nixos-fw-accept 2>/dev/null || true
+        #   iptables -D nixos-fw -p tcp --dport ${toString cfg.cacheServer.port} \
+        #     -j nixos-fw-refuse 2>/dev/null || true
+        # '';
       };
     })
   ]);
