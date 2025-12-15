@@ -5,7 +5,7 @@ keys:
   - &sab_zanoza age1n3q6hj36mkzxntdl7zmws7l7zna8z8f930h2tj00vwc2lucszyxsdd4pzl
   - &host_mbp16 age17tnup59gy7jvj65la8nud0y6ukf57w0mueh3e4hxx5npwsa5x44sv765ru
   - &host_nz age1ranl5gsq43t0z22s28zdhvfzrvqqpmwqcjc3h6latfa4rrruxpps34vgqj
-  - &host_beez age1pd5lj9knvy94466f0np5fww60efnqmw6nkgca776rff6wx9x334qp2neh6
+  - &host_beez age1xfq3wfu4086pwxusqca92wh3p7hzr7gn3suqnyfqy4vqg30k3cyqft4pcf
   - &host_zanoza age1xz35v23vpnudp2u7el44cv32fdzc0sc42x0yzs2kl58dcfdpdy3qt9j4y2
 creation_rules:
   - path_regex: secrets/sab/[^/]+\.(yaml|json|env|ini)$
