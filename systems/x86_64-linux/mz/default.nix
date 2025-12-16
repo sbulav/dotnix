@@ -43,7 +43,6 @@ in
     desktop.enable = true;
     develop.enable = true;
     games.enable = true;
-    ssh.enable = true;
   };
   custom = {
     security.sops = {
