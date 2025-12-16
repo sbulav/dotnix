@@ -521,6 +521,191 @@ nix-instantiate --eval -E '(import ./modules/nixos/{path}/default.nix)'
 9. **Use suites** for related module groups
 10. **Platform conditionals** when mixing Linux/Darwin configs
 
+## Telegram Notifications for Systemd Services
+
+This configuration includes a reusable telegram notification system for systemd service failures.
+
+### Library Functions
+
+Available in `lib.custom.telegram.*`:
+
+#### `mkTelegramNotifications`
+
+Creates both failure notification and test services for a systemd service.
+
+**Parameters:**
+```nix
+lib.custom.telegram.mkTelegramNotifications pkgs {
+  serviceName = "my-service";           # Base service name (without .service)
+  friendlyName = "My Service";          # Human-readable name for notifications
+  hostName = config.system.name;        # Hostname to display
+  chatId = "123456789";                 # Telegram chat ID (hardcoded)
+  secretPath = "/path/to/token";        # Path to TELEGRAM_TOKEN secret file
+  priority = "high";                    # "high" or "low" (affects notification sound)
+  errorLogLines = 10;                   # Number of log lines to include (0 to disable)
+  getDetailsScript = "";                # Optional bash script to extract service details
+  enableTest = true;                    # Enable manual test service
+}
+```
+
+**Returns:**
+```nix
+{
+  services = {
+    "${serviceName}-telegram-failure" = { ... };  # Failure notification service
+    "${serviceName}-telegram-test" = { ... };      # Manual test service (if enableTest)
+  };
+}
+```
+
+### Usage Example (Restic Backups)
+
+```nix
+{
+  config,
+  lib,
+  namespace,
+  pkgs,
+  ...
+}:
+let
+  cfg = config.${namespace}.containers.restic;
+in {
+  options.${namespace}.containers.restic = {
+    enable = mkBoolOpt false "Enable restic backups";
+    
+    telegram = {
+      enable = mkBoolOpt true "Enable telegram failure notifications";
+      chatId = mkOpt str "681806836" "Telegram chat ID";
+      errorLogLines = mkOpt int 10 "Number of error log lines in notification";
+      enableTest = mkBoolOpt true "Enable manual test notification";
+    };
+  };
+
+  config = mkIf cfg.enable {
+    # Setup SOPS secret for telegram token
+    custom.security.sops.secrets."telegram-notifications-bot-token" = 
+      lib.custom.secrets.services.sharedTelegramBot 1000 // {
+        sopsFile = lib.snowfall.fs.get-file "secrets/zanoza/default.yaml";
+      };
+
+    # Configure backup services
+    services.restic.backups.my-backup = { ... };
+
+    # Add telegram notifications
+    systemd.services = mkMerge [
+      {
+        # Wire up failure hook
+        restic-backups-my-backup.onFailure = [ "restic-backups-telegram-failure.service" ];
+      }
+
+      (mkIf cfg.telegram.enable
+        (lib.custom.telegram.mkTelegramNotifications pkgs {
+          serviceName = "restic-backups";
+          friendlyName = "Restic Backup";
+          hostName = config.system.name;
+          chatId = cfg.telegram.chatId;
+          secretPath = config.sops.secrets."telegram-notifications-bot-token".path;
+          priority = "high";
+          errorLogLines = cfg.telegram.errorLogLines;
+          enableTest = cfg.telegram.enableTest;
+          
+          # Optional: Custom detail extraction
+          getDetailsScript = ''
+            echo "Backup Status:"
+            for service in restic-backups-*; do
+              status=$(systemctl show $service --property=ExecMainStatus --value)
+              echo "  $([ "$status" = "0" ] && echo "✅" || echo "❌") $service"
+            done
+          '';
+        }).services
+      )
+    ];
+  };
+}
+```
+
+### Message Format
+
+**Failure Notification:**
+```
+🖥️ zanoza | Restic Backup
+🔥 FAILURE
+
+Backup Status:
+  ✅ nextcloud
+  ❌ immich (exit: 1, state: failed)
+  ✅ photos
+
+📋 Last 10 log lines:
+[journalctl output]
+```
+
+**Test Notification:**
+```
+🖥️ zanoza | Restic Backup
+⚠️ TEST NOTIFICATION
+
+This is a manual test. The service is working correctly.
+```
+
+### Testing Notifications
+
+To send a manual test notification:
+```bash
+# Start the test service
+sudo systemctl start restic-backups-telegram-test.service
+
+# Check logs
+sudo journalctl -u restic-backups-telegram-test.service -n 20
+```
+
+To test actual failure notification (manually trigger):
+```bash
+sudo systemctl start restic-backups-telegram-failure.service
+```
+
+### Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `telegram.enable` | bool | `true` | Enable telegram notifications |
+| `telegram.chatId` | string | `"681806836"` | Telegram chat ID (hardcoded per host) |
+| `telegram.errorLogLines` | int | `10` | Number of log lines to include (0=none) |
+| `telegram.enableTest` | bool | `true` | Create manual test service |
+
+**Priority Levels:**
+- `"high"`: Normal notification with sound (default for critical services)
+- `"low"`: Silent notification (for non-critical services)
+
+### Secret Management
+
+The telegram bot token must be stored in SOPS secrets:
+
+**Secret file:** `secrets/{hostname}/default.yaml`
+```yaml
+telegram-notifications-bot-token: ENC[...]
+```
+
+**Secret configuration:**
+```nix
+custom.security.sops.secrets."telegram-notifications-bot-token" = 
+  lib.custom.secrets.services.sharedTelegramBot 1000;
+```
+
+The secret template automatically sets the correct UID for the service.
+
+### Adding Notifications to Other Services
+
+To add telegram notifications to any systemd service:
+
+1. **Add telegram configuration options** to your module
+2. **Setup SOPS secret** for the telegram token
+3. **Use `mkTelegramNotifications`** to create notification services
+4. **Wire up `onFailure` hook** to trigger notification
+
+See the restic module (modules/nixos/containers/restic/default.nix:126-160) for a complete example.
+
 ## References
 
 - [Snowfall Lib Documentation](https://snowfall.org/guides/lib/)

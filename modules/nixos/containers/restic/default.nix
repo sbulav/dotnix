@@ -9,37 +9,21 @@ with lib;
 with lib.custom;
 let
   cfg = config.${namespace}.containers.restic;
-  mkNtfyScript = status: priority: hostName: ''
-    echo "----------------------"
-    if [[ "$status" != "SUCCESS" ]]; then
-      echo "Detecting failured backups"
-      status_nextcloud=$(systemctl show restic-backups-tank_nextcloud.service --property=ExecMainStatus)
-      status_immich=$(systemctl show restic-backups-tank_immich.service --property=ExecMainStatus)
-      status_photos=$(systemctl show restic-backups-tank_photos.service --property=ExecMainStatus)
-      status_result="\n--------------\nNEXTCLOUD: $status_nextcloud\nIMMICH: $status_immich\nPHOTOS: $status_photos"
-      icon="🔥"
-    else
-      echo "Last backup was successfull"
-      status_result="$status"
-      icon="✅"
-    fi
-
-    data="{\"chat_id\": \"681806836\", \"text\": \"Backups on $hostName: $icon \n PRIORITY: $priority \n BACKUP STATUS: $status_result\"}"
-    echo "Sending data"
-    echo "$data"
-     ${lib.getExe pkgs.curl} -s -X POST \
-    ┊ -H 'Content-Type: application/json' \
-    ┊ -d "$data" \
-    ┊ https://api.telegram.org/bot$TELEGRAM_TOKEN/sendMessage
-  '';
 in
 {
   options.${namespace}.containers.restic = with types; {
-    enable = mkBoolOpt false "Enable the restic backup service ;";
+    enable = mkBoolOpt false "Enable the restic backup service";
     backup_user = mkOpt str "sab" "The backup user";
     backup_host = mkOpt str "192.168.92.197" "The backup server host";
-    # backup_paths = mkOpt (listOf str) [] "List of paths to backup";
     secret_file = mkOpt str "secrets/zanoza/default.yaml" "SOPS secret to get creds from";
+
+    # Telegram notifications
+    telegram = {
+      enable = mkBoolOpt true "Enable telegram failure notifications";
+      chatId = mkOpt str "681806836" "Telegram chat ID for notifications";
+      errorLogLines = mkOpt int 10 "Number of error log lines to include in notification";
+      enableTest = mkBoolOpt true "Enable manual test notification service";
+    };
   };
 
   imports = [
@@ -131,39 +115,47 @@ in
         ];
       };
     };
-    systemd.services = {
-      restic-backups-tank_immich = {
-        onSuccess = [ "restic-ntfy-success.service" ];
-        onFailure = [ "restic-ntfy-failure.service" ];
-      };
-      restic-backups-tank_nextcloud = {
-        onSuccess = [ "restic-ntfy-success.service" ];
-        onFailure = [ "restic-ntfy-failure.service" ];
-      };
-      restic-backups-tank_photos = {
-        onSuccess = [ "restic-ntfy-success.service" ];
-        onFailure = [ "restic-ntfy-failure.service" ];
-      };
+    systemd.services = mkMerge [
+      # Restic backup services with failure hooks
+      {
+        restic-backups-tank_immich.onFailure = [ "restic-backups-telegram-failure.service" ];
+        restic-backups-tank_nextcloud.onFailure = [ "restic-backups-telegram-failure.service" ];
+        restic-backups-tank_photos.onFailure = [ "restic-backups-telegram-failure.service" ];
+      }
 
-      restic-ntfy-success = {
-        serviceConfig.EnvironmentFile = [ config.sops.secrets."telegram-notifications-bot-token".path ];
-        script = mkNtfyScript "SUCCESS ✅" "INFO" "${config.system.name}";
-        environment = {
-          status = "SUCCESS";
-          priority = "INFO";
+      # Telegram notification services
+      (mkIf cfg.telegram.enable
+        (lib.custom.telegram.mkTelegramNotifications pkgs {
+          serviceName = "restic-backups";
+          friendlyName = "Restic Backup";
           hostName = config.system.name;
-        };
-      };
+          chatId = cfg.telegram.chatId;
+          secretPath = config.sops.secrets."telegram-notifications-bot-token".path;
+          priority = "high";
+          errorLogLines = cfg.telegram.errorLogLines;
+          enableTest = cfg.telegram.enableTest;
 
-      restic-ntfy-failure = {
-        serviceConfig.EnvironmentFile = [ config.sops.secrets."telegram-notifications-bot-token".path ];
-        script = mkNtfyScript "SUCCESS ✅" "INFO" "${config.system.name}";
-        environment = {
-          status = "FAILURE";
-          priority = "HIGH";
-          hostName = config.system.name;
-        };
-      };
-    };
+          # Custom detail extraction for restic
+          getDetailsScript = ''
+            echo "Backup Status:"
+
+            # Check each backup service
+            for service in restic-backups-tank_nextcloud restic-backups-tank_immich restic-backups-tank_photos; do
+              status=$(systemctl show $service.service --property=ExecMainStatus --value 2>/dev/null || echo "unknown")
+              active=$(systemctl is-active $service.service 2>/dev/null || echo "unknown")
+
+              # Extract backup name
+              backup_name=$(echo "$service" | sed 's/restic-backups-tank_//')
+
+              if [ "$status" = "0" ] && [ "$active" = "active" -o "$active" = "inactive" ]; then
+                echo "  ✅ $backup_name"
+              else
+                echo "  ❌ $backup_name (exit: $status, state: $active)"
+              fi
+            done
+          '';
+        }).services
+      )
+    ];
   };
 }

@@ -324,4 +324,196 @@ in
       };
     };
   };
+
+  # Telegram notification helpers
+  telegram = rec {
+    # Generate telegram notification script for service failures
+    # Note: pkgs parameter must be provided by the calling module
+    mkTelegramFailureScript =
+      pkgs:
+      {
+        serviceName, # e.g., "restic-backups"
+        friendlyName, # e.g., "Restic Backup"
+        hostName,
+        chatId, # Hardcoded: "681806836"
+        priority ? "high", # "high" | "low"
+        errorLogLines ? 10, # Number of error log lines to include
+        getDetailsScript ? "", # Optional bash code for service-specific details
+      }:
+      let
+        curl = "${pkgs.curl}/bin/curl";
+        jq = "${pkgs.jq}/bin/jq";
+      in
+      ''
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        # Message header
+        message="🖥️ ${hostName} | ${friendlyName}\n🔥 FAILURE"
+
+        # Service-specific details (if provided)
+        ${
+          if getDetailsScript != "" then
+            ''
+              echo "Extracting service details..."
+              details=$(${getDetailsScript})
+              if [ -n "$details" ]; then
+                message="$message\n\n$details"
+              fi
+            ''
+          else
+            ""
+        }
+
+        # Error logs from journalctl
+        ${
+          if errorLogLines > 0 then
+            ''
+              echo "Fetching last ${toString errorLogLines} log lines..."
+              error_logs=$(journalctl -u ${serviceName}.service -n ${toString errorLogLines} --no-pager 2>/dev/null | tail -${toString errorLogLines} || echo "No logs available")
+              if [ -n "$error_logs" ] && [ "$error_logs" != "No logs available" ]; then
+                message="$message\n\n📋 Last ${toString errorLogLines} log lines:\n$error_logs"
+              fi
+            ''
+          else
+            ""
+        }
+
+        # Send to Telegram
+        disable_notification=${if priority == "low" then "true" else "false"}
+
+        echo "Preparing telegram notification..."
+        data=$(${jq} -n \
+          --arg chat_id "${chatId}" \
+          --arg text "$message" \
+          --argjson disable_notification "$disable_notification" \
+          '{chat_id: $chat_id, text: $text, disable_notification: $disable_notification}')
+
+        echo "Sending telegram notification..."
+        response=$(${curl} -s -X POST \
+          -H 'Content-Type: application/json' \
+          -d "$data" \
+          "https://api.telegram.org/bot''${TELEGRAM_TOKEN}/sendMessage") || {
+          echo "Failed to send telegram notification" >&2
+          echo "Response: $response" >&2
+          exit 1
+        }
+
+        echo "Notification sent successfully"
+        echo "Response: $response"
+      '';
+
+    # Create systemd service for telegram notification
+    # Note: pkgs parameter must be provided by the calling module
+    mkTelegramFailureService =
+      pkgs:
+      {
+        serviceName,
+        friendlyName,
+        hostName,
+        chatId,
+        secretPath,
+        priority ? "high",
+        errorLogLines ? 10,
+        getDetailsScript ? "",
+      }:
+      {
+        "${serviceName}-telegram-failure" = {
+          description = "Telegram notification for ${friendlyName} failure";
+          serviceConfig = {
+            Type = "oneshot";
+            EnvironmentFile = secretPath;
+          };
+          script = mkTelegramFailureScript pkgs {
+            inherit
+              serviceName
+              friendlyName
+              hostName
+              chatId
+              priority
+              errorLogLines
+              getDetailsScript
+              ;
+          };
+        };
+      };
+
+    # Complete helper: creates notification service + manual test service
+    # Note: pkgs parameter must be provided by the calling module
+    mkTelegramNotifications =
+      pkgs:
+      {
+        serviceName,
+        friendlyName,
+        hostName,
+        chatId,
+        secretPath,
+        priority ? "high",
+        errorLogLines ? 10,
+        getDetailsScript ? "",
+        enableTest ? true,
+      }:
+      let
+        curl = "${pkgs.curl}/bin/curl";
+        jq = "${pkgs.jq}/bin/jq";
+      in
+      {
+        services =
+          mkTelegramFailureService pkgs {
+            inherit
+              serviceName
+              friendlyName
+              hostName
+              chatId
+              secretPath
+              priority
+              errorLogLines
+              getDetailsScript
+              ;
+          }
+          // (
+            if enableTest then
+              {
+                # Test service to manually trigger notification
+                "${serviceName}-telegram-test" = {
+                  description = "Test telegram notification for ${friendlyName}";
+                  serviceConfig = {
+                    Type = "oneshot";
+                    EnvironmentFile = secretPath;
+                  };
+                  script = ''
+                    #!/usr/bin/env bash
+                    set -euo pipefail
+
+                    echo "🧪 Sending TEST notification for ${friendlyName}..."
+
+                    message="🖥️ ${hostName} | ${friendlyName}\n⚠️ TEST NOTIFICATION\n\nThis is a manual test. The service is working correctly."
+
+                    disable_notification=${if priority == "low" then "true" else "false"}
+
+                    data=$(${jq} -n \
+                      --arg chat_id "${chatId}" \
+                      --arg text "$message" \
+                      --argjson disable_notification "$disable_notification" \
+                      '{chat_id: $chat_id, text: $text, disable_notification: $disable_notification}')
+
+                    echo "Sending test notification..."
+                    response=$(${curl} -s -X POST \
+                      -H 'Content-Type: application/json' \
+                      -d "$data" \
+                      "https://api.telegram.org/bot''${TELEGRAM_TOKEN}/sendMessage") || {
+                      echo "Failed to send test notification" >&2
+                      exit 1
+                    }
+
+                    echo "✅ Test notification sent successfully"
+                    echo "Response: $response"
+                  '';
+                };
+              }
+            else
+              { }
+          );
+      };
+  };
 }
