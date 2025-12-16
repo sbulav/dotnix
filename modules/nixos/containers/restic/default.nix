@@ -137,22 +137,37 @@ in
 
           # Custom detail extraction for restic
           getDetailsScript = ''
-            echo "Backup Status:"
-
+            output="Backup Status:"
+            
             # Check each backup service
             for service in restic-backups-tank_nextcloud restic-backups-tank_immich restic-backups-tank_photos; do
-              status=$(systemctl show $service.service --property=ExecMainStatus --value 2>/dev/null || echo "unknown")
-              active=$(systemctl is-active $service.service 2>/dev/null || echo "unknown")
-
-              # Extract backup name
+              # Get status in original format: "ExecMainStatus=0"
+              status=$(systemctl show $service.service --property=ExecMainStatus 2>/dev/null || echo "ExecMainStatus=unknown")
+              
+              # Extract backup name (nextcloud, immich, photos)
               backup_name=$(echo "$service" | sed 's/restic-backups-tank_//')
-
-              if [ "$status" = "0" ] && [ "$active" = "active" -o "$active" = "inactive" ]; then
-                echo "  ✅ $backup_name"
+              
+              # Check if status is success (ExecMainStatus=0)
+              if [[ "$status" == "ExecMainStatus=0" ]]; then
+                output=$(printf '%s\n  ✅ %s' "$output" "$backup_name")
               else
-                echo "  ❌ $backup_name (exit: $status, state: $active)"
+                output=$(printf '%s\n  ❌ %s (%s)' "$output" "$backup_name" "$status")
               fi
             done
+            
+            printf '%s' "$output"
+          '';
+          
+          # Identify which services failed for log extraction
+          getFailedServicesScript = ''
+            failed_services=""
+            for service in restic-backups-tank_nextcloud restic-backups-tank_immich restic-backups-tank_photos; do
+              status=$(systemctl show $service.service --property=ExecMainStatus --value 2>/dev/null || echo "unknown")
+              if [ "$status" != "0" ]; then
+                failed_services="$failed_services $service.service"
+              fi
+            done
+            printf '%s' "$failed_services"
           '';
         }).services
       )

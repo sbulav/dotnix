@@ -339,6 +339,7 @@ in
         priority ? "high", # "high" | "low"
         errorLogLines ? 10, # Number of error log lines to include
         getDetailsScript ? "", # Optional bash code for service-specific details
+        getFailedServicesScript ? "", # Optional bash code returning space-separated list of failed service names
       }:
       let
         curl = "${pkgs.curl}/bin/curl";
@@ -369,11 +370,41 @@ in
         ${
           if errorLogLines > 0 then
             ''
-              echo "Fetching last ${toString errorLogLines} log lines..."
-              error_logs=$(journalctl -u ${serviceName}.service -n ${toString errorLogLines} --no-pager 2>/dev/null | tail -${toString errorLogLines} || echo "No logs available")
-              if [ -n "$error_logs" ] && [ "$error_logs" != "No logs available" ]; then
-                message=$(printf '%s\n\n📋 Last %d log lines:\n%s' "$message" ${toString errorLogLines} "$error_logs")
-              fi
+              echo "Fetching logs from failed services..."
+              
+              ${
+                if getFailedServicesScript != "" then
+                  ''
+                    # Get list of failed services
+                    failed_services=$(${getFailedServicesScript})
+                    
+                    if [ -n "$failed_services" ]; then
+                      error_logs=""
+                      for service in $failed_services; do
+                        service_logs=$(journalctl -u "$service" -n ${toString errorLogLines} --no-pager 2>/dev/null || echo "")
+                        if [ -n "$service_logs" ]; then
+                          if [ -n "$error_logs" ]; then
+                            error_logs=$(printf '%s\n\n=== %s ===\n%s' "$error_logs" "$service" "$service_logs")
+                          else
+                            error_logs=$(printf '=== %s ===\n%s' "$service" "$service_logs")
+                          fi
+                        fi
+                      done
+                      
+                      if [ -n "$error_logs" ]; then
+                        message=$(printf '%s\n\n📋 Failed service logs:\n%s' "$message" "$error_logs")
+                      fi
+                    fi
+                  ''
+                else
+                  ''
+                    # Fallback: query base service name
+                    error_logs=$(journalctl -u ${serviceName}.service -n ${toString errorLogLines} --no-pager 2>/dev/null | tail -${toString errorLogLines} || echo "No logs available")
+                    if [ -n "$error_logs" ] && [ "$error_logs" != "No logs available" ]; then
+                      message=$(printf '%s\n\n📋 Last %d log lines:\n%s' "$message" ${toString errorLogLines} "$error_logs")
+                    fi
+                  ''
+              }
             ''
           else
             ""
@@ -416,6 +447,7 @@ in
         priority ? "high",
         errorLogLines ? 10,
         getDetailsScript ? "",
+        getFailedServicesScript ? "",
       }:
       {
         "${serviceName}-telegram-failure" = {
@@ -433,6 +465,7 @@ in
               priority
               errorLogLines
               getDetailsScript
+              getFailedServicesScript
               ;
           };
         };
@@ -451,6 +484,7 @@ in
         priority ? "high",
         errorLogLines ? 10,
         getDetailsScript ? "",
+        getFailedServicesScript ? "",
         enableTest ? true,
       }:
       let
@@ -469,6 +503,7 @@ in
               priority
               errorLogLines
               getDetailsScript
+              getFailedServicesScript
               ;
           }
           // (
