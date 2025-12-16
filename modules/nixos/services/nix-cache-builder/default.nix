@@ -219,17 +219,17 @@ in
           # Cleanup old generations
           echo ""
           echo "Cleaning up old generations..."
-          REMOVED=$(${pkgs.findutils}/bin/find "$CACHE_DIR" \
-            -name '*-result-*' \
-            -mtime +${toString (cfg.keepGenerations * 7)} \
-            -delete -print | wc -l)
+           REMOVED=$(${pkgs.findutils}/bin/find "$CACHE_DIR" \
+             -name '*-result-*' \
+             -mtime +${toString (cfg.keepGenerations * 7)} \
+             -delete -print | ${pkgs.coreutils}/bin/wc -l)
           echo "✓ Removed $REMOVED old generation symlinks"
 
           echo ""
-          echo "=== Cache Statistics ==="
-          echo "Current cache size: $(${pkgs.coreutils}/bin/du -sh $CACHE_DIR | cut -f1)"
-          echo "Available disk space: $(${pkgs.coreutils}/bin/df -h $CACHE_DIR | tail -1 | awk '{print $4}')"
-          echo "======================="
+           echo "=== Cache Statistics ==="
+           echo "Current cache size: $(${pkgs.coreutils}/bin/du -sh $CACHE_DIR | ${pkgs.coreutils}/bin/cut -f1)"
+           echo "Available disk space: $(${pkgs.coreutils}/bin/df -h $CACHE_DIR | ${pkgs.coreutils}/bin/tail -1 | ${pkgs.gawk}/bin/awk '{print $4}')"
+           echo "======================="
         '';
 
         serviceConfig = {
