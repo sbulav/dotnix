@@ -349,7 +349,7 @@ in
         set -euo pipefail
 
         # Message header
-        message="🖥️ ${hostName} | ${friendlyName}\n🔥 FAILURE"
+        message=$(printf '%s\n%s' "🖥️ ${hostName} | ${friendlyName}" "🔥 FAILURE")
 
         # Service-specific details (if provided)
         ${
@@ -358,7 +358,7 @@ in
               echo "Extracting service details..."
               details=$(${getDetailsScript})
               if [ -n "$details" ]; then
-                message="$message\n\n$details"
+                message=$(printf '%s\n\n%s' "$message" "$details")
               fi
             ''
           else
@@ -372,7 +372,7 @@ in
               echo "Fetching last ${toString errorLogLines} log lines..."
               error_logs=$(journalctl -u ${serviceName}.service -n ${toString errorLogLines} --no-pager 2>/dev/null | tail -${toString errorLogLines} || echo "No logs available")
               if [ -n "$error_logs" ] && [ "$error_logs" != "No logs available" ]; then
-                message="$message\n\n📋 Last ${toString errorLogLines} log lines:\n$error_logs"
+                message=$(printf '%s\n\n📋 Last %d log lines:\n%s' "$message" ${toString errorLogLines} "$error_logs")
               fi
             ''
           else
@@ -487,7 +487,7 @@ in
 
                     echo "🧪 Sending TEST notification for ${friendlyName}..."
 
-                    message="🖥️ ${hostName} | ${friendlyName}\n⚠️ TEST NOTIFICATION\n\nThis is a manual test. The service is working correctly."
+                    message=$(printf '%s\n%s\n\n%s' "🖥️ ${hostName} | ${friendlyName}" "⚠️ TEST NOTIFICATION" "This is a manual test. The service is working correctly.")
 
                     disable_notification=${if priority == "low" then "true" else "false"}
 
