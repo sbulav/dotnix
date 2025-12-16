@@ -242,7 +242,7 @@ in
               echo "✓ Signed store paths for ${host}"
               
               SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
-              BUILD_RESULTS="$BUILD_RESULTS${host}: ''${BUILD_TIME}s ✓\n"
+              BUILD_RESULTS="''${BUILD_RESULTS}${host}: ''${BUILD_TIME}s ✓\n"
               
             else
               BUILD_END=$(date +%s)
@@ -251,7 +251,7 @@ in
               echo "✗ Failed to build ${host} after ''${BUILD_TIME}s" >&2
               
               FAILED_COUNT=$((FAILED_COUNT + 1))
-              BUILD_RESULTS="$BUILD_RESULTS${host}: ''${BUILD_TIME}s ✗\n"
+              BUILD_RESULTS="''${BUILD_RESULTS}${host}: ''${BUILD_TIME}s ✗\n"
               
               # Continue with next host instead of failing entirely
             fi
