@@ -86,6 +86,17 @@ in
       "beez"
     ];
     cacheServer.enable = true;
+
+    # Telegram notifications
+    telegram = {
+      enable = true;
+      chatId = "681806836";
+      notifyOnSuccess = true;
+      notifyOnPartialSuccess = true;
+      notifyOnFailure = true;
+      successPriority = "low"; # Silent for full success
+      failurePriority = "high"; # Sound for any failures
+    };
   };
 
   services.journald.extraConfig = ''

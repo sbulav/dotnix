@@ -706,6 +706,151 @@ To add telegram notifications to any systemd service:
 
 See the restic module (modules/nixos/containers/restic/default.nix:126-160) for a complete example.
 
+## Nix Cache Builder Notifications
+
+The nix-cache-builder service can send telegram notifications for build results with statistics.
+
+### Configuration
+
+```nix
+custom.services.nix-cache-builder = {
+  enable = true;
+  hosts = [ "nz" "zanoza" "mz" "beez" ];
+  cacheServer.enable = true;
+  
+  telegram = {
+    enable = true;
+    chatId = "681806836";
+    notifyOnSuccess = true;          # Notify on complete success
+    notifyOnPartialSuccess = true;   # Notify when some builds fail
+    notifyOnFailure = true;          # Notify when all builds fail
+    successPriority = "low";         # Silent for full success
+    failurePriority = "high";        # Sound for any failures
+  };
+};
+```
+
+### Message Format
+
+**Success (Low Priority / Silent):**
+```
+🖥️ beez | Cache Builder
+✅ SUCCESS (4/4)
+
+nz: 45s ✓
+zanoza: 67s ✓
+mz: 52s ✓
+beez: 49s ✓
+
+⏱️ 3m 33s total
+💾 Cache: 2.3GB (+145MB)
+💿 Free: 45GB
+```
+
+**Partial Success (High Priority):**
+```
+🖥️ beez | Cache Builder
+⚠️ PARTIAL (2/4)
+
+nz: 45s ✗
+zanoza: 67s ✗
+mz: 52s ✓
+beez: 49s ✓
+
+⏱️ 3m 33s total
+💾 Cache: 2.1GB (+23MB)
+💿 Free: 46GB
+```
+
+**Complete Failure (High Priority):**
+```
+🖥️ beez | Cache Builder
+🔥 FAILED (0/4)
+
+All builds failed!
+
+nz: 12s ✗
+zanoza: 8s ✗
+mz: 15s ✗
+beez: 9s ✗
+
+⏱️ 44s total
+```
+
+### Statistics Tracked
+
+| Metric | Description |
+|--------|-------------|
+| **Per-host status** | Build success (✓) or failure (✗) |
+| **Per-host time** | Build duration in seconds |
+| **Total time** | Sum of all build times (human readable) |
+| **Success ratio** | X/Y format showing successful vs total builds |
+| **Cache size** | Total cache size after build |
+| **Cache diff** | Change in cache size (+/-) |
+| **Disk free** | Available disk space |
+
+### Configuration Options
+
+| Option | Type | Default | Description |
+|--------|------|---------|-------------|
+| `telegram.enable` | bool | `false` | Enable telegram notifications |
+| `telegram.chatId` | string | `"681806836"` | Telegram chat ID |
+| `telegram.notifyOnSuccess` | bool | `true` | Notify when all builds succeed |
+| `telegram.notifyOnPartialSuccess` | bool | `true` | Notify when some builds fail |
+| `telegram.notifyOnFailure` | bool | `true` | Notify when all builds fail |
+| `telegram.successPriority` | enum | `"low"` | Priority for complete success (high/low) |
+| `telegram.failurePriority` | enum | `"high"` | Priority for any failures (high/low) |
+
+**Priority Levels:**
+- `"low"`: Silent notification (no sound)
+- `"high"`: Normal notification with sound
+
+### Secret Management
+
+Uses the same `telegram-notifications-bot-token` secret as Restic backups:
+
+**Secret file:** `secrets/beez/default.yaml` (already exists)
+```yaml
+telegram-notifications-bot-token: ENC[...]
+```
+
+The secret is automatically configured when `telegram.enable = true`.
+
+### Testing
+
+To manually trigger a build and test notifications:
+
+```bash
+# Start the build service
+sudo systemctl start nix-cache-builder.service
+
+# Watch logs in real-time
+sudo journalctl -u nix-cache-builder.service -f
+
+# Check build status
+systemctl status nix-cache-builder.service
+```
+
+The notification will be sent automatically when the build completes based on the result:
+- **All succeed**: Silent notification (if `notifyOnSuccess = true`)
+- **Some fail**: Sound notification (if `notifyOnPartialSuccess = true`)
+- **All fail**: Sound notification (if `notifyOnFailure = true`)
+
+### Timer Schedule
+
+The builder runs automatically based on the configured schedule:
+
+```nix
+custom.services.nix-cache-builder = {
+  buildTime = "*-*-* 02:00:00";  # Daily at 2 AM (default)
+};
+```
+
+To check the next scheduled run:
+```bash
+systemctl list-timers nix-cache-builder.timer
+```
+
 ## References
 
 - [Snowfall Lib Documentation](https://snowfall.org/guides/lib/)
