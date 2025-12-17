@@ -25,6 +25,7 @@ in
   };
 
   hardware.fingerprint.enable = true;
+  hardware.yubikey.enable = true;
   hardware.bluetoothmy.enable = true;
 
   # environment.systemPackages = with pkgs; [
