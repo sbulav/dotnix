@@ -371,13 +371,13 @@ in
           if errorLogLines > 0 then
             ''
               echo "Fetching logs from failed services..."
-              
+
               ${
                 if getFailedServicesScript != "" then
                   ''
                     # Get list of failed services
                     failed_services=$(${getFailedServicesScript})
-                    
+
                     if [ -n "$failed_services" ]; then
                       error_logs=""
                       for service in $failed_services; do
@@ -550,5 +550,132 @@ in
               { }
           );
       };
+
+    # Generate telegram script for daily backup summary
+    mkTelegramSummaryScript =
+      pkgs:
+      {
+        serviceName,
+        friendlyName,
+        hostName,
+        chatId,
+        backupServices,
+        successPriority ? "low",
+        failurePriority ? "high",
+        errorLogLines ? 10,
+      }:
+      let
+        curl = "${pkgs.curl}/bin/curl";
+        jq = "${pkgs.jq}/bin/jq";
+      in
+      ''
+        #!/usr/bin/env bash
+        set -euo pipefail
+
+        # Check status of all backup services
+        passed_count=0
+        failed_count=0
+        failed_services=""
+
+        ${builtins.concatStringsSep "\n        " (
+          map (service: ''
+            status=$(systemctl show ${service}.service --property=ExecMainStatus --value 2>/dev/null || echo "unknown")
+            if [ "$status" = "0" ]; then
+              passed_count=$((passed_count + 1))
+            else
+              failed_count=$((failed_count + 1))
+              failed_services="$failed_services ${service}.service"
+            fi
+          '') backupServices
+        )}
+
+        # Determine message and priority based on results
+        total=$((passed_count + failed_count))
+
+        if [ $passed_count -eq $total ]; then
+          # All successful
+          message=$(printf '%s\n%s' "🖥️ ${hostName} | ${friendlyName}" "✅ All backups successful")
+          
+          # Add backup summary
+          message=$(printf '%s\n\n%s' "$message" "Daily Backup Summary:")
+          ${builtins.concatStringsSep "\n          " (
+            map (service: ''
+              backup_name=$(echo "${service}" | sed 's/restic-backups-tank_//')
+              message=$(printf '%s\n  ✅ %s' "$message" "$backup_name")
+            '') backupServices
+          )}
+          
+          disable_notification=true
+        elif [ $passed_count -gt 0 ]; then
+          # Partial failure
+          message=$(printf '%s\n%s' "🖥️ ${hostName} | ${friendlyName}" "⚠️ PARTIAL ($passed_count/$total)")
+          
+          # Add backup summary
+          message=$(printf '%s\n\n%s' "$message" "Daily Backup Summary:")
+          ${builtins.concatStringsSep "\n          " (
+            map (service: ''
+              backup_name=$(echo "${service}" | sed 's/restic-backups-tank_//')
+              status=$(systemctl show ${service}.service --property=ExecMainStatus --value 2>/dev/null || echo "unknown")
+              if [ "$status" = "0" ]; then
+                message=$(printf '%s\n  ✅ %s' "$message" "$backup_name")
+              else
+                message=$(printf '%s\n  ❌ %s (exit: %s)' "$message" "$backup_name" "$status")
+              fi
+            '') backupServices
+          )}
+          
+          # Add error logs for failed services
+          if [ ${toString errorLogLines} -gt 0 ]; then
+            message=$(printf '%s\n\n%s' "$message" "📋 Failed service logs:")
+            for service in $failed_services; do
+              service_logs=$(journalctl -u "$service" -n ${toString errorLogLines} --no-pager 2>/dev/null || echo "")
+              if [ -n "$service_logs" ]; then
+                message=$(printf '%s\n\n=== %s ===\n%s' "$message" "$service" "$service_logs")
+              fi
+            done
+          fi
+          
+          disable_notification=false
+        else
+          # All failed
+          message=$(printf '%s\n%s' "🖥️ ${hostName} | ${friendlyName}" "🔥 FAILED (0/$total)")
+          message=$(printf '%s\n\n%s' "$message" "All backups failed!")
+          message=$(printf '%s\n\n%s' "$message" "⚠️ Manual intervention required")
+          
+          # Add error logs
+          if [ ${toString errorLogLines} -gt 0 ]; then
+            message=$(printf '%s\n\n%s' "$message" "📋 Failed service logs:")
+            for service in $failed_services; do
+              service_logs=$(journalctl -u "$service" -n ${toString errorLogLines} --no-pager 2>/dev/null || echo "")
+              if [ -n "$service_logs" ]; then
+                message=$(printf '%s\n\n=== %s ===\n%s' "$message" "$service" "$service_logs")
+              fi
+            done
+          fi
+          
+          disable_notification=false
+        fi
+
+        # Send to Telegram
+        echo "Preparing telegram notification..."
+        data=$(${jq} -n \
+          --arg chat_id "${chatId}" \
+          --arg text "$message" \
+          --argjson disable_notification "$disable_notification" \
+          '{chat_id: $chat_id, text: $text, disable_notification: $disable_notification}')
+
+        echo "Sending telegram notification..."
+        response=$(${curl} -s -X POST \
+          -H 'Content-Type: application/json' \
+          -d "$data" \
+          "https://api.telegram.org/bot''${TELEGRAM_TOKEN}/sendMessage") || {
+          echo "Failed to send telegram notification" >&2
+          echo "Response: $response" >&2
+          exit 1
+        }
+
+        echo "Notification sent successfully"
+        echo "Response: $response"
+      '';
   };
 }

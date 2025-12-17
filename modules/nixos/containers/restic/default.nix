@@ -115,6 +115,19 @@ in
         ];
       };
     };
+
+    # Daily summary timer
+    systemd.timers = mkIf cfg.telegram.enable {
+      "restic-backups-summary" = {
+        description = "Daily Restic backup summary check";
+        timerConfig = {
+          OnCalendar = "*-*-* 05:00:00";
+          Persistent = true;
+        };
+        wantedBy = [ "timers.target" ];
+      };
+    };
+
     systemd.services = mkMerge [
       # Restic backup services with failure hooks
       {
@@ -138,7 +151,7 @@ in
           # Custom detail extraction for restic
           getDetailsScript = ''
             output="Backup Status:"
-            
+
             # Check each backup service
             for service in restic-backups-tank_nextcloud restic-backups-tank_immich restic-backups-tank_photos; do
               # Get status in original format: "ExecMainStatus=0"
@@ -154,10 +167,10 @@ in
                 output=$(printf '%s\n  ❌ %s (%s)' "$output" "$backup_name" "$status")
               fi
             done
-            
+
             printf '%s' "$output"
           '';
-          
+
           # Identify which services failed for log extraction
           getFailedServicesScript = ''
             failed_services=""
@@ -171,6 +184,31 @@ in
           '';
         }).services
       )
+
+      # Daily summary service
+      (mkIf cfg.telegram.enable {
+        "restic-backups-summary" = {
+          description = "Check restic backups and send daily summary";
+          serviceConfig = {
+            Type = "oneshot";
+            EnvironmentFile = config.sops.secrets."telegram-notifications-bot-token".path;
+          };
+          script = lib.custom.telegram.mkTelegramSummaryScript pkgs {
+            serviceName = "restic-backups";
+            friendlyName = "Restic Backup";
+            hostName = config.system.name;
+            chatId = cfg.telegram.chatId;
+            backupServices = [
+              "restic-backups-tank_nextcloud"
+              "restic-backups-tank_immich"
+              "restic-backups-tank_photos"
+            ];
+            successPriority = "low";
+            failurePriority = "high";
+            errorLogLines = cfg.telegram.errorLogLines;
+          };
+        };
+      })
     ];
   };
 }
