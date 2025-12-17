@@ -16,10 +16,30 @@ in
   };
 
   config = mkIf cfg.enable {
+    # Enable U2F authentication
+    security.pam.u2f = {
+      enable = true;
+      # "sufficient" means: if YubiKey is present and valid, auth succeeds immediately
+      # If YubiKey is absent or fails, fall through to next auth method (fingerprint/password)
+      control = "sufficient";
+
+      settings = {
+        # Prompt user to insert YubiKey
+        cue = true;
+        # Enable debug output (can be disabled after testing)
+        debug = false;
+        # authpending_file allows proper timeout and fallback to next auth method
+        # When YubiKey is not inserted within timeout, authentication falls through to fingerprint
+        authpending_file = "/var/run/user/%u/pam-u2f-authpending";
+      };
+    };
+
+    # Enable U2F for specific PAM services
     security.pam.services = {
       login.u2fAuth = true;
       sudo.u2fAuth = true;
     };
+
     environment.systemPackages = with pkgs; [
       # Yubico's official tools
       yubikey-manager # cli

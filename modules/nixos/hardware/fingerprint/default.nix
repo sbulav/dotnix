@@ -18,23 +18,14 @@ in
   config = mkIf cfg.enable {
     services.fprintd.enable = true;
 
-    security.pam.services.swaylock.text = ''
-      # Account management.
-      account required pam_unix.so
-
-      # Authentication management.
-
-      # prompt for a password; pressing Enter on a blank field will proceed to fingerprint authentication.
-      auth sufficient pam_unix.so nullok likeauth try_first_pass
-      auth sufficient ${pkgs.fprintd}/lib/security/pam_fprintd.so
-      auth required pam_deny.so
-
-      # Password management.
-      password sufficient pam_unix.so nullok sha512
-
-      # Session management.
-      session required pam_env.so conffile=/etc/pam/environment readenv=0
-      session required pam_unix.so
-    '';
+    # NixOS automatically enables fprintAuth for all PAM services when fprintd is enabled
+    # This includes swaylock, login, sudo, and other PAM services
+    #
+    # Authentication order (handled by NixOS module ordering):
+    # 1. YubiKey (U2F) - order 10900 (if hardware.yubikey.enable = true)
+    # 2. Fingerprint - order 11400 (this module)
+    # 3. Password - order 12900 (always available)
+    #
+    # No manual PAM configuration needed - NixOS handles the ordering automatically
   };
 }
