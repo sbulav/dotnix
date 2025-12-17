@@ -67,17 +67,15 @@ in
 
       notifyOnFailure = mkBoolOpt true "Send notification when all builds fail";
 
-      successPriority =
-        mkOpt (enum [
-          "high"
-          "low"
-        ]) "low" "Notification priority for complete success";
+      successPriority = mkOpt (enum [
+        "high"
+        "low"
+      ]) "low" "Notification priority for complete success";
 
-      failurePriority =
-        mkOpt (enum [
-          "high"
-          "low"
-        ]) "high" "Notification priority for any failures";
+      failurePriority = mkOpt (enum [
+        "high"
+        "low"
+      ]) "high" "Notification priority for any failures";
     };
   };
 
@@ -214,47 +212,49 @@ in
 
           # Build each host
           ${concatMapStringsSep "\n" (host: ''
-            echo ""
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "Building configuration for ${host}..."
-            echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                        echo ""
+                        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+                        echo "Building configuration for ${host}..."
+                        echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-            BUILD_START=$(date +%s)
+                        BUILD_START=$(date +%s)
 
-            if ${pkgs.nix}/bin/nix build \
-              --out-link "$CACHE_DIR/${host}-result" \
-              "$FLAKE#nixosConfigurations.${host}.config.system.build.toplevel" \
-              --print-build-logs \
-              --keep-going; then
-              
-              BUILD_END=$(date +%s)
-              BUILD_TIME=$((BUILD_END - BUILD_START))
-              
-              echo "✓ Successfully built ${host} in ''${BUILD_TIME}s"
-              
-              # Sign the store paths
-              echo "Signing store paths for ${host}..."
-              ${pkgs.nix}/bin/nix store sign \
-                --recursive \
-                --key-file ${config.sops.secrets."nix-cache-priv-key".path} \
-                "$CACHE_DIR/${host}-result"
-              
-              echo "✓ Signed store paths for ${host}"
-              
-              SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
-              BUILD_RESULTS="''${BUILD_RESULTS}${host}: ''${BUILD_TIME}s ✓\n"
-              
-            else
-              BUILD_END=$(date +%s)
-              BUILD_TIME=$((BUILD_END - BUILD_START))
-              
-              echo "✗ Failed to build ${host} after ''${BUILD_TIME}s" >&2
-              
-              FAILED_COUNT=$((FAILED_COUNT + 1))
-              BUILD_RESULTS="''${BUILD_RESULTS}${host}: ''${BUILD_TIME}s ✗\n"
-              
-              # Continue with next host instead of failing entirely
-            fi
+                        if ${pkgs.nix}/bin/nix build \
+                          --out-link "$CACHE_DIR/${host}-result" \
+                          "$FLAKE#nixosConfigurations.${host}.config.system.build.toplevel" \
+                          --print-build-logs \
+                          --keep-going; then
+                          
+                          BUILD_END=$(date +%s)
+                          BUILD_TIME=$((BUILD_END - BUILD_START))
+                          
+                          echo "✓ Successfully built ${host} in ''${BUILD_TIME}s"
+                          
+                          # Sign the store paths
+                          echo "Signing store paths for ${host}..."
+                          ${pkgs.nix}/bin/nix store sign \
+                            --recursive \
+                            --key-file ${config.sops.secrets."nix-cache-priv-key".path} \
+                            "$CACHE_DIR/${host}-result"
+                          
+                          echo "✓ Signed store paths for ${host}"
+                          
+                          SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
+                          BUILD_RESULTS="''${BUILD_RESULTS}✅ ${host}: ''${BUILD_TIME}s
+            "
+                          
+                        else
+                          BUILD_END=$(date +%s)
+                          BUILD_TIME=$((BUILD_END - BUILD_START))
+                          
+                          echo "✗ Failed to build ${host} after ''${BUILD_TIME}s" >&2
+                          
+                          FAILED_COUNT=$((FAILED_COUNT + 1))
+                          BUILD_RESULTS="''${BUILD_RESULTS}❌ ${host}: ''${BUILD_TIME}s ✗
+            "
+                          
+                          # Continue with next host instead of failing entirely
+                        fi
           '') cfg.hosts}
 
           TOTAL_END=$(date +%s)
@@ -292,7 +292,7 @@ in
             CACHE_SIZE_AFTER=$(${pkgs.coreutils}/bin/du -sb "$CACHE_DIR" 2>/dev/null | ${pkgs.coreutils}/bin/cut -f1 || echo "0")
             CACHE_DIFF=$((CACHE_SIZE_AFTER - CACHE_SIZE_BEFORE))
             CACHE_SIZE_HUMAN=$(${pkgs.coreutils}/bin/numfmt --to=iec-i --suffix=B $CACHE_SIZE_AFTER 2>/dev/null || echo "unknown")
-            
+
             # Handle cache diff formatting (can be negative)
             if [ $CACHE_DIFF -ge 0 ]; then
               CACHE_DIFF_HUMAN="+$(${pkgs.coreutils}/bin/numfmt --to=iec-i --suffix=B $CACHE_DIFF 2>/dev/null || echo "0B")"
@@ -300,7 +300,7 @@ in
               CACHE_DIFF_ABS=$((0 - CACHE_DIFF))
               CACHE_DIFF_HUMAN="-$(${pkgs.coreutils}/bin/numfmt --to=iec-i --suffix=B $CACHE_DIFF_ABS 2>/dev/null || echo "0B")"
             fi
-            
+
             DISK_FREE=$(${pkgs.coreutils}/bin/df -h "$CACHE_DIR" | ${pkgs.coreutils}/bin/tail -1 | ${pkgs.gawk}/bin/awk '{print $4}')
 
             # Format total time (convert seconds to human readable)
@@ -339,21 +339,13 @@ in
               # Build message
               if [ $SUCCESS_COUNT -eq 0 ]; then
                 # Complete failure - shorter message
-                message=$(printf '%s\n%s (%d/%d)\n\nAll builds failed!\n\n%s\n⏱️ %s total' \
-                  "🖥️ ${config.system.name} | Cache Builder" \
-                  "$STATUS_EMOJI $STATUS_TEXT" \
-                  "$SUCCESS_COUNT" \
-                  "$TOTAL_HOSTS" \
-                  "$(echo -e "$BUILD_RESULTS")" \
+                message=$(printf 'Cache Build Status:\n%s\n==========\n⏱️ %s total' \
+                  "$BUILD_RESULTS" \
                   "$TIME_HUMAN")
               else
                 # Success or partial - full stats
-                message=$(printf '%s\n%s (%d/%d)\n\n%s\n⏱️ %s total\n💾 Cache: %s (%s)\n💿 Free: %s' \
-                  "🖥️ ${config.system.name} | Cache Builder" \
-                  "$STATUS_EMOJI $STATUS_TEXT" \
-                  "$SUCCESS_COUNT" \
-                  "$TOTAL_HOSTS" \
-                  "$(echo -e "$BUILD_RESULTS")" \
+                message=$(printf 'Cache Build Status:\n%s\n==========\n⏱️ %s total\n💾 Cache: %s (%s)\n💿 Free: %s' \
+                  "$BUILD_RESULTS" \
                   "$TIME_HUMAN" \
                   "$CACHE_SIZE_HUMAN" \
                   "$CACHE_DIFF_HUMAN" \
@@ -391,26 +383,25 @@ in
           ''}
         '';
 
-        serviceConfig =
-          {
-            Type = "oneshot";
-            User = "root";
-            WorkingDirectory = cfg.flakePath;
+        serviceConfig = {
+          Type = "oneshot";
+          User = "root";
+          WorkingDirectory = cfg.flakePath;
 
-            # Limit resources
-            CPUQuota = "80%";
-            MemoryMax = "8G";
+          # Limit resources
+          CPUQuota = "80%";
+          MemoryMax = "8G";
 
-            # Increase timeout for long builds
-            TimeoutStartSec = "6h";
+          # Increase timeout for long builds
+          TimeoutStartSec = "6h";
 
-            # Restart on failure (transient network issues, etc.)
-            Restart = "on-failure";
-            RestartSec = "30m";
-          }
-          // (optionalAttrs cfg.telegram.enable {
-            EnvironmentFile = config.sops.secrets."telegram-notifications-bot-token".path;
-          });
+          # Restart on failure (transient network issues, etc.)
+          Restart = "on-failure";
+          RestartSec = "30m";
+        }
+        // (optionalAttrs cfg.telegram.enable {
+          EnvironmentFile = config.sops.secrets."telegram-notifications-bot-token".path;
+        });
       };
 
       # Build timer: Schedule daily builds
