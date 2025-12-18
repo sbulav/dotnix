@@ -61,9 +61,10 @@ in
 
       settings = {
         general = {
-          lock_cmd = "${swaylock} -fF";
-          ignore_dbus_inhibit = false;
           after_sleep_cmd = "${hyprctl} dispatch dpms on";
+          before_sleep_cmd = "${swaylock} -fF";
+          ignore_dbus_inhibit = false;
+          lock_cmd = "${swaylock} -fF";
         };
 
         listener = listenerConfig;
