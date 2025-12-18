@@ -24,13 +24,14 @@ in
     ];
   };
   hardware = {
-    fingerprint.enable = false;
     bluetooth.enable = true;
     bluetoothmy.enable = true;
     cpu.amd.enable = true;
+    fingerprint.enable = false;
     gpu.intel.enable = true;
     openglmy.enable = true;
     rgb.openrgb.enable = true;
+    yubikey.enable = true;
   };
 
   # environment.systemPackages = with pkgs; [
