@@ -20,13 +20,36 @@ in
       autostart.enable = true;
       portal = {
         enable = true;
+        
         extraPortals = with pkgs; [
-          # Only one hyprland portal must be enabled, otherwise screen sharing brokes
-          # xdg-desktop-portal
           xdg-desktop-portal-hyprland
+          xdg-desktop-portal-gtk
         ];
-        # gtkUsePortal = true;
+
+        # Configure portal backends explicitly for proper screensharing
+        # This is critical for NVIDIA + Hyprland screensharing to work correctly
+        config = {
+          common = {
+            default = [ "gtk" ];
+          };
+          hyprland = {
+            default = [
+              "hyprland"
+              "gtk"
+            ];
+            # Use Hyprland portal for screencasting/screenshots
+            "org.freedesktop.impl.portal.Screenshot" = [ "hyprland" ];
+            "org.freedesktop.impl.portal.ScreenCast" = [ "hyprland" ];
+          };
+        };
+
+        xdgOpenUsePortal = true;
       };
+    };
+
+    # Ensure proper environment for portal integration
+    environment.sessionVariables = {
+      NIXOS_XDG_OPEN_USE_PORTAL = "1";
     };
   };
 }
