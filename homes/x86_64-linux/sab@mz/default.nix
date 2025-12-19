@@ -19,17 +19,21 @@ in
     desktop = {
       hyprland = {
         enable = true;
+        # Auto-detect monitors initially - update with actual port names after NVIDIA drivers load
+        # Run 'hyprctl monitors' to see actual port names (e.g., DP-1, DP-2, HDMI-A-1)
+        # Previous Intel Arc config: HDMI-A-1,1920x1080,0x0,1 and DP-2,3840x2560@60,1920x0,2
         monitors = [
+          # ",preferred,auto,auto"
           "HDMI-A-1,1920x1080,0x0,1"
-          "DP-2,3840x2560@60,1920x0,2"
+          "DP-1,3840x2560@60,1920x0,2"
         ];
         workspaces.monitorBindings = {
-          "1" = "DP-2";
-          "2" = "DP-2";
-          "3" = "DP-2";
-          "4" = "DP-2";
-          "5" = "DP-2";
-          "6" = "DP-2";
+          "1" = "DP-1";
+          "2" = "DP-1";
+          "3" = "DP-1";
+          "4" = "DP-1";
+          "5" = "DP-1";
+          "6" = "DP-1";
           "7" = "HDMI-A-1";
           "8" = "HDMI-A-1";
           "9" = "HDMI-A-1";

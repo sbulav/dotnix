@@ -29,6 +29,17 @@ in
   config = mkIf cfg.enable {
     boot.blacklistedKernelModules = [ "nouveau" ];
 
+    # Critical: Configure video drivers to load NVIDIA kernel modules
+    services.xserver.videoDrivers = [ "nvidia" ];
+
+    # NVIDIA-specific environment variables for Wayland/Hyprland
+    environment.sessionVariables = {
+      LIBVA_DRIVER_NAME = "nvidia";
+      GBM_BACKEND = "nvidia-drm";
+      __GLX_VENDOR_LIBRARY_NAME = "nvidia";
+      NVD_BACKEND = "direct";
+    };
+
     environment.systemPackages = with pkgs; [
       nvfancontrol
 
@@ -57,7 +68,9 @@ in
         open = mkDefault true;
         nvidiaSettings = false;
         nvidiaPersistenced = true;
-        forceFullCompositionPipeline = true;
+        # Note: forceFullCompositionPipeline can cause issues with Wayland
+        # Disable it for Wayland compositors like Hyprland
+        forceFullCompositionPipeline = false;
       };
 
       graphics = {
