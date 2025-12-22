@@ -22,7 +22,7 @@ in
     };
 
     hardware.steam-hardware.enable = true;
-
+    programs.gamemode.enable = true; # for performance mode
     programs.steam = {
       enable = true;
       extest.enable = true;
