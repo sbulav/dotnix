@@ -25,7 +25,7 @@ in
 
         # Use minimal drivers and rely on IPP Everywhere for modern printers
         drivers = with pkgs; [
-          pantum-driver
+          unstable.pantum-driver
         ];
 
         logLevel = "warn";
