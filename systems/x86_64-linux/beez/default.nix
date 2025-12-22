@@ -121,6 +121,7 @@ in
   };
 
   environment.systemPackages = with pkgs; [
+    git
     nixd # LSP for nix
     smartmontools
     ntfs3g
