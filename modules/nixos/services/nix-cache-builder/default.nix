@@ -97,6 +97,11 @@ in
         };
       };
 
+      # Configure git safe directory for nix-cache-builder
+      programs.git.config = {
+        safe.directory = [ cfg.flakePath ];
+      };
+
       # Create cache directory with proper permissions
       systemd.tmpfiles.rules = [
         "d ${cfg.cacheDir} 0755 root root -"
@@ -145,14 +150,18 @@ in
             echo "Updating existing repository..."
             cd "$FLAKE_DIR"
             
+            # Clean any local modifications first to ensure clean state
+            echo "Cleaning local modifications..."
+            ${pkgs.git}/bin/git reset --hard HEAD
+            ${pkgs.git}/bin/git clean -fd
+            
             # Fetch latest changes
+            echo "Fetching latest changes from origin/$BRANCH..."
             ${pkgs.git}/bin/git fetch origin "$BRANCH"
             
             # Hard reset to latest remote state
+            echo "Resetting to origin/$BRANCH..."
             ${pkgs.git}/bin/git reset --hard "origin/$BRANCH"
-            
-            # Clean any untracked files
-            ${pkgs.git}/bin/git clean -fd
           fi
 
           echo "✓ Flake synced successfully"
@@ -162,18 +171,28 @@ in
           Type = "oneshot";
           User = "root";
           ExecStartPre = "${pkgs.coreutils}/bin/mkdir -p /root/.ssh";
+
+          # Add required packages to PATH
+          path = [
+            pkgs.openssh # For GIT_SSH_COMMAND
+            pkgs.git
+            pkgs.coreutils
+            pkgs.bash
+          ];
         };
       };
 
       # Build service: Build NixOS configurations
       systemd.services."nix-cache-builder" = {
         description = "Build NixOS configurations for cache";
-        wants = [ "nix-cache-builder-sync.service" ];
+        requires = [
+          "nix-cache-builder-sync.service"
+          "network-online.target"
+        ];
         after = [
           "nix-cache-builder-sync.service"
           "network-online.target"
         ];
-        requires = [ "network-online.target" ];
 
         script = ''
           #!/usr/bin/env bash
@@ -387,6 +406,18 @@ in
           Type = "oneshot";
           User = "root";
           WorkingDirectory = cfg.flakePath;
+
+          # Add required packages to PATH
+          path = [
+            pkgs.git # For nix flake update --commit-lock-file
+            pkgs.nix # For nix commands
+            pkgs.coreutils
+            pkgs.findutils
+            pkgs.gawk
+            pkgs.jq # For telegram notifications
+            pkgs.curl # For telegram notifications
+            pkgs.bash # For script execution
+          ];
 
           # Limit resources
           CPUQuota = "80%";
