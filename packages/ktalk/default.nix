@@ -5,14 +5,14 @@
 }:
 let
   pname = "ktalk";
-  version = "3.2.0";
+  version = "3.3.0";
 
   # Platform-specific sources
   src =
     if pkgs.stdenv.isLinux then
       builtins.fetchurl {
         url = "https://st.ktalk.host/ktalk-app/linux/${pname}${version}x86_64.AppImage";
-        sha256 = "1yaiyg8cfxyvb585xfpwlji2k2cmmd3skn47chgh74ddpp1jxwgx";
+        sha256 = "1lmqpx6kg6ih49jfs5y0nmac7n8xix9ax45ca1bx96cdbwzfryyn";
       }
     else
       builtins.fetchurl {
