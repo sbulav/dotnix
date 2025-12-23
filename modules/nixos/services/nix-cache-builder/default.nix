@@ -144,13 +144,13 @@ in
           else
             echo "Updating existing repository..."
             cd "$FLAKE_DIR"
-            
+
             # Fetch latest changes
             ${pkgs.git}/bin/git fetch origin "$BRANCH"
-            
+
             # Hard reset to latest remote state
             ${pkgs.git}/bin/git reset --hard "origin/$BRANCH"
-            
+
             # Clean any untracked files
             ${pkgs.git}/bin/git clean -fd
           fi
@@ -162,6 +162,7 @@ in
           Type = "oneshot";
           User = "root";
           ExecStartPre = "${pkgs.coreutils}/bin/mkdir -p /root/.ssh";
+          Environment = "PATH=${pkgs.git}/bin:${pkgs.nix}/bin:${pkgs.coreutils}/bin:/run/current-system/sw/bin";
         };
       };
 
@@ -224,35 +225,35 @@ in
                           "$FLAKE#nixosConfigurations.${host}.config.system.build.toplevel" \
                           --print-build-logs \
                           --keep-going; then
-                          
+
                           BUILD_END=$(date +%s)
                           BUILD_TIME=$((BUILD_END - BUILD_START))
-                          
+
                           echo "✓ Successfully built ${host} in ''${BUILD_TIME}s"
-                          
+
                           # Sign the store paths
                           echo "Signing store paths for ${host}..."
                           ${pkgs.nix}/bin/nix store sign \
                             --recursive \
                             --key-file ${config.sops.secrets."nix-cache-priv-key".path} \
                             "$CACHE_DIR/${host}-result"
-                          
+
                           echo "✓ Signed store paths for ${host}"
-                          
+
                           SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
                           BUILD_RESULTS="''${BUILD_RESULTS}✅ ${host}: ''${BUILD_TIME}s
             "
-                          
+
                         else
                           BUILD_END=$(date +%s)
                           BUILD_TIME=$((BUILD_END - BUILD_START))
-                          
+
                           echo "✗ Failed to build ${host} after ''${BUILD_TIME}s" >&2
-                          
+
                           FAILED_COUNT=$((FAILED_COUNT + 1))
                           BUILD_RESULTS="''${BUILD_RESULTS}❌ ${host}: ''${BUILD_TIME}s ✗
             "
-                          
+
                           # Continue with next host instead of failing entirely
                         fi
           '') cfg.hosts}
@@ -356,7 +357,7 @@ in
               disable_notification=$([ "$PRIORITY" = "low" ] && echo "true" || echo "false")
 
               echo "Sending telegram notification (priority: $PRIORITY)..."
-              
+
               data=$(${pkgs.jq}/bin/jq -n \
                 --arg chat_id "${cfg.telegram.chatId}" \
                 --arg text "$message" \
@@ -386,6 +387,7 @@ in
         serviceConfig = {
           Type = "oneshot";
           User = "root";
+          Environment = "PATH=${pkgs.git}/bin:${pkgs.nix}/bin:${pkgs.coreutils}/bin:/run/current-system/sw/bin";
           WorkingDirectory = cfg.flakePath;
 
           # Limit resources
