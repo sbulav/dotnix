@@ -162,6 +162,12 @@ in
           Type = "oneshot";
           User = "root";
           ExecStartPre = "${pkgs.coreutils}/bin/mkdir -p /root/.ssh";
+          # Add git to PATH for consistency
+          path = [
+            pkgs.git
+            pkgs.coreutils
+            pkgs.bash
+          ];
         };
       };
 
@@ -387,6 +393,19 @@ in
           Type = "oneshot";
           User = "root";
           WorkingDirectory = cfg.flakePath;
+
+          # Add required packages to PATH for nix flake update --commit-lock-file
+          # git is needed for lock file commits, other tools for script execution
+          path = [
+            pkgs.git
+            pkgs.nix
+            pkgs.coreutils
+            pkgs.findutils
+            pkgs.gawk
+            pkgs.jq
+            pkgs.curl
+            pkgs.bash
+          ];
 
           # Limit resources
           CPUQuota = "80%";
