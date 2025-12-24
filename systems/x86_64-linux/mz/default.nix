@@ -33,6 +33,9 @@ in
     openglmy.enable = true;
     rgb.openrgb.enable = true;
     yubikey.enable = true;
+    # XBOX Wireless controller
+    xone.enable = true;
+    xpadneo.enable = false;
   };
 
   # environment.systemPackages = with pkgs; [
