@@ -13,21 +13,22 @@
       url = "github:snowfallorg/lib";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    darwin = {
-      url = "github:nix-darwin/nix-darwin";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-    nix-homebrew = {
-      url = "github:zhaofengli-wip/nix-homebrew";
-    };
-    homebrew-core = {
-      url = "github:homebrew/homebrew-core";
-      flake = false;
-    };
-    homebrew-cask = {
-      url = "github:homebrew/homebrew-cask";
-      flake = false;
-    };
+    # Darwin inputs (disabled - no Darwin systems in use)
+    # darwin = {
+    #   url = "github:nix-darwin/nix-darwin";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
+    # nix-homebrew = {
+    #   url = "github:zhaofengli-wip/nix-homebrew";
+    # };
+    # homebrew-core = {
+    #   url = "github:homebrew/homebrew-core";
+    #   flake = false;
+    # };
+    # homebrew-cask = {
+    #   url = "github:homebrew/homebrew-cask";
+    #   flake = false;
+    # };
 
     # Home manager
     home-manager = {
@@ -45,11 +46,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    sops-nix-darwin = {
-      url = "github:Mic92/sops-nix/nix-darwin";
-      # url = "github:khaneliman/sops-nix/nix-darwin";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # sops-nix-darwin = {
+    #   url = "github:Mic92/sops-nix/nix-darwin";
+    #   # url = "github:khaneliman/sops-nix/nix-darwin";
+    #   inputs.nixpkgs.follows = "nixpkgs";
+    # };
 
     # System Deployment
     deploy-rs = {
@@ -72,6 +73,10 @@
           };
 
           namespace = "custom";
+          
+          # Skip Darwin discovery to speed up evaluation
+          systems.exclude = [ "darwin" ];
+          homes.exclude = [ "darwin" ];
         };
       };
     in
@@ -100,7 +105,7 @@
       ];
       systems = {
         modules = {
-          darwin = with inputs; [ sops-nix-darwin.darwinModules.sops ];
+          # darwin = with inputs; [ sops-nix-darwin.darwinModules.sops ]; # Disabled - no Darwin systems
           nixos = with inputs; [
             sops-nix.nixosModules.sops
             determinate.nixosModules.default
