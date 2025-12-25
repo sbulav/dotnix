@@ -26,6 +26,7 @@ in
           # ",preferred,auto,auto"
           "HDMI-A-1,1920x1080,0x0,1"
           "DP-1,3840x2560@60,1920x0,2"
+          ",preferred,auto,auto"
         ];
         workspaces.monitorBindings = {
           "1" = "DP-1";
