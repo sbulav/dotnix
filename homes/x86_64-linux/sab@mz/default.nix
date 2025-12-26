@@ -86,7 +86,10 @@ in
 
     apps = {
       obsidian = enabled;
-      ktalk = enabled;
+      ktalk = {
+        enable = true;
+        package = pkgs.custom.ktalk-nvidia;
+      };
       libreoffice = enabled;
     };
 
