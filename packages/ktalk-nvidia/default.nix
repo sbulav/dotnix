@@ -1,48 +1,74 @@
-{ pkgs ? import <nixpkgs> {}, lib, ... }:
-
+{ pkgs, lib, ... }:
 let
   pname = "ktalk-nvidia";
   version = "3.3.0";
 
-  # Download original AppImage
+  # NVIDIA-patched AppImage from sbulav's releases
   src = builtins.fetchurl {
-    url = "https://st.ktalk.host/ktalk-app/linux/ktalk${version}x86_64.AppImage";
-    sha256 = "1lmqpx6kg6ih49jfs5y0nmac7n8xix9ax45ca1bx96cdbwzfryyn";
+    url = "https://github.com/sbulav/appimages/releases/download/v3.3.0-nvidia/ktalk-nvidia-x86_64.AppImage";
+    sha256 = "1f1db885ea830f3039c2e3416a98be278c5c359075352edcf175e0340f094b19";
   };
 
-  # Extract the AppImage
-  extracted = pkgs.appimageTools.extractType2 {
-    inherit pname version src;
+  meta = with lib; {
+    description = ''
+      Kontur talk, communication platform with NVIDIA GPU support
+    '';
+    longDescription = ''
+      A space for communication and teamwork with NVIDIA GPU support.
+      This version includes fixes for virtual background and screensharing
+      on NVIDIA GPUs (RTX 5070 and others).
+
+      It combines hangouts, chat rooms, webinars, online whiteboards and an
+      application for meeting rooms. Allows you to capture and save the result of
+      communications.
+    '';
+    homepage = "https://kontur.ru/talk";
+    license = licenses.unfree;
+    maintainers = with maintainers; [ sbulav ];
+    platforms = [ "x86_64-linux" ];
   };
 
-  # NVIDIA-specific desktop item
+  # Desktop item for AppImage
   desktopItem = pkgs.makeDesktopItem {
     name = "ktalk-nvidia";
-    desktopName = "Толк (NVIDIA)";
+    desktopName = "ktalk (NVIDIA)";
     comment = "Kontur.Talk with NVIDIA GPU support";
     icon = "ktalk";
     exec = "ktalk-nvidia %U";
-    categories = [ "VideoConference" "AudioVideo" "Audio" "Video" "Network" ];
+    categories = [ "VideoConference" ];
     mimeTypes = [ "x-scheme-handler/ktalk" ];
   };
 
-  # Create wrapper script
-  wrapperScript = pkgs.writeShellScript "ktalk-nvidia-wrapper" ''
+  # Extract AppImage contents
+  appimageContents = pkgs.appimageTools.extractType2 {
+    inherit
+      pname
+      version
+      src
+      meta
+      ;
+  };
+
+  # NVIDIA-fixed wrapper script based on user's launcher
+  nvidiaWrapperScript = pkgs.writeShellScriptBin "ktalk-nvidia-wrapper" ''
     #!/usr/bin/env bash
-    # ktalk-nvidia wrapper with NVIDIA GPU support
+    # Fixed wrapper for Ktalk with NVIDIA on NixOS
+    # Solves virtual background white screen issue
 
     # Set EGL vendor to NVIDIA
     export __EGL_VENDOR_LIBRARY_FILENAMES=/run/opengl-driver/share/glvnd/egl_vendor.d/10_nvidia.json
 
-    # Add system NVIDIA libraries to library path
-    export LD_LIBRARY_PATH="${pkgs.linuxPackages.nvidia_x11}/lib:$LD_LIBRARY_PATH"
+    # CRITICAL: Add system NVIDIA libraries to library path
+    export LD_LIBRARY_PATH="/run/opengl-driver/lib:$LD_LIBRARY_PATH"
 
     # Set EGL platform based on current session
     if [ "$XDG_SESSION_TYPE" = "wayland" ]; then
-      export EGL_PLATFORM=wayland
-      export __GLX_VENDOR_LIBRARY_NAME=nvidia
+        echo "Detected Wayland session"
+        export EGL_PLATFORM=wayland
+        export __GLX_VENDOR_LIBRARY_NAME=nvidia
     else
-      export EGL_PLATFORM=x11
+        echo "Detected X11 session"
+        export EGL_PLATFORM=x11
     fi
 
     # GPU configuration for virtual background support
@@ -59,82 +85,58 @@ let
     echo "Session: $XDG_SESSION_TYPE"
     echo "EGL Platform: $EGL_PLATFORM"
     echo "EGL Vendor: NVIDIA"
+    echo "Library Path: /run/opengl-driver/lib"
     echo "========================================="
     echo ""
     echo "Starting Ktalk with fixed GPU configuration..."
     echo "Virtual background should now work correctly."
     echo ""
 
-    # Run the extracted AppImage
-    exec "${extracted}/AppRun" "$@"
+    # Run the wrapped AppImage binary
+    exec "$KTALK_BINARY" "$@"
   '';
-
 in
-pkgs.stdenv.mkDerivation rec {
-  inherit pname version;
+pkgs.appimageTools.wrapType2 rec {
+  inherit
+    pname
+    version
+    src
+    desktopItem
+    ;
 
-  nativeBuildInputs = with pkgs; [
-    makeWrapper
-  ];
+  extraPkgs =
+    pkgs: with pkgs; [
+      # Ensure NVIDIA libraries are available at runtime
+      nvidia-vaapi-driver
+      libglvnd
+      mesa
+    ];
 
-  buildInputs = with pkgs; [
-    linuxPackages.nvidia_x11
-  ];
+  extraInstallCommands = ''
+    source "${pkgs.makeWrapper}/nix-support/setup-hook"
 
-  dontUnpack = true;
+    # Create the main binary wrapper that calls our NVIDIA launcher
+    wrapProgram $out/bin/${pname} \
+      --set KTALK_BINARY "$out/bin/.${pname}-wrapped" \
+      --run "${nvidiaWrapperScript}/bin/ktalk-nvidia-wrapper \"\$@\""
 
-  installPhase = ''
-    echo "=== Installing ktalk-nvidia ==="
-    
-    # Create output directories
-    mkdir -p $out/bin
-    mkdir -p $out/share/applications
-    mkdir -p $out/share/icons/hicolor
-    
-    # Install wrapper script
-    cp ${wrapperScript} $out/bin/ktalk-nvidia
-    chmod +x $out/bin/ktalk-nvidia
-    
-    # Install desktop file
+    # Optional detached launcher (runs in background)
+    cat > $out/bin/${pname}-detached <<'EOF'
+    #!/usr/bin/env bash
+    setsid "${pname}" "$@" >/dev/null 2>&1 &
+    disown
+    EOF
+    chmod +x $out/bin/${pname}-detached
+
+    # Install desktop entry
+    mkdir -p $out/share/applications/
     cp ${desktopItem}/share/applications/*.desktop $out/share/applications/
-    
-    # Copy icons from extracted AppImage
-    echo "Copying icons..."
-    if [ -d "${extracted}/usr/share/icons" ]; then
-      cp -r "${extracted}/usr/share/icons"/* $out/share/icons/ 2>/dev/null || true
-    fi
-    
-    # Also look for icons in the extracted directory
-    find "${extracted}" -name "*.png" -o -name "*.svg" | head -10 | while read icon; do
-      icon_name=$(basename "$icon")
-      if [[ "$icon_name" =~ ktalk|Ktalk|KTALK ]]; then
-        icon_size=$(echo "$icon" | grep -oE "[0-9]+x[0-9]+" || echo "scalable")
-        mkdir -p "$out/share/icons/hicolor/$icon_size/apps"
-        cp "$icon" "$out/share/icons/hicolor/$icon_size/apps/ktalk.png" 2>/dev/null || true
-      fi
-    done
-    
-    echo "=== Installation complete ==="
-  '';
 
-  meta = with lib; {
-    description = "Kontur.Talk with NVIDIA GPU support for virtual backgrounds";
-    longDescription = ''
-      A space for communication and teamwork with fixed NVIDIA GPU support.
-      
-      This version includes fixes for:
-      - Virtual background/blur effects on NVIDIA GPUs
-      - EGL library compatibility issues on Wayland
-      - GPU process initialization failures
-      
-      It combines hangouts, chat rooms, webinars, online whiteboards and an
-      application for meeting rooms. Allows you to capture and save the result of
-      communications.
-    '';
-    homepage = "https://kontur.ru/talk";
-    license = licenses.unfree;
-    maintainers = with maintainers; [ ];
-    platforms = [ "x86_64-linux" ];
-    mainProgram = "ktalk-nvidia";
-  };
+    # Copy icons from extracted AppImage
+    if [ -d "${appimageContents}/usr/share/icons" ]; then
+      cp -r ${appimageContents}/usr/share/icons/ $out/share/icons/
+    fi
+
+    runHook postInstall
+  '';
 }
