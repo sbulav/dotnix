@@ -32,7 +32,10 @@ in
     gpu.nvidia.enable = true;
     openglmy.enable = true;
     rgb.openrgb.enable = true;
-    yubikey.enable = true;
+    yubikey = {
+      enable = true;
+      smartcard.enable = true;
+    };
     # XBOX Wireless controller
     xone.enable = true;
     xpadneo.enable = false;
@@ -49,12 +52,18 @@ in
     develop.enable = true;
     games.enable = true;
   };
+
+  # Enable GPG smartcard support for YubiKey
+  system.security.gpg.smartcard.enable = true;
+
   custom = {
     security.sops = {
       enable = true;
       sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
       defaultSopsFile = lib.snowfall.fs.get-file "secrets/mz/default.yaml";
     };
+
+    # Enable GPG smartcard support for YubiKey
 
     virtualisation = {
       virt-manager.enable = true;

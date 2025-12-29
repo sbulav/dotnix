@@ -25,7 +25,10 @@ in
   };
 
   hardware.fingerprint.enable = true;
-  hardware.yubikey.enable = true;
+  hardware.yubikey = {
+    enable = true;
+    smartcard.enable = true;
+  };
   hardware.bluetoothmy.enable = true;
 
   # environment.systemPackages = with pkgs; [
@@ -37,12 +40,18 @@ in
   suites.desktop.enable = true;
   suites.develop.enable = true;
 
+  # Enable GPG smartcard support for YubiKey
+  system.security.gpg.smartcard.enable = true;
+
   custom = {
     security.sops = {
       enable = true;
       sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
       defaultSopsFile = lib.snowfall.fs.get-file "secrets/nz/default.yaml";
     };
+
+    # Enable GPG smartcard support for YubiKey
+    system.security.gpg.smartcard.enable = true;
 
     virtualisation = {
       virt-manager.enable = true;
