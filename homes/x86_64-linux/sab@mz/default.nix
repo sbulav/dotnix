@@ -62,7 +62,7 @@ in
             enable = true;
 
             # AMD Ryzen k10temp sensor - use hwmon0 which corresponds to k10temp-pci-00c3
-            hwmonPath = "/sys/class/hwmon/hwmon5/temp1_input";
+            hwmonPath = "/sys/class/hwmon/hwmon4/temp1_input";
             criticalThreshold = 85;
             tooltip = true;
           };
