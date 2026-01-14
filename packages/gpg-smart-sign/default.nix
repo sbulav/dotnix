@@ -28,19 +28,20 @@ stdenv.mkDerivation {
 
     set -euo pipefail
 
+    # YubiKey key ID (set by configuration)
+    YUBIKEY_KEY_ID="15DB4B4A58D027CB73D0E911D06334BAEC6DC034"
+    # Fallback key ID (password-protected key)
+    FALLBACK_KEY_ID="7C43420F61CEC7FB"
+
     # Check if YubiKey is present and has a signature key configured
     check_yubikey() {
-      if ! command -v gpg &> /dev/null; then
-        return 1
-      fi
-
       # Check if card is present (redirect stderr to avoid noise)
-      if ! gpg --card-status &>/dev/null; then
+      if ! ${gnupg}/bin/gpg --card-status &>/dev/null; then
         return 1
       fi
 
       # Extract signature key from card status
-      local card_key=$(gpg --card-status 2>/dev/null | grep "Signature key" | cut -d: -f2 | tr -d ' ')
+      local card_key=$(${gnupg}/bin/gpg --card-status 2>/dev/null | grep "Signature key" | cut -d: -f2 | tr -d ' ')
 
       # Check if key exists and is not "[none]"
       if [ -n "$card_key" ] && [ "$card_key" != "[none]" ]; then
@@ -50,15 +51,19 @@ stdenv.mkDerivation {
       return 1
     }
 
-    # Try to use YubiKey, fall back to standard GPG
+    # Check if YubiKey is available
     if check_yubikey; then
-      # YubiKey is available with a signing key - use it
-      # GPG will automatically select the key from the card
+      # YubiKey is available - use it as-is
       exec ${gnupg}/bin/gpg "$@"
     else
-      # YubiKey not available or no key - use standard GPG
-      # This will use the default key configured in git (user.signingkey)
-      exec ${gnupg}/bin/gpg "$@"
+      # YubiKey not available - replace YubiKey key ID with fallback key in arguments
+      new_args=()
+      for arg in "$@"; do
+        # Replace any occurrence of YubiKey key ID with fallback key ID
+        new_arg="''${arg//$YUBIKEY_KEY_ID/$FALLBACK_KEY_ID}"
+        new_args+=("$new_arg")
+      done
+      exec ${gnupg}/bin/gpg "''${new_args[@]}"
     fi
     EOF
 

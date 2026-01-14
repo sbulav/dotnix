@@ -10,14 +10,12 @@ with lib.custom; let
 
   gpgConf = ''
     use-agent
-    pinentry-mode loopback
   '';
 
   gpgAgentConf = ''
     enable-ssh-support
     default-cache-ttl 28800
     max-cache-ttl 28800
-    allow-loopback-pinentry
   '';
 in {
   options.custom.security.gpg = with types; {

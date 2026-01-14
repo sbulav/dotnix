@@ -108,7 +108,7 @@ in
         enable = true;
         enableSigning = true;
         gpgProgram = "${pkgs.custom.gpg-smart-sign}/bin/gpg-smart-sign";
-        signingKey = "7C43420F61CEC7FB"; # Fallback key, will use YubiKey when available
+        signingKey = "15DB4B4A58D027CB73D0E911D06334BAEC6DC034"; # YubiKey key (fallback: 7C43420F61CEC7FB)
       };
       k9s = enabled;
       opentofu = enabled;
