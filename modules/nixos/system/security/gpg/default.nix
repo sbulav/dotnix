@@ -10,18 +10,6 @@ with lib;
 with lib.custom;
 let
   cfg = config.system.security.gpg;
-
-  gpgConf = ''
-    use-agent
-    pinentry-mode loopback
-  '';
-
-  gpgAgentConf = ''
-    enable-ssh-support
-    default-cache-ttl 28800
-    max-cache-ttl 28800
-    allow-loopback-pinentry
-  '';
 in
 {
   options.system.security.gpg = with types; {
@@ -30,8 +18,6 @@ in
   };
 
   config = mkIf cfg.enable {
-    # NOTE: This should already have been added by programs.gpg, but
-    # keeping it here for now just in case.
     environment.shellInit = ''
       export GPG_TTY="$(tty)"
       export SSH_AUTH_SOCK=$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)
@@ -62,11 +48,7 @@ in
       };
     };
 
-    home.file = {
-      ".gnupg/.keep".text = "";
-
-      ".gnupg/gpg.conf".text = gpgConf;
-      ".gnupg/gpg-agent.conf".text = gpgAgentConf;
-    };
+    # Enable PC/SC Smart Card Daemon for smartcard support
+    services.pcscd.enable = true;
   };
 }

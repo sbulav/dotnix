@@ -16,6 +16,8 @@ in
     userName = mkOpt types.str user.fullName "The name to configure git with.";
     userEmail = mkOpt types.str user.email "The email to configure git with.";
     signingKey = mkOpt types.str "7C43420F61CEC7FB" "The key ID to sign commits with.";
+    enableSigning = mkBoolOpt true "Whether to enable GPG commit signing.";
+    gpgProgram = mkOpt types.str "gpg" "The GPG program to use for signing.";
   };
 
   config = mkIf cfg.enable {
@@ -26,6 +28,13 @@ in
         user = {
           name = cfg.userName;
           email = cfg.userEmail;
+          signingkey = cfg.signingKey;
+        };
+        commit = {
+          gpgsign = cfg.enableSigning;
+        };
+        gpg = {
+          program = cfg.gpgProgram;
         };
         init = {
           defaultBranch = "master";

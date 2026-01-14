@@ -104,12 +104,23 @@ in
     tools = {
       direnv = disabled;
       gh = enabled;
-      git = enabled;
+      git = {
+        enable = true;
+        enableSigning = true;
+        gpgProgram = "${pkgs.custom.gpg-smart-sign}/bin/gpg-smart-sign";
+        signingKey = "7C43420F61CEC7FB"; # Fallback key, will use YubiKey when available
+      };
       k9s = enabled;
       opentofu = enabled;
       yandex-cloud = disabled;
     };
     security = {
+      gpg = {
+        enable = true;
+        agentTimeout = 5;
+        yubikeyKeyId = ""; # Auto-detect from YubiKey card
+        fallbackKeyId = "7C43420F61CEC7FB";
+      };
       rbw = enabled;
       vault = enabled;
       openconnect = enabled;

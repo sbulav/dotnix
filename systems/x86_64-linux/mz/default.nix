@@ -32,7 +32,10 @@ in
     gpu.nvidia.enable = true;
     openglmy.enable = true;
     rgb.openrgb.enable = true;
-    yubikey.enable = true;
+    yubikey = {
+      enable = true;
+      smartcard.enable = true;
+    };
     # XBOX Wireless controller
     xone.enable = true;
     xpadneo.enable = false;
