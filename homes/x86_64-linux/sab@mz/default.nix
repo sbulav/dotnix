@@ -103,7 +103,7 @@ in
     };
     tools = {
       direnv = disabled;
-      gh = enabled;
+      gh = disabled;
       git = {
         enable = true;
         enableSigning = true;
@@ -112,6 +112,7 @@ in
       };
       k9s = enabled;
       opentofu = enabled;
+      tea = enabled;
       yandex-cloud = disabled;
     };
     security = {
