@@ -87,7 +87,9 @@ in
       };
     };
   };
-
+  # Disable gnome keyring own agents, as we use SSH via GPG-agent
+  systemd.user.sockets."gcr-ssh-agent".enable = false;
+  systemd.user.services."gcr-ssh-agent".enable = false;
   # limit systemd journal size
   # https://wiki.archlinux.org/title/Systemd/Journal#Persistent_journals
   services.journald.extraConfig = ''
