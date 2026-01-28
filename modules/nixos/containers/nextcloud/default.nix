@@ -176,7 +176,7 @@ in
                 };
                 talk = pkgs.fetchNextcloudApp {
                   license = "gpl3";
-                  sha256 = "sha256-Ld/1UKhch7QYsfxGHpcjviGPna3moMsLCOMOGi937SI=";
+                  sha256 = "sha256-FR2T4cFhRa9Yef6sIkQEZ7XiVQhpQeW6hqYXtnid/mM=";
                   url = "https://github.com/nextcloud-releases/spreed/releases/download/v22.0.8/spreed-v22.0.8.tar.gz";
                 };
               };
