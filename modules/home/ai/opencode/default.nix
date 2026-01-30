@@ -150,8 +150,8 @@ let
 
   # Default configuration settings
   defaultSettings = {
-    model = "hhdev-openai/gpt-4.1";
-    small_model = "hhdev-openai/gpt-4.1";
+    model = "hhdev-grok/grok-code-fast-1";
+    small_model = "hhdev-grok/grok-code-fast-1";
 
     disabled_providers = [
       "openai"
