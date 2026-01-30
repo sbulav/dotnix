@@ -38,6 +38,7 @@
 
     wallpapers-nix = {
       url = "github:sbulav/wallpapers-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
     };
 
     # Sops (Secrets)
@@ -73,7 +74,7 @@
           };
 
           namespace = "custom";
-          
+
           # Skip Darwin discovery to speed up evaluation
           systems.exclude = [ "darwin" ];
           homes.exclude = [ "darwin" ];
