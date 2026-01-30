@@ -174,7 +174,7 @@ in
                   url = "https://github.com/pulsejet/nextcloud-oidc-login/releases/download/v3.2.2/oidc_login.tar.gz";
                   sha256 = "sha256-RLYquOE83xquzv+s38bahOixQ+y4UI6OxP9HfO26faI=";
                 };
-                talk = pkgs.fetchNextcloudApp {
+                spreed = pkgs.fetchNextcloudApp {
                   license = "gpl3";
                   sha256 = "sha256-FR2T4cFhRa9Yef6sIkQEZ7XiVQhpQeW6hqYXtnid/mM=";
                   url = "https://github.com/nextcloud-releases/spreed/releases/download/v22.0.8/spreed-v22.0.8.tar.gz";
