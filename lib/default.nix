@@ -12,7 +12,7 @@ let
   stdenv = pkgs.stdenv or { };
   systemFromStdenv =
     if stdenv ? hostPlatform && stdenv.hostPlatform ? system then stdenv.hostPlatform.system else null;
-  systemFromPkgs = pkgs.system or null;
+  systemFromPkgs = pkgs.stdenv.hostPlatform.system or null;
   systemFromConfig =
     if config ? nixpkgs && config.nixpkgs ? hostPlatform && config.nixpkgs.hostPlatform ? system then
       config.nixpkgs.hostPlatform.system
