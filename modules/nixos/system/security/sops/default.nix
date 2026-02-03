@@ -30,8 +30,8 @@ in
       secrets = cfg.secrets;
     };
 
-    warnings = [
-      "modules/nixos/system/security/sops is deprecated - use shared SOPS patterns in system configurations"
-    ];
+    # warnings = [
+    #   "modules/nixos/system/security/sops is deprecated - use shared SOPS patterns in system configurations"
+    # ];
   };
 }

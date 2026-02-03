@@ -94,7 +94,7 @@
         # Expose unstable packages via pkgs.unstable
         (final: prev: {
           unstable = import unstable {
-            system = final.system;
+            system = final.stdenv.hostPlatform.system;
             config.allowUnfree = true;
           };
         })
