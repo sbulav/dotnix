@@ -19,6 +19,12 @@
       "gpt-4.1" = {
         name = "ChatGPT 4.1";
       };
+      "gpt-5.2-codex" = {
+        name = "ChatGPT 5.2 Codex";
+      };
+      "gpt-5.2" = {
+        name = "ChatGPT 5.2";
+      };
     };
   };
 

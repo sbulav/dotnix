@@ -60,22 +60,25 @@ let
 
   # Process physical utility scripts from utils directory
   physicalUtils =
-    let
-      files = builtins.readDir utilsDir;
-    in
-    lib.mapAttrs' (
-      name: _:
+    if builtins.pathExists utilsDir then
       let
-        filePath = utilsDir + "/${name}";
+        files = builtins.readDir utilsDir;
       in
-      if builtins.pathExists filePath then
+      lib.mapAttrs' (
+        name: _:
         let
-          content = builtins.readFile filePath;
+          filePath = utilsDir + "/${name}";
         in
-        nameValuePair name content
-      else
-        null
-    ) files;
+        if builtins.pathExists filePath then
+          let
+            content = builtins.readFile filePath;
+          in
+          nameValuePair name content
+        else
+          null
+      ) files
+    else
+      { };
 
   # Helper functions to convert Nix to YAML/Markdown
 
