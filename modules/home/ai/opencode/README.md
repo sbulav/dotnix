@@ -9,6 +9,7 @@ This module provides a modular configuration for the OpenCode AI assistant under
 - `mcp-servers.nix` - MCP (Model Context Protocol) server configurations
 - `agent/` - Directory for agent configuration files (`.nix` files)
 - `command/` - Directory for command configuration files (`.nix` files)
+- `skill/` - Directory for skill configuration files (`.nix` files)
 
 ## Usage
 
@@ -88,6 +89,33 @@ Create `.nix` files in the `command/` directory:
 }
 ```
 
+## Adding Skills
+
+Create `.nix` files in the `skill/` directory to define reusable agent behaviors:
+
+```nix
+# skill/my-skill.nix
+{
+  name = "my-skill";
+  version = "1.0.0";
+  description = "Brief description of what this skill does";
+  allowed-tools = [ "Read" "Write" "Edit" ];
+  content = ''
+    # Skill Instructions
+
+    Detailed instructions for the agent on how to use this skill.
+    This content appears after the YAML frontmatter in the generated SKILL.md.
+  '';
+}
+```
+
+Skill files are automatically converted to `SKILL.md` format with proper YAML frontmatter and placed in `~/.config/opencode/skills/<name>/SKILL.md`.
+
+### Included Skills
+
+- **humanizer**: Remove signs of AI-generated writing from text. Based on Wikipedia's comprehensive "Signs of AI writing" guide, this skill helps agents detect and fix patterns including: inflated symbolism, promotional language, superficial -ing analyses, vague attributions, em dash overuse, rule of three, AI vocabulary words, negative parallelisms, and excessive conjunctive phrases. Use when editing or reviewing text to make it sound more natural and human-written.
+- **technical-writer**: Creates clear documentation, API references, guides, and technical content for developers and users. Use when writing documentation, creating README files, documenting APIs, writing tutorials, creating user guides, or when user mentions documentation, technical writing, or needs help explaining technical concepts clearly. Includes patterns for writing user-centered content with clarity, progressive disclosure, and scannable structure.
+
 ## MCP Servers
 
 Edit `mcp-servers.nix` to configure MCP servers:
@@ -107,6 +135,7 @@ Edit `mcp-servers.nix` to configure MCP servers:
 The module generates the following configuration files in `~/.config/opencode/`:
 
 - `opencode.json` - Main configuration
-- `agents/*.json` - Agent configurations
-- `commands/*.json` - Command configurations
-- `tools/*` - Tool scripts (if configured)
+- `agent/*.md` - Agent markdown configurations
+- `command/*.md` - Command markdown configurations
+- `skills/<name>/SKILL.md` - Skill definitions (loaded on-demand via the skill tool)
+- `utils/*` - Utility scripts (if configured)

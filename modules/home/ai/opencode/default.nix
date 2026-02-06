@@ -20,6 +20,7 @@ let
   # Constants for paths and settings
   agentDir = ./agent;
   commandDir = ./command;
+  skillDir = ./skill;
   utilsDir = ./utils;
   providersPath = ./providers.nix;
   mcpServersPath = ./mcp-servers.nix;
@@ -57,6 +58,7 @@ let
   # Import configurations from directories
   agents = processConfigDir agentDir;
   commands = processConfigDir commandDir;
+  skills = processConfigDir skillDir;
 
   # Process physical utility scripts from utils directory
   physicalUtils =
@@ -151,6 +153,23 @@ let
     ${config.task or ""}
   '';
 
+  # Generate skill markdown file (SKILL.md format)
+  # name: string, config: attrset -> string
+  toSkillMarkdown = name: config: ''
+    ---
+    name: ${builtins.toJSON config.name}
+    description: ${builtins.toJSON config.description}
+    ${optionalYamlField "version" (config.version or null)}
+    ${
+      if (config ? allowed-tools && config.allowed-tools != [ ]) then
+        "allowed-tools:\n" + lib.concatStringsSep "\n" (map (tool: "  - ${tool}") config.allowed-tools)
+      else
+        ""
+    }
+    ---
+    ${config.content or ""}
+  '';
+
   # Default configuration settings
   defaultSettings = {
     model = "hhdev-grok/grok-4-fast-reasoning";
@@ -210,6 +229,13 @@ in
         text = toMarkdownCommand name value;
       }
     ) commands
+    # Skill markdown files (placed in skills/<name>/SKILL.md)
+    // lib.mapAttrs' (
+      name: value:
+      nameValuePair "opencode/skills/${value.name}/SKILL.md" {
+        text = toSkillMarkdown name value;
+      }
+    ) skills
     # Utility scripts (from both options and physical files)
     // lib.mapAttrs' (
       name: value:
