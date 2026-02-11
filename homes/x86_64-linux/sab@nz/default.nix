@@ -35,6 +35,7 @@ in
         wlogout = enabled;
         hyprlock = disabled;
         wezterm = enabled;
+        "wlr-which-key" = enabled;
         wallpaper = "${wallpapers}/share/wallpapers/cities/1-osaka-jade-bg.jpg";
 
         waypaper = {
