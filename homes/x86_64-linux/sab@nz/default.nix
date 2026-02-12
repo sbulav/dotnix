@@ -70,6 +70,8 @@ in
       k9s = enabled;
       opentofu = enabled;
       yandex-cloud = enabled;
+      tea = enabled;
+      sqlite-jira = enabled;
     };
     security = {
       rbw = enabled;
