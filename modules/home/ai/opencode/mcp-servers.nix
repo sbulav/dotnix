@@ -23,4 +23,9 @@
   #   url = "https://lobechat.pyn.ru/mcp_servers/jira_mcp/mcp";
   #   enabled = true;
   # };
+  astro-docs = {
+    type = "remote";
+    url = "https://mcp.docs.astro.build/mcp";
+    enabled = true;
+  };
 }
