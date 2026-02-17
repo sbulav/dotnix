@@ -22,9 +22,195 @@
     webfetch = "deny";
     bash = {
       "*" = "ask";
+
       "git status" = "allow";
       "git diff *" = "allow";
       "git log *" = "allow";
+      "git branch *" = "allow";
+      "git show *" = "allow";
+      "git stash list" = "allow";
+      "git remote *" = "allow";
+      "git rev-parse *" = "allow";
+      "git ls-remote *" = "allow";
+
+      "docker ps *" = "allow";
+      "docker images *" = "allow";
+      "docker logs *" = "allow";
+      "docker inspect *" = "allow";
+      "docker stats *" = "allow";
+      "docker network ls" = "allow";
+      "docker volume ls" = "allow";
+      "docker version" = "allow";
+      "docker info" = "allow";
+      "docker compose ls" = "allow";
+      "docker compose config *" = "allow";
+      "docker compose ps *" = "allow";
+      "docker compose logs *" = "allow";
+
+      "kubectl get *" = "allow";
+      "kubectl describe *" = "allow";
+      "kubectl logs *" = "allow";
+      "kubectl version *" = "allow";
+      "kubectl cluster-info *" = "allow";
+      "kubectl api-resources *" = "allow";
+      "kubectl config *" = "allow";
+      "kubectl top *" = "allow";
+      "kubectl rollout status *" = "allow";
+      "kubectl rollout history *" = "allow";
+
+      "helm list *" = "allow";
+      "helm status *" = "allow";
+      "helm history *" = "allow";
+      "helm get *" = "allow";
+      "helm show *" = "allow";
+      "helm search *" = "allow";
+      "helm version" = "allow";
+      "helm env" = "allow";
+      "helm repo list" = "allow";
+      "helm template *" = "allow";
+      "helm lint *" = "allow";
+
+      "terraform plan *" = "allow";
+      "terraform show *" = "allow";
+      "terraform state list *" = "allow";
+      "terraform state show *" = "allow";
+      "terraform output *" = "allow";
+      "terraform providers *" = "allow";
+      "terraform version" = "allow";
+      "terraform workspace list" = "allow";
+      "terraform fmt *" = "allow";
+      "terraform validate *" = "allow";
+
+      "ls *" = "allow";
+      "cat *" = "allow";
+      "head *" = "allow";
+      "tail *" = "allow";
+      "less *" = "allow";
+      "wc *" = "allow";
+      "file *" = "allow";
+      "stat *" = "allow";
+      "tree *" = "allow";
+      "find *" = "allow";
+      "which *" = "allow";
+      "whereis *" = "allow";
+      "realpath *" = "allow";
+      "basename *" = "allow";
+      "dirname *" = "allow";
+      "pwd" = "allow";
+
+      "grep *" = "allow";
+      "rg *" = "allow";
+      "awk *" = "allow";
+      "sed *" = "allow";
+      "sort *" = "allow";
+      "uniq *" = "allow";
+      "cut *" = "allow";
+      "tr *" = "allow";
+      "diff *" = "allow";
+      "cmp *" = "allow";
+
+      "jq *" = "allow";
+      "yq *" = "allow";
+      "xmllint *" = "allow";
+
+      "curl *" = "allow";
+      "wget *" = "allow";
+      "ping *" = "allow";
+      "nc *" = "allow";
+      "netstat *" = "allow";
+      "ss *" = "allow";
+      "dig *" = "allow";
+      "nslookup *" = "allow";
+      "host *" = "allow";
+      "whois *" = "allow";
+      "traceroute *" = "allow";
+      "nmap *" = "allow";
+
+      "ps *" = "allow";
+      "pgrep *" = "allow";
+      "pstree *" = "allow";
+      "top *" = "allow";
+      "htop *" = "allow";
+      "free *" = "allow";
+      "df *" = "allow";
+      "du *" = "allow";
+      "uptime" = "allow";
+      "uname *" = "allow";
+      "hostname *" = "allow";
+      "date" = "allow";
+      "timedatectl" = "allow";
+      "locale" = "allow";
+      "env" = "allow";
+      "printenv *" = "allow";
+      "id" = "allow";
+      "whoami" = "allow";
+      "groups" = "allow";
+      "ulimit *" = "allow";
+
+      "systemctl status *" = "allow";
+      "systemctl list-units *" = "allow";
+      "systemctl list-timers *" = "allow";
+      "systemctl list-sockets *" = "allow";
+      "systemctl is-active *" = "allow";
+      "systemctl is-enabled *" = "allow";
+      "systemctl show *" = "allow";
+      "systemctl cat *" = "allow";
+      "journalctl *" = "allow";
+
+      "make *" = "allow";
+      "cmake *" = "allow";
+      "npm list *" = "allow";
+      "npm outdated *" = "allow";
+      "npm audit *" = "allow";
+      "npm run *" = "allow";
+      "yarn *" = "allow";
+      "pnpm *" = "allow";
+      "pip list *" = "allow";
+      "pip show *" = "allow";
+      "pip freeze *" = "allow";
+      "go version" = "allow";
+      "go env *" = "allow";
+      "go list *" = "allow";
+      "go mod *" = "allow";
+      "cargo *" = "allow";
+      "rustc *" = "allow";
+
+      "python *" = "allow";
+      "python3 *" = "allow";
+      "node *" = "allow";
+      "nodejs *" = "allow";
+      "npx *" = "allow";
+
+      "tar *" = "allow";
+      "unzip *" = "allow";
+      "gzip *" = "allow";
+      "gunzip *" = "allow";
+      "zipinfo *" = "allow";
+      "zcat *" = "allow";
+      "xz *" = "allow";
+      "bzip2 *" = "allow";
+
+      "echo *" = "allow";
+      "printf *" = "allow";
+      "tee *" = "allow";
+      "xargs *" = "allow";
+      "true" = "allow";
+      "false" = "allow";
+      "test *" = "allow";
+      "[" = "allow";
+      "[[" = "allow";
+
+      "nix-instantiate *" = "allow";
+      "nix eval *" = "allow";
+      "nix flake show *" = "allow";
+      "nix flake metadata *" = "allow";
+      "nix store ls *" = "allow";
+      "nix store cat *" = "allow";
+      "nix derivation show *" = "allow";
+      "nix path-info *" = "allow";
+      "nix hash *" = "allow";
+      "nix key *" = "allow";
+      "nix copy *" = "allow";
     };
   };
 
