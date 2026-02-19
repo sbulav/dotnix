@@ -40,7 +40,7 @@ in
       route_enabled = cfg.enable;
       middleware = [ "secure-headers" ];
       # pathregexp = "/api/(albums|assets|users|partners)|/api/.well-known/immich|^/api/(auth|oauth|socket.io|sync|assets|server)/";
-      pathregexp = "^/api/";
+      pathregexp = "^/api/|^/.well-known/immich";
     })
     (import ../shared/shared-traefik-route.nix {
       app = "immich";
