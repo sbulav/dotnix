@@ -71,17 +71,16 @@ Every module should follow this pattern:
 
 ```nix
 {
-  options,
   config,
   lib,
   pkgs,
   ...
 }:
-with lib;
 with lib.custom; let
+  inherit (lib) mkIf types;
   cfg = config.custom.{category}.{module-name};
 in {
-  options.custom.{category}.{module-name} = with types; {
+  options.custom.{category}.{module-name} = {
     enable = mkBoolOpt false "Whether to enable {feature description}";
     # Additional options...
   };
@@ -302,13 +301,9 @@ mkService = name: port: {
 };
 ```
 
-3. **Use `mapAttrs` for similar configs**:
+3. **Use `genAttrs` for similar configs**:
 ```nix
-programs = lib.mapAttrs (_: lib.enabled) [
-  "git"
-  "vim"
-  "tmux"
-];
+programs = lib.genAttrs ["git" "vim" "tmux"] (_: lib.enabled);
 ```
 
 ## Snowfall Lib Conventions
@@ -427,8 +422,8 @@ Suites group related modules (see `modules/nixos/suites/common/default.nix`):
   lib,
   ...
 }:
-with lib;
 with lib.custom; let
+  inherit (lib) mkIf;
   cfg = config.suites.common;
 in {
   options.suites.common = {
