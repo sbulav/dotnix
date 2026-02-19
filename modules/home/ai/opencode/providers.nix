@@ -129,4 +129,24 @@
       };
     };
   };
+
+  "litellm" = {
+    name = "HH";
+    npm = "@ai-sdk/openai-compatible";
+    options = {
+      baseURL = "http://gpu1.pyn.ru:40000/v1";
+      apiKey = "sk-any";
+    };
+    models = {
+      "glm-5-fp8" = {
+        name = "GLM-5 FP8";
+      };
+      "minimax-m2.5" = {
+        name = "MiniMax M2.5";
+      };
+      "gpt-oss-120b" = {
+        name = "GPT-OSS 120B";
+      };
+    };
+  };
 }
