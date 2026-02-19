@@ -1,6 +1,6 @@
 {
   "hhdev-openai" = {
-    npm = "@ai-sdk/openai-compatible";
+    npm = "@ai-sdk/openai";
     name = "HHDev Gateway";
     options = {
       baseURL = "https://llmgtw.hhdev.ru/proxy/openai/";
