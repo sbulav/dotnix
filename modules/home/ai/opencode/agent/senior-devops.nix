@@ -2,7 +2,7 @@
   name = "default";
   description = "Senior DevOps/Software Engineer — default agent for general tasks. Use when no specialized agent fits, or as a fallback for infrastructure, DevOps, and general engineering tasks.";
   mode = "primary";
-  model = "hhdev-grok/grok-4-fast-reasoning";
+  model = "hhdev-grok/grok-4-1-fast-reasoning";
   temperature = 0.1;
 
   tools = {

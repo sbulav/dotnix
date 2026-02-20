@@ -2,7 +2,7 @@
   name = "Nix Expert";
   description = "Nix and NixOS configuration specialist — idiomatic, secure, and performant Nix code";
   mode = "subagent";
-  model = "hhdev-grok/grok-code-fast-1";
+  model = "hhdev-grok/grok-4-1-fast-reasoning";
   temperature = 0.1;
 
   tools = {

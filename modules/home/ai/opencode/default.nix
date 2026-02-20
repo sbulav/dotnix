@@ -172,8 +172,8 @@ let
 
   # Default configuration settings
   defaultSettings = {
-    model = "hhdev-grok/grok-4-fast-reasoning";
-    small_model = "hhdev-grok/grok-4-fast-reasoning";
+    model = "hhdev-grok/grok-4-1-fast-reasoning";
+    small_model = "hhdev-grok/grok-4-1-fast-reasoning";
 
     disabled_providers = [
       "openai"

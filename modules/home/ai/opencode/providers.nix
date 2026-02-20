@@ -118,14 +118,8 @@
       baseURL = "https://llmgtw.hhdev.ru/proxy/xai";
     };
     models = {
-      "grok-4-0709" = {
-        name = "Grok 4";
-      };
-      "grok-code-fast-1" = {
-        name = "Grok Code Fast 1";
-      };
-      "grok-4-fast-reasoning" = {
-        name = "Grok 4 Fast Reasoning";
+      "grok-4-1-fast-reasoning" = {
+        name = "Grok 4.1 Fast Reasoning";
       };
     };
   };
