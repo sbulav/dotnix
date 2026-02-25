@@ -41,6 +41,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    whisper-dictation = {
+      url = "github:jacopone/whisper-dictation";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Sops (Secrets)
     sops-nix = {
       url = "github:Mic92/sops-nix";
