@@ -56,6 +56,7 @@ in
     apps.whisper-dictation = {
       enable = true;
       language = "en";
+      paste.method = "type";
       hotkey = {
         modifiers = [ "alt" ];
         key = "slash";

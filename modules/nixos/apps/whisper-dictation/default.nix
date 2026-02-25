@@ -121,11 +121,9 @@ in
               "",
               "                subprocess.run([\"ydotool\", \"key\", *key_events], check=True)",
               "            else:",
-              "                # Use ydotool to type text",
-              "                key_delay = str(self.config.get(\"typing.key_delay\", 20))",
-              "                key_hold = str(self.config.get(\"typing.key_hold\", 20))",
+              "                # Use wtype to type text (respects keyboard layout)",
               "                subprocess.run(",
-              "                    [\"ydotool\", \"type\", \"--key-delay\", key_delay, \"--key-hold\", key_hold, text],",
+              "                    [\"wtype\", text],",
               "                    check=True,",
               "                )",
               "",
@@ -175,6 +173,7 @@ in
       pkgs.ydotool
       pkgs.procps
       pkgs.wl-clipboard
+      pkgs.wtype
       pkgs.harfbuzz
       pkgs.pango
       pkgs.cairo
@@ -220,6 +219,7 @@ in
         pkgs.procps
         pkgs.ydotool
         pkgs.wl-clipboard
+        pkgs.wtype
       ];
       serviceConfig = {
         ExecStart = daemonExec;
