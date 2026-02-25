@@ -89,23 +89,8 @@
       baseURL = "https://llmgtw.hhdev.ru/proxy/google/v1beta";
     };
     models = {
-      "gemini-2.5-pro" = {
-        name = "Gemini 2.5 Pro";
-        options = {
-          max_tokens = 65536;
-          temperature = 1;
-          top_p = 0.95;
-          top_k = 64;
-        };
-      };
-      "gemini-1.5-pro" = {
-        name = "Gemini 1.5 Pro";
-        options = {
-          max_tokens = 8192;
-          temperature = 1;
-          top_p = 0.95;
-          top_k = 40;
-        };
+      "gemini-3.1-pro-preview" = {
+        name = "Gemini 3.1 Pro Preview";
       };
     };
   };
