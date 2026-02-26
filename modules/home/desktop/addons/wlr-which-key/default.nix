@@ -148,6 +148,16 @@ let
           desc = "Full Screen";
           cmd = "grim ~/Pictures/Screenshots/$(date +\'ss_%s.png\')";
         }
+        {
+          key = "v";
+          desc = "Toggle Recording";
+          cmd = "record-screen toggle";
+        }
+        {
+          key = "x";
+          desc = "Stop Recording";
+          cmd = "record-screen stop";
+        }
       ];
     }
     {

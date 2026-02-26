@@ -43,6 +43,9 @@ in
           copy = "C";
           paste = "V";
           clipboard = "SHIFT C";
+          extra = [
+            "ALT, Print, exec, record-screen toggle"
+          ];
         };
       };
       addons = {
@@ -114,6 +117,7 @@ in
       k9s = enabled;
       opentofu = enabled;
       tea = enabled;
+      record-screen = enabled;
       sqlite-jira = enabled;
       yandex-cloud = disabled;
     };
