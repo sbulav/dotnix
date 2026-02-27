@@ -1,7 +1,7 @@
 {
   description = "Generate and apply Conventional Commits for staged changes, safely.";
   mode = "subagent";
-  model = "hhdev-openai/gpt-4.1";
+  model = "litellm/glm-5-fp8";
   temperature = 0.1;
 
   tools = {

@@ -1,7 +1,7 @@
 {
   description = "Draft (and optionally apply) a Conventional Commit for staged changes";
   agent = "committer";
-  model = "hhdev-openai/gpt-4.1";
+  model = "litellm/glm-5-fp8";
 
   context = ''
     Staged summary:
