@@ -21,7 +21,7 @@ Enable the module in your Home Manager configuration:
     enable = true;
     settings = {
       # Override default settings here
-      model = "hhdev-anthropic/claude-sonnet-4-20250514";
+      model = "hhdev-anthropic/claude-sonnet-4-6";
       theme = "dark";
     };
   };
