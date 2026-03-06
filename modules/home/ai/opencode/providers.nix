@@ -25,6 +25,9 @@
       "gpt-5.3" = {
         name = "ChatGPT 5.3";
       };
+      "gpt-5.4" = {
+        name = "ChatGPT 5.4";
+      };
     };
   };
 
