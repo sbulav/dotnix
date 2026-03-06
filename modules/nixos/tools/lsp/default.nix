@@ -19,16 +19,19 @@ in
   config = mkIf cfg.enable {
     nix.nixPath = [ "nixpkgs=${inputs.nixpkgs}" ];
     environment.systemPackages = with pkgs; [
+      helm-ls
       lua-language-server # LSP for lua
       marksman # LSP for markdown
       nixd # LSP for nix
-      tree-sitter
-      yamllint
       nodejs_22 # Note for LSP servers
       pyright
       ruff
       black
-      helm-ls
+      terraform-ls
+      tree-sitter
+      vscode-langservers-extracted
+      yaml-language-server
+      yamllint
     ];
   };
 }
