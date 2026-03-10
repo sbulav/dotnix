@@ -16,9 +16,11 @@ in
   };
 
   config = mkIf cfg.enable {
-    home.packages = with pkgs; [
-      rofi-rbw
-      wtype
+    home.packages = [
+      pkgs.wtype
+    ]
+    ++ lib.optionals config.custom.security.rbw.enable [
+      pkgs.rofi-rbw
     ];
     programs.rofi = {
       enable = true;
