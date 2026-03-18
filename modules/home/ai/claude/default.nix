@@ -226,6 +226,11 @@ let
 
   settings = {
     "$schema" = "https://json.schemastore.org/claude-code-settings.json";
+    vim = true;
+    statusLine = {
+      type = "command";
+      command = "${dataHome}/claude-code/statusline.sh";
+    };
     env = {
       CLAUDE_CODE_ENABLE_TELEMETRY = "0";
       CLAUDE_CODE_DISABLE_EXPERIMENTAL_BETAS = "1";
@@ -257,6 +262,24 @@ in
 
     home.file = {
       ".claude/settings.json".text = builtins.toJSON settings;
+      ".local/share/claude-code/statusline.sh" = {
+        executable = true;
+        text = ''
+          #!/usr/bin/env bash
+          input=$(cat)
+          MODEL=$(echo "$input" | jq -r '.model.display_name // "claude"')
+          PCT=$(echo "$input" | jq -r '.context_window.used_percentage // 0' | cut -d. -f1)
+
+          BAR_WIDTH=10
+          FILLED=$((PCT * BAR_WIDTH / 100))
+          EMPTY=$((BAR_WIDTH - FILLED))
+          BAR=""
+          [ "$FILLED" -gt 0 ] && printf -v F "%''${FILLED}s" && BAR="''${F// /▓}"
+          [ "$EMPTY"  -gt 0 ] && printf -v E "%''${EMPTY}s"  && BAR="$BAR''${E// /░}"
+
+          printf "[$MODEL] ctx $BAR %s%%\n" "$PCT"
+        '';
+      };
     }
     # Shared skills from opencode — same SKILL.md format, zero duplication
     // lib.mapAttrs' (
