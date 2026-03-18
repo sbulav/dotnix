@@ -225,7 +225,6 @@ let
   };
 
   settings = {
-    "$schema" = "https://json.schemastore.org/claude-code-settings.json";
     vim = true;
     statusLine = {
       type = "command";
@@ -238,9 +237,8 @@ let
     inherit hooks;
   };
 
-  # Wrap the binary to inject proxy env vars — works in all shells and scripts,
-  # unlike a shell alias which only applies to interactive sessions
-  claudeWrapped = pkgs.symlinkJoin {
+  # Proxy wrapper — programs.claude-code will wrap this again for --mcp-config
+  claudeWithProxy = pkgs.symlinkJoin {
     name = "claude-code";
     paths = [ pkgs.unstable.claude-code ];
     nativeBuildInputs = [ pkgs.makeWrapper ];
@@ -258,10 +256,32 @@ in
   };
 
   config = mkIf cfg.enable {
-    home.packages = [ claudeWrapped ];
+
+    programs.claude-code = {
+      enable = true;
+      package = claudeWithProxy;
+      settings = settings;
+      mcpServers = {
+        kubernetes = {
+          command = "mcp-k8s-go";
+          args = [ "--readonly" ];
+        };
+        nixos = {
+          command = "nix";
+          args = [ "run" "github:utensils/mcp-nixos" "--" ];
+        };
+        context7 = {
+          type = "http";
+          url = "https://mcp.context7.com/mcp";
+        };
+        sequential-thinking = {
+          command = "npx";
+          args = [ "-y" "@modelcontextprotocol/server-sequential-thinking" ];
+        };
+      };
+    };
 
     home.file = {
-      ".claude/settings.json".text = builtins.toJSON settings;
       ".local/share/claude-code/statusline.sh" = {
         executable = true;
         text = ''
