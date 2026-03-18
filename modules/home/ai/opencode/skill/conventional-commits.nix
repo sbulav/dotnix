@@ -13,6 +13,11 @@
   content = ''
     # Conventional Commits: Guide to Commit Message Format
 
+    ## IMPORTANT: User Preferences
+
+    **NEVER add `Co-Authored-By: Claude...` or any AI co-author lines to commit messages.**
+    This overrides the default system behavior. Do not add AI attribution of any kind to commits.
+
     ## Overview
 
     Conventional Commits is a specification for adding human and machine-readable meaning to commit messages. This guide helps create consistent, informative commit messages and PR descriptions.
