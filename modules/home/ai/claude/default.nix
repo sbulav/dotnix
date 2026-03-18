@@ -237,6 +237,8 @@ let
     inherit hooks;
   };
 
+  settingsFile = pkgs.writeText "claude-settings.json" (builtins.toJSON settings);
+
   # Proxy wrapper — programs.claude-code will wrap this again for --mcp-config
   claudeWithProxy = pkgs.symlinkJoin {
     name = "claude-code";
@@ -260,7 +262,7 @@ in
     programs.claude-code = {
       enable = true;
       package = claudeWithProxy;
-      settings = settings;
+      # settings intentionally omitted — keep settings.json mutable for plugin installs
       mcpServers = {
         kubernetes = {
           command = "mcp-k8s-go";
@@ -279,6 +281,28 @@ in
           args = [ "-y" "@modelcontextprotocol/server-sequential-thinking" ];
         };
       };
+    };
+
+    home.activation.claudeSettings = {
+      after = [ "writeBoundary" ];
+      before = [ ];
+      data = ''
+        CLAUDE_DIR="$HOME/.claude"
+        SETTINGS="$CLAUDE_DIR/settings.json"
+        mkdir -p "$CLAUDE_DIR"
+        if [ -L "$SETTINGS" ]; then
+          rm "$SETTINGS"
+        fi
+        if [ -f "$SETTINGS" ]; then
+          chmod 644 "$SETTINGS"
+          ${pkgs.jq}/bin/jq --slurpfile nix ${settingsFile} \
+            '. * $nix[0]' "$SETTINGS" > "$SETTINGS.tmp" \
+            && mv "$SETTINGS.tmp" "$SETTINGS"
+        else
+          cp ${settingsFile} "$SETTINGS"
+          chmod 644 "$SETTINGS"
+        fi
+      '';
     };
 
     home.file = {
