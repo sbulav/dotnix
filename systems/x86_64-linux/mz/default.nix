@@ -36,6 +36,7 @@ in
       enable = true;
       smartcard.enable = true;
     };
+    scanning.enable = false;
     # XBOX Wireless controller
     xone.enable = true;
     xpadneo.enable = false;
