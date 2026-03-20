@@ -15,7 +15,8 @@ let
 
   cfg = config.custom.ai.claude;
 
-  skillDir = ../opencode/skill;
+  localSkillDir = ../opencode/skill;
+  workflowSkillDir = ../shared/workflow/skill;
 
   # Reuse the opencode skill renderer — both tools share the same SKILL.md format
   optionalYamlField =
@@ -26,6 +27,12 @@ let
     name: ${builtins.toJSON skill.name}
     description: ${builtins.toJSON skill.description}
     ${optionalYamlField "version" (skill.version or null)}
+    ${optionalYamlField "argument-hint" (skill."argument-hint" or null)}
+    ${optionalYamlField "disable-model-invocation" (skill."disable-model-invocation" or null)}
+    ${optionalYamlField "user-invocable" (skill."user-invocable" or null)}
+    ${optionalYamlField "model" (skill.model or null)}
+    ${optionalYamlField "context" (skill.context or null)}
+    ${optionalYamlField "agent" (skill.agent or null)}
     ${
       if (skill ? allowed-tools && skill.allowed-tools != [ ]) then
         "allowed-tools:\n" + lib.concatStringsSep "\n" (map (tool: "  - ${tool}") skill.allowed-tools)
@@ -36,20 +43,22 @@ let
     ${skill.content or ""}
   '';
 
-  # Import all skill .nix files from the shared opencode/skill directory
-  skills =
+  processSkillDir =
+    dir:
     let
-      files = builtins.readDir skillDir;
+      files = builtins.readDir dir;
       nixFiles = filterAttrs (name: _: lib.hasSuffix ".nix" name) files;
     in
     lib.mapAttrs' (
       name: _:
       let
         fileName = lib.removeSuffix ".nix" name;
-        skill = import (skillDir + "/${name}");
+        skill = import (dir + "/${name}");
       in
       nameValuePair fileName skill
     ) nixFiles;
+
+  skills = (processSkillDir localSkillDir) // (processSkillDir workflowSkillDir);
 
   dataHome = config.xdg.dataHome;
 
@@ -270,7 +279,11 @@ in
         };
         nixos = {
           command = "nix";
-          args = [ "run" "github:utensils/mcp-nixos" "--" ];
+          args = [
+            "run"
+            "github:utensils/mcp-nixos"
+            "--"
+          ];
         };
         context7 = {
           type = "http";
@@ -278,7 +291,10 @@ in
         };
         sequential-thinking = {
           command = "npx";
-          args = [ "-y" "@modelcontextprotocol/server-sequential-thinking" ];
+          args = [
+            "-y"
+            "@modelcontextprotocol/server-sequential-thinking"
+          ];
         };
       };
     };

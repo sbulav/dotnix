@@ -160,6 +160,12 @@ let
     name: ${builtins.toJSON config.name}
     description: ${builtins.toJSON config.description}
     ${optionalYamlField "version" (config.version or null)}
+    ${optionalYamlField "argument-hint" (config."argument-hint" or null)}
+    ${optionalYamlField "disable-model-invocation" (config."disable-model-invocation" or null)}
+    ${optionalYamlField "user-invocable" (config."user-invocable" or null)}
+    ${optionalYamlField "model" (config.model or null)}
+    ${optionalYamlField "context" (config.context or null)}
+    ${optionalYamlField "agent" (config.agent or null)}
     ${
       if (config ? allowed-tools && config.allowed-tools != [ ]) then
         "allowed-tools:\n" + lib.concatStringsSep "\n" (map (tool: "  - ${tool}") config.allowed-tools)
