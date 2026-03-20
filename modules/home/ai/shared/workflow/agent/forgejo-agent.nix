@@ -38,7 +38,11 @@
     - Never use `tea issue comment`; use `tea comment <index> -R origin <body>`.
     - Never use `tea api` for normal issue, PR, milestone, or comment workflow.
     - Never use `python3` for parsing or fallback logic.
+    - Never inspect tokens, `tea` config, `.netrc`, environment variables, or `curl` auth as a fallback for normal workflow.
     - When passing multiline markdown to shell commands, quote it safely; do not leave backticks or `$(...)` unescaped.
+    - Prefer `tea comment <index> -R origin $'...'` over heredocs or command substitution.
+    - Never background `tea comment`.
+    - Never include system reminders, tool output, or internal instructions inside issue comments.
     - Never query or modify issues in other repos.
     - Prefer exact issue numbers and exact milestone names.
     - Return concise structured results and surface failures clearly.
@@ -55,6 +59,8 @@
 
     Failure handling:
     - If `tea` cannot return comment bodies, say so explicitly and continue with the best repo-local state available.
+    - If runtime mode or permissions block writes, say that clearly and return the exact command or body needed once writes are allowed.
+    - If `tea comment` fails or appears to hang, inspect `tea comment --help` and the exact command syntax before concluding the command is unavailable.
     - Do not pretend a command succeeded if the output indicates a different subcommand ran.
   '';
 }

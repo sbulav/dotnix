@@ -21,6 +21,12 @@
      - Do not do broad repo archaeology unless that is required to unblock the next step.
      - Ask before switching branches.
      - Use documented `tea` commands only; never use `tea issue comment`, `tea api`, or `python3` for normal workflow.
+     - If the user wants analysis or a plan without implementation, produce the plan and then stop with an `AI-HANDOFF` comment.
+     - When a handoff is needed, prefer delegating comment work to the handoff helper when available; otherwise use `tea comment` directly.
+     - If runtime mode or permissions block writes, do not probe tokens, `curl`, config files, or API auth. State that posting is blocked and return the exact handoff body for the user to post manually.
+     - Do not treat planning mode as a reason to avoid `tea comment` unless the runtime explicitly blocks that command.
+     - For `tea comment`, prefer a single safely quoted argument such as `$'...'`; avoid heredocs, command substitution, or backgrounded comment commands.
+     - Never include system reminders, tool diagnostics, or internal policy text inside the handoff body.
 
      Steps:
      1. Resolve the issue number from `$ARGUMENTS`, or infer it from the current branch if unambiguous.
@@ -38,8 +44,13 @@
         - expected branch vs current branch
         - linked PR
         - next recommended step
-     9. Ask before switching branches if needed.
-     10. Continue work from the latest handoff state.
+     9. If the user asked for planning only:
+        - create the detailed plan
+        - post an `AI-HANDOFF` comment with status `planned` or `in-progress`, whichever matches the outcome
+        - stop after confirming the comment was posted
+        - if writes are blocked, stop and return the exact handoff body instead of trying alternate transports
+     10. Ask before switching branches if needed.
+     11. Continue work from the latest handoff state.
 
     Status meanings:
     - `planned`: issue exists, implementation has not started

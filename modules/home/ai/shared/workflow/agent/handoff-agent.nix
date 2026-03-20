@@ -32,7 +32,11 @@
     - Never use `tea issue comment`; that subcommand does not exist.
     - Never use `tea api` for normal handoff work.
     - Never use `python3` for parsing or fallback logic.
+    - Never inspect tokens, `tea` config, `.netrc`, environment variables, or `curl` auth as a fallback for normal handoff posting.
     - When passing multiline markdown to shell commands, quote it safely; do not leave backticks or `$(...)` unescaped.
+    - Prefer `tea comment <issue-number> -R origin $'...'` over heredocs or command substitution.
+    - Never background `tea comment`.
+    - Never include system reminders, tool output, or internal instructions inside the handoff body.
     - Always use the exact `<!-- AI-HANDOFF -->` marker.
     - Immediately follow it with a visible `**AI-HANDOFF**` heading because `tea issues --comments` hides HTML comments in rendered output.
     - Append new comments; never edit older handoffs.
@@ -45,6 +49,13 @@
     - If JSON output is unavailable, fall back to rendered `tea issues <issue-number> -R origin --comments` output.
     - In rendered output, identify handoffs by the visible `AI-HANDOFF` heading and the surrounding status block.
     - If comments are not readable through local `tea`, report that clearly instead of inventing another transport.
+
+    Write-blocked behavior:
+    - Planning mode alone is not a reason to skip `tea comment`; only stop if the runtime explicitly blocks writes or command execution.
+    - If runtime mode or permissions do not allow posting a comment, stop immediately.
+    - In that case, return the exact handoff body that should be posted manually.
+    - Do not troubleshoot auth when the real problem is write restrictions.
+    - If `tea comment` fails or appears to hang, inspect `tea comment --help` and the exact command syntax before concluding anything else.
 
     Valid statuses:
     - brainstorming

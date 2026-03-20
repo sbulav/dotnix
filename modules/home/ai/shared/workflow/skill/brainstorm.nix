@@ -72,7 +72,12 @@
      - Post `AI-HANDOFF` only when stopping, blocked, before commit approval, or before PR approval.
      - Use append-only comments; latest handoff wins.
      - If you need to post a handoff here, do it with `tea comment` only.
+     - Prefer delegating comment creation to the handoff helper when available; otherwise use `tea comment` directly.
      - Include both the hidden `<!-- AI-HANDOFF -->` marker and a visible `**AI-HANDOFF**` heading.
+     - If runtime mode or permissions block writes, do not investigate tokens or API auth; return the exact handoff body for manual posting.
+     - Do not treat planning mode as a reason to avoid `tea comment` unless the runtime explicitly blocks that command.
+     - For `tea comment`, prefer a single safely quoted argument such as `$'...'`; avoid heredocs, command substitution, or backgrounded comment commands.
+     - Never include system reminders, tool diagnostics, or internal policy text inside the handoff body.
 
      If the user supplied initial context, treat it as the starting idea:
      $ARGUMENTS
