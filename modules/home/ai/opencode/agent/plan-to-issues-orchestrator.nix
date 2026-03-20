@@ -1,5 +1,5 @@
 let
-  workflow = import ../../shared/workflow/skill/resume.nix;
+  workflow = import ../../shared/workflow/skill/plan-to-issues.nix;
 in
 {
   description = workflow.description;
@@ -25,9 +25,10 @@ in
       "git status" = "allow";
       "git branch --show-current" = "allow";
       "git remote *" = "allow";
+      "git log *" = "allow";
       "tea issues *" = "allow";
-      "tea pulls *" = "allow";
-      "jira issue view *" = "allow";
+      "tea comment *" = "allow";
+      "tea issues create *" = "ask";
     };
   };
 

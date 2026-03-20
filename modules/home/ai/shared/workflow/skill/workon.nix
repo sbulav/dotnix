@@ -1,7 +1,7 @@
 {
-  name = "resume";
+  name = "workon";
   version = "1.0.0";
-  description = "Resume work from a Forgejo issue in the current repo. Use with an issue number, or infer from the current issue branch when unambiguous.";
+  description = "Resume and work on a Forgejo issue — read state, then implement. Use with an issue number, or infer from the current issue branch when unambiguous.";
   "argument-hint" = "[issue-number|TPL-key]";
   "disable-model-invocation" = true;
   allowed-tools = [
@@ -10,18 +10,22 @@
     "Glob"
     "Bash"
     "Task"
+    "Write"
+    "Edit"
   ];
   content = ''
-    Resume work using only the current repo and its Forgejo issue tracker.
+    Resume and implement work using only the current repo and its Forgejo issue tracker.
 
      Hard rules:
-     - Prefer `/resume <issue-number>`.
+     - Prefer `/workon <issue-number>`.
      - If the argument is a Jira key, resolve it to a Forgejo issue in the current repo only.
      - Read only the issue body, the latest `AI-HANDOFF` comment, and any linked or open PR relevant to the issue.
      - Do not do broad repo archaeology unless that is required to unblock the next step.
      - Ask before switching branches.
+     - Follow issue scope and acceptance criteria strictly.
+     - Stop at natural checkpoints and report status via AI-HANDOFF.
+     - Never commit or create PRs — suggest `/ship` when ready.
      - Use documented `tea` commands only; never use `tea issue comment`, `tea api`, or `python3` for normal workflow.
-     - If the user wants analysis or a plan without implementation, produce the plan and then stop with an `AI-HANDOFF` comment.
      - When a handoff is needed, prefer delegating comment work to the handoff helper when available; otherwise use `tea comment` directly.
      - If runtime mode or permissions block writes, do not probe tokens, `curl`, config files, or API auth. State that posting is blocked and return the exact handoff body for the user to post manually.
      - Do not treat planning mode as a reason to avoid `tea comment` unless the runtime explicitly blocks that command.
@@ -44,13 +48,22 @@
         - expected branch vs current branch
         - linked PR
         - next recommended step
-     9. If the user asked for planning only:
-        - create the detailed plan
-        - post an `AI-HANDOFF` comment with status `planned` or `in-progress`, whichever matches the outcome
-        - stop after confirming the comment was posted
-        - if writes are blocked, stop and return the exact handoff body instead of trying alternate transports
-     10. Ask before switching branches if needed.
-     11. Continue work from the latest handoff state.
+
+     Status-driven action:
+     9. Based on the handoff status, take the appropriate action:
+        - `planned` → Ask before starting implementation, then switch to branch and build.
+        - `in-progress` → Continue building from where the last session left off.
+        - `blocked` → Surface blockers, ask what to do.
+        - `ready-for-commit` / `ready-for-pr` → Suggest `/ship`.
+        - `pr-open` / `merged` → Suggest `/complete`.
+     10. If the parent issue has sub-issues, list them and recommend working on the next unblocked sub-issue.
+     11. Ask before switching branches if needed.
+
+     During implementation:
+     - Follow the acceptance criteria from the issue as your checklist.
+     - Stop at natural checkpoints (feature complete, tests passing, etc.) and post AI-HANDOFF updates.
+     - Keep commits granular; do not bundle unrelated changes.
+     - When implementation is complete and tests pass, suggest `/ship`.
 
     Status meanings:
     - `planned`: issue exists, implementation has not started

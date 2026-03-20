@@ -36,6 +36,8 @@ let
 
     **Blockers:** ${"<blockers>"}
 
+    **Decision log:** ${"<decision_log>"}
+
     **Files/areas:** ${"<files_areas>"}
 
     **Verification left:** ${"<verification_left>"}
@@ -85,6 +87,7 @@ in
         jira = "none";
         next_step = "";
         blockers = "none";
+        decision_log = "";
         files_areas = "";
         verification_left = "";
         commit_status = "not-committed";
