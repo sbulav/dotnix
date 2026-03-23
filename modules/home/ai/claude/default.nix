@@ -234,6 +234,64 @@ let
   };
 
   settings = {
+    permissions = {
+      allow = [
+        "Glob"
+        "Grep"
+        "Read"
+        "Task"
+        "TodoWrite"
+        "Bash(git status)"
+        "Bash(git log *)"
+        "Bash(git diff *)"
+        "Bash(git show *)"
+        "Bash(git branch *)"
+        "Bash(git remote *)"
+        "Bash(git add *)"
+        "Bash(ls *)"
+        "Bash(find *)"
+        "Bash(cat *)"
+        "Bash(head *)"
+        "Bash(tail *)"
+        "Bash(mkdir *)"
+        "Bash(chmod *)"
+        "Bash(rg *)"
+        "Bash(grep *)"
+        "Bash(nix *)"
+        "Bash(nixos-option *)"
+        "Bash(systemctl list-units *)"
+        "Bash(systemctl list-timers *)"
+        "Bash(systemctl status *)"
+        "Bash(journalctl *)"
+        "Bash(env)"
+        "Bash(claude --version)"
+        "WebFetch(domain:github.com)"
+        "WebFetch(domain:raw.githubusercontent.com)"
+      ];
+      ask = [
+        "Bash(git checkout *)"
+        "Bash(git commit *)"
+        "Bash(git merge *)"
+        "Bash(git pull *)"
+        "Bash(git push *)"
+        "Bash(git rebase *)"
+        "Bash(git reset *)"
+        "Bash(git restore *)"
+        "Bash(git stash *)"
+        "Bash(git switch *)"
+        "Bash(cp *)"
+        "Bash(mv *)"
+        "Bash(rm *)"
+        "Bash(curl *)"
+        "Bash(sudo *)"
+        "Bash(nixos-rebuild *)"
+      ];
+      deny = [
+        "Bash(rm -rf /*)"
+        "Bash(dd *)"
+        "Bash(mkfs *)"
+      ];
+    };
     vim = true;
     statusLine = {
       type = "command";
