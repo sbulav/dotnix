@@ -183,6 +183,13 @@ let
     model = "litellm/glm-5-fp8";
     small_model = "litellm/glm-5-fp8";
 
+    permission = {
+      edit = "ask";
+      bash = "ask";
+      webfetch = "ask";
+      external_directory = "ask";
+    };
+
     disabled_providers = [
       # "openai"
       "amazon-bedrock"
@@ -232,14 +239,14 @@ in
     # Agent markdown files
     // lib.mapAttrs' (
       name: value:
-      nameValuePair "opencode/agent/${name}.md" {
+      nameValuePair "opencode/agents/${name}.md" {
         text = toMarkdownAgent name value;
       }
     ) agents
     # Command markdown files
     // lib.mapAttrs' (
       name: value:
-      nameValuePair "opencode/command/${name}.md" {
+      nameValuePair "opencode/commands/${name}.md" {
         text = toMarkdownCommand name value;
       }
     ) commands

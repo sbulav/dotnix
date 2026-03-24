@@ -17,23 +17,21 @@
 
   permission = {
     edit = "deny";
-    write = "deny";
-    patch = "deny";
     webfetch = "deny";
     bash = {
-      "\*" = "ask";
+      "*" = "ask";
       "git status" = "allow";
-      "git diff \*" = "allow";
-      "git log \*" = "allow";
-      "git add \*" = "ask";
-      "git restore --staged \*" = "allow";
-      "git commit -m \*" = "allow";
-      "git commit --amend \*" = "ask";
-      "git tag -a \* -m \*" = "ask";
-      "git push \*" = "ask";
-      "git rebase \*" = "deny";
-      "git reset \*" = "deny";
-      "rm -rf \*" = "deny";
+      "git diff *" = "allow";
+      "git log *" = "allow";
+      "git add *" = "ask";
+      "git restore --staged *" = "allow";
+      "git commit -m *" = "allow";
+      "git commit --amend *" = "ask";
+      "git tag -a * -m *" = "ask";
+      "git push *" = "ask";
+      "git rebase *" = "deny";
+      "git reset *" = "deny";
+      "rm -rf *" = "deny";
     };
   };
 

@@ -17,8 +17,6 @@
 
   permission = {
     edit = "ask";
-    write = "ask";
-    patch = "deny";
     webfetch = "deny";
     bash = {
       "*" = "ask";

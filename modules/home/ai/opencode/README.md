@@ -7,8 +7,8 @@ This module provides a modular configuration for the OpenCode AI assistant under
 - `default.nix` - Main module definition using `programs.opencode`
 - `providers.nix` - AI provider configurations (OpenAI, Anthropic, etc.)
 - `mcp-servers.nix` - MCP (Model Context Protocol) server configurations
-- `agent/` - Directory for agent configuration files (`.nix` files)
-- `command/` - Directory for command configuration files (`.nix` files)
+- `agent/` - Source directory for agent configuration files (`.nix` files)
+- `command/` - Source directory for command configuration files (`.nix` files)
 - `skill/` - Directory for skill configuration files (`.nix` files)
 
 ## Usage
@@ -135,7 +135,7 @@ Edit `mcp-servers.nix` to configure MCP servers:
 The module generates the following configuration files in `~/.config/opencode/`:
 
 - `opencode.json` - Main configuration
-- `agent/*.md` - Agent markdown configurations
-- `command/*.md` - Command markdown configurations
+- `agents/*.md` - Agent markdown configurations
+- `commands/*.md` - Command markdown configurations
 - `skills/<name>/SKILL.md` - Skill definitions (loaded on-demand via the skill tool)
 - `utils/*` - Utility scripts (if configured)
