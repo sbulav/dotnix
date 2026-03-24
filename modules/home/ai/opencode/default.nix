@@ -21,6 +21,7 @@ let
   agentDir = ./agent;
   commandDir = ./command;
   skillDir = ./skill;
+  pluginDir = ./plugin;
   utilsDir = ./utils;
   providersPath = ./providers.nix;
   mcpServersPath = ./mcp-servers.nix;
@@ -59,6 +60,7 @@ let
   agents = processConfigDir agentDir;
   commands = processConfigDir commandDir;
   skills = processConfigDir skillDir;
+  plugins = processConfigDir pluginDir;
 
   # Process physical utility scripts from utils directory
   physicalUtils =
@@ -182,7 +184,7 @@ let
     small_model = "litellm/glm-5-fp8";
 
     disabled_providers = [
-      "openai"
+      # "openai"
       "amazon-bedrock"
       # "opencode"
     ];
@@ -210,6 +212,12 @@ in
       type = types.attrsOf types.lines;
       default = { };
       description = "Utility scripts placed in the utils directory";
+    };
+
+    plugins = mkOption {
+      type = types.attrsOf types.lines;
+      default = { };
+      description = "Plugin JS files to generate (merged with plugin/ directory)";
     };
   };
 
@@ -249,6 +257,13 @@ in
         text = value;
         executable = true;
       }
-    ) (cfg.utils // physicalUtils);
+    ) (cfg.utils // physicalUtils)
+    # Plugin JS files (from both options and physical files)
+    // lib.mapAttrs' (
+      name: value:
+      nameValuePair "opencode/plugins/${name}.js" {
+        text = value;
+      }
+    ) (cfg.plugins // plugins);
   };
 }
