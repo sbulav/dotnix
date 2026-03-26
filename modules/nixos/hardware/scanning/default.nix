@@ -28,5 +28,8 @@ in
       inherit (cfg) openFirewall;
       extraBackends = cfg.drivers;
     };
+    environment.systemPackages = with pkgs; [
+      simple-scan
+    ];
   };
 }
