@@ -49,6 +49,7 @@
   # with explicit per-interface declarations with `networking.interfaces.<interface>.useDHCP`.
   networking = {
     useDHCP = lib.mkDefault true;
+    interfaces.enp7s0.wakeOnLan.enable = true;
     hosts = {
       # To make local resources work under VPN
       "192.168.89.207" = [
