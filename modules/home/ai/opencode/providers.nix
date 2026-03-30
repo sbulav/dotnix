@@ -123,12 +123,53 @@
       "glm-5-fp8" = {
         name = "GLM-5 FP8";
       };
-      "minimax-m2.5" = {
-        name = "MiniMax M2.5";
-      };
-      "gpt-oss-120b" = {
-        name = "GPT-OSS 120B";
-      };
     };
   };
+
+  # "hhdev-sglang" = {
+  #   name = "HHDev SGLang Local";
+  #   npm = "@ai-sdk/openai-compatible";
+  #   options = {
+  #     baseURL = "https://llmgtw.hhdev.ru/proxy/sglang/v1";
+  #     apiKey = "{env:OPENAI_API_KEY}";
+  #   };
+  #   models = {
+  #     "Qwen/Qwen3.5-122B-A10B-FP8" = {
+  #       name = "Qwen 3.5 122B A10B FP8";
+  #       limit = {
+  #         context = 32768;
+  #         output = 10000;
+  #       };
+  #     };
+  #   };
+  # };
+
+  # "pyn-glm5-fp8" = {
+  #   name = "GLM-5 FP8";
+  #   npm = "@ai-sdk/openai-compatible";
+  #   options = {
+  #     baseURL = "https://llm-gateway.pyn.ru/proxy/glm5-fp8/v1";
+  #     apiKey = "{env:OPENAI_API_KEY}";
+  #   };
+  #   models = {
+  #     "glm-5" = {
+  #       name = "GLM-5 FP8";
+  #     };
+  #   };
+  # };
+
+  # "pyn-gpt-oss-120b" = {
+  #   name = "GPT-OSS 120B";
+  #   npm = "@ai-sdk/openai-compatible";
+  #   options = {
+  #     baseURL = "https://llm-gateway.pyn.ru/proxy/gpt-oss-120b/v1";
+  #     apiKey = "{env:OPENAI_API_KEY}";
+  #   };
+  #   models = {
+  #     "gpt-oss-120b" = {
+  #       name = "GPT-OSS 120B";
+  #     };
+  #   };
+  # };
+
 }

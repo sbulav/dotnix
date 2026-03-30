@@ -26,6 +26,6 @@
   astro-docs = {
     type = "remote";
     url = "https://mcp.docs.astro.build/mcp";
-    enabled = true;
+    enabled = false;
   };
 }
