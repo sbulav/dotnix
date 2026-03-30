@@ -18,7 +18,7 @@ let
   localSkillDir = ../opencode/skill;
   workflowSkillDir = ../shared/workflow/skill;
 
-  # Reuse the opencode skill renderer — both tools share the same SKILL.md format
+  # Reuse the opencode skill renderer - both tools share the same SKILL.md format
   optionalYamlField =
     key: value: if value != null && value != "" then "${key}: ${builtins.toJSON value}" else "";
 
@@ -62,7 +62,7 @@ let
 
   dataHome = config.xdg.dataHome;
 
-  # Only the hooks worth having — security, notifications, pre-compact, subagent summary
+  # Only the hooks worth having - security, notifications, pre-compact, subagent summary
   hooks = {
     Notification = [
       {
@@ -105,23 +105,35 @@ let
                 fi
               done
 
+              if echo "$cmd" | grep -qE '(^|[[:space:]|;&=])([^[:space:]|;&=]*/)?\.env(\.(?!local($|[[:space:]|;&=]))[^[:space:]|;&=]*)?($|[[:space:]|;&=])'; then
+                echo '{"hookSpecificOutput":{"permissionDecision":"deny","permissionDecisionReason":".env files are protected"}}'
+                exit 2
+              fi
+
               exit 0
             '';
           }
         ];
       }
-      # Block path traversal in file tools
+      # Block path traversal and direct .env access in file tools
       {
-        matcher = "Write|Edit|MultiEdit|Read";
+        matcher = "Write|Edit|MultiEdit|Read|Glob|Grep";
         hooks = [
           {
             type = "command";
             timeout = 5;
             command = ''
               input=$(cat)
+              tool_name=$(echo "$input" | jq -r '.tool_name // ""')
+              target=$(echo "$input" | jq -r '.tool_input.file_path // .tool_input.filePath // .tool_input.path // .tool_input.pattern // ""')
 
               if echo "$input" | jq -r '.tool_input | to_entries[] | .value' 2>/dev/null | grep -qE '\.\./' ; then
                 echo '{"hookSpecificOutput":{"permissionDecision":"deny","permissionDecisionReason":"Path traversal attempt detected"}}'
+                exit 2
+              fi
+
+              if [[ "$tool_name" =~ ^(Read|Write|Edit|MultiEdit)$ ]] && [[ -n "$target" ]] && echo "$target" | grep -qE '(^|/)\.env($|\.(?!local$)|[/*?])'; then
+                echo '{"hookSpecificOutput":{"permissionDecision":"deny","permissionDecisionReason":".env files are protected"}}'
                 exit 2
               fi
 
@@ -306,7 +318,7 @@ let
 
   settingsFile = pkgs.writeText "claude-settings.json" (builtins.toJSON settings);
 
-  # Proxy wrapper — programs.claude-code will wrap this again for --mcp-config
+  # Proxy wrapper - programs.claude-code will wrap this again for --mcp-config
   claudeWithProxy = pkgs.symlinkJoin {
     name = "claude-code";
     paths = [ pkgs.unstable.claude-code ];
@@ -329,7 +341,7 @@ in
     programs.claude-code = {
       enable = true;
       package = claudeWithProxy;
-      # settings intentionally omitted — keep settings.json mutable for plugin installs
+      # settings intentionally omitted - keep settings.json mutable for plugin installs
       mcpServers = {
         kubernetes = {
           command = "mcp-k8s-go";
@@ -399,7 +411,7 @@ in
         '';
       };
     }
-    # Shared skills from opencode — same SKILL.md format, zero duplication
+    # Shared skills from opencode - same SKILL.md format, zero duplication
     // lib.mapAttrs' (
       name: skill:
       nameValuePair ".claude/skills/${skill.name}/SKILL.md" {

@@ -26,8 +26,13 @@
     }
   }
 
-  // Matches exactly .env (not .env.local, .env.production, etc.)
-  const isEnvFile = (p) => /(?:^|\/)\.env$/.test(p || "")
+  // Protect .env and variants, but allow .env.local
+  const isProtectedEnvFile = (p) => /(?:^|\/)\.env(?:\.(?!local$).*)?$/.test(p || "")
+
+  const commandReferencesProtectedEnvFile = (command) =>
+    /(?:^|[\s|;&`('"=])(?:[^\s|;&`('"=]*\/)?\.env(?:\.(?!local(?:$|[\s|;&`)'"]))[^\s|;&`('"=]*)?(?=$|[\s|;&`)'"])/i.test(
+      command || ""
+    )
 
   export const SecurityPlugin = async ({ directory, worktree }) => {
     const workspace = worktree || directory
@@ -47,8 +52,8 @@
               throw new Error("Dangerous command pattern detected")
             }
           }
-          // Block bash commands that read .env (exact filename only)
-          if (/(?:^|[\s|;&`(])\s*(?:cat|head|tail|less|more|bat)\s+[^;&|]*(?:^|\/)\.env(?:\s|$)/i.test(cmd)) {
+          // Block bash commands that reference .env files
+          if (commandReferencesProtectedEnvFile(cmd)) {
             throw new Error(".env files are protected")
           }
         }
@@ -62,14 +67,14 @@
         // regular permission system can still govern.
         if (["read", "write", "edit", "multiedit"].includes(input.tool)) {
           assertRelativePathStaysInWorkspace(workspace, output.args.filePath, "filePath")
-          if (isEnvFile(output.args.filePath)) {
+          if (isProtectedEnvFile(output.args.filePath)) {
             throw new Error(".env files are protected")
           }
         }
 
         if (["grep", "glob", "list"].includes(input.tool)) {
           assertRelativePathStaysInWorkspace(workspace, output.args.path, "path")
-          if (input.tool === "grep" && isEnvFile(output.args.path)) {
+          if (input.tool === "grep" && output.args.path && isProtectedEnvFile(output.args.path)) {
             throw new Error(".env files are protected")
           }
         }
