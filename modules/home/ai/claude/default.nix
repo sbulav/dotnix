@@ -62,6 +62,8 @@ let
 
   dataHome = config.xdg.dataHome;
 
+  langfusePython = pkgs.python3.withPackages (ps: [ ps.langfuse ]);
+
   # Only the hooks worth having - security, notifications, pre-compact, subagent summary
   hooks = {
     Notification = [
@@ -96,6 +98,14 @@ let
                 'eval.*\$\(curl'
                 'eval.*\$\(wget'
                 ':\(\)\{.*:\|:.*\};:'
+                '\.ssh(/|$| )'
+                '\.kube(/|$| )'
+                'kubeconfig'
+                '(source|\.)\s+.*\.env($|\s)'
+                '\bprintenv\b'
+                '\bdeclare\s+-p\b'
+                '\bexport\s+-p\b'
+                '\$KUBECONFIG'
               )
 
               for pattern in "''${dangerous_patterns[@]}"; do
@@ -105,8 +115,8 @@ let
                 fi
               done
 
-              if echo "$cmd" | grep -qE '(^|[[:space:]|;&=])([^[:space:]|;&=]*/)?\.env(\.(?!local($|[[:space:]|;&=]))[^[:space:]|;&=]*)?($|[[:space:]|;&=])'; then
-                echo '{"hookSpecificOutput":{"permissionDecision":"deny","permissionDecisionReason":".env files are protected"}}'
+              if echo "$cmd" | grep -qE '(^|[[:space:]|;&=])([^[:space:]|;&=]*/)?\.env($|[[:space:]|;&=])'; then
+                echo '{"hookSpecificOutput":{"permissionDecision":"deny","permissionDecisionReason":".env file is protected"}}'
                 exit 2
               fi
 
@@ -132,8 +142,18 @@ let
                 exit 2
               fi
 
-              if [[ "$tool_name" =~ ^(Read|Write|Edit|MultiEdit)$ ]] && [[ -n "$target" ]] && echo "$target" | grep -qE '(^|/)\.env($|\.(?!local$)|[/*?])'; then
-                echo '{"hookSpecificOutput":{"permissionDecision":"deny","permissionDecisionReason":".env files are protected"}}'
+              if [[ "$tool_name" =~ ^(Read|Write|Edit|MultiEdit)$ ]] && [[ -n "$target" ]] && echo "$target" | grep -qE '(^|/)\.env$'; then
+                echo '{"hookSpecificOutput":{"permissionDecision":"deny","permissionDecisionReason":".env file is protected"}}'
+                exit 2
+              fi
+
+              if [[ -n "$target" ]] && echo "$target" | grep -qiE '(^|/)(\.ssh|\.kube)(/|$)'; then
+                echo '{"hookSpecificOutput":{"permissionDecision":"deny","permissionDecisionReason":"~/.ssh and ~/.kube are protected"}}'
+                exit 2
+              fi
+
+              if [[ -n "$target" ]] && echo "$target" | grep -qiE '(^|/)kubeconfig($|\.)'; then
+                echo '{"hookSpecificOutput":{"permissionDecision":"deny","permissionDecisionReason":"kubeconfig files are protected"}}'
                 exit 2
               fi
 
@@ -243,6 +263,18 @@ let
         ];
       }
     ];
+
+    Stop = [
+      {
+        matcher = "*";
+        hooks = [
+          {
+            type = "command";
+            command = "${langfusePython}/bin/python ${config.home.homeDirectory}/.claude/hooks/langfuse_hook.py >> ${config.home.homeDirectory}/.claude/hooks/langfuse-stop.log 2>&1";
+          }
+        ];
+      }
+    ];
   };
 
   settings = {
@@ -253,34 +285,30 @@ let
         "Read"
         "Task"
         "TodoWrite"
+        # Git — safe read-only ops
         "Bash(git status)"
         "Bash(git log *)"
         "Bash(git diff *)"
         "Bash(git show *)"
         "Bash(git branch *)"
         "Bash(git remote *)"
-        "Bash(git add *)"
+        # Basic filesystem
         "Bash(ls *)"
-        "Bash(find *)"
-        "Bash(cat *)"
-        "Bash(head *)"
-        "Bash(tail *)"
         "Bash(mkdir *)"
-        "Bash(chmod *)"
-        "Bash(rg *)"
-        "Bash(grep *)"
+        # Nix tooling
         "Bash(nix *)"
         "Bash(nixos-option *)"
         "Bash(systemctl list-units *)"
         "Bash(systemctl list-timers *)"
         "Bash(systemctl status *)"
         "Bash(journalctl *)"
-        "Bash(env)"
         "Bash(claude --version)"
         "WebFetch(domain:github.com)"
         "WebFetch(domain:raw.githubusercontent.com)"
       ];
       ask = [
+        # Git — mutating ops
+        "Bash(git add *)"
         "Bash(git checkout *)"
         "Bash(git commit *)"
         "Bash(git merge *)"
@@ -291,17 +319,34 @@ let
         "Bash(git restore *)"
         "Bash(git stash *)"
         "Bash(git switch *)"
+        # File ops
         "Bash(cp *)"
         "Bash(mv *)"
         "Bash(rm *)"
+        "Bash(chmod *)"
         "Bash(curl *)"
         "Bash(sudo *)"
         "Bash(nixos-rebuild *)"
+        # Content readers — bypass file-tool hooks, so require approval
+        "Bash(cat *)"
+        "Bash(head *)"
+        "Bash(tail *)"
+        "Bash(find *)"
+        "Bash(grep *)"
+        "Bash(rg *)"
       ];
       deny = [
         "Bash(rm -rf /*)"
         "Bash(dd *)"
         "Bash(mkfs *)"
+        # Environment variable exposure
+        "Bash(env)"
+        "Bash(env *)"
+        "Bash(printenv)"
+        "Bash(printenv *)"
+        "Bash(set)"
+        "Bash(declare -p *)"
+        "Bash(export -p)"
       ];
     };
     vim = true;
@@ -392,6 +437,11 @@ in
     };
 
     home.file = {
+      ".claude/hooks/langfuse_hook.py" = {
+        executable = true;
+        source = ./langfuse_hook.py;
+      };
+
       ".local/share/claude-code/statusline.sh" = {
         executable = true;
         text = ''
