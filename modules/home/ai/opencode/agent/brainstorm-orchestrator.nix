@@ -28,7 +28,7 @@ in
       "tea issues *" = "allow";
       "tea milestones *" = "allow";
       "tea comment *" = "allow";
-      "tea issues create *" = "ask";
+      "tea issues create *" = "allow";
       "jira issue view *" = "allow";
     };
   };

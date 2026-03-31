@@ -31,7 +31,7 @@ in
       "tea issues *" = "allow";
       "tea pulls *" = "allow";
       "tea comment *" = "allow";
-      "tea pr create *" = "ask";
+      "tea pr create *" = "allow";
     };
   };
 

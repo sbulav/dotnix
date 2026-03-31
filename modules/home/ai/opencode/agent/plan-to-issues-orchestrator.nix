@@ -27,7 +27,7 @@ in
       "git log *" = "allow";
       "tea issues *" = "allow";
       "tea comment *" = "allow";
-      "tea issues create *" = "ask";
+      "tea issues create *" = "allow";
     };
   };
 

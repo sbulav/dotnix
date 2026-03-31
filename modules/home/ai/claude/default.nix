@@ -292,6 +292,12 @@ let
         "Bash(git show *)"
         "Bash(git branch *)"
         "Bash(git remote *)"
+        # Forgejo via tea
+        "Bash(tea issues *)"
+        "Bash(tea pulls *)"
+        "Bash(tea comment *)"
+        "Bash(tea issues create *)"
+        "Bash(tea pr create *)"
         # Basic filesystem
         "Bash(ls *)"
         "Bash(mkdir *)"
