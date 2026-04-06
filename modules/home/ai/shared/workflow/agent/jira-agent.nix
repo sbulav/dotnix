@@ -1,7 +1,7 @@
 {
   description = "Narrow Jira helper for TPL tickets. Fetches only the details needed for the current issue or PR context.";
   mode = "subagent";
-  model = "litellm/glm-5-fp8";
+  model = "hhdev-glm5-fp8/zai-org/GLM-5-FP8";
   temperature = 0.1;
 
   tools = {

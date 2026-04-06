@@ -4,7 +4,7 @@ in
 {
   description = workflow.description;
   agent = "workon-orchestrator";
-  model = "litellm/glm-5-fp8";
+  model = "hhdev-glm5-fp8/zai-org/GLM-5-FP8";
 
   requirements = ''
     Resume and work on a Forgejo issue in the current repo.

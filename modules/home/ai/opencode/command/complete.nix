@@ -4,7 +4,7 @@ in
 {
   description = workflow.description;
   agent = "complete-orchestrator";
-  model = "litellm/glm-5-fp8";
+  model = "hhdev-glm5-fp8/zai-org/GLM-5-FP8";
 
   requirements = ''
     Complete the issue workflow after merge in the current repo.

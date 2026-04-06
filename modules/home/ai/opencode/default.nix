@@ -180,10 +180,8 @@ let
 
   # Default configuration settings
   defaultSettings = {
-    model = "litellm/glm-5-fp8";
-    # model = "hhdev-sglang/Qwen/Qwen3.5-122B-A10B-FP8";
-    small_model = "litellm/glm-5-fp8";
-    # small_model = "hhdev-sglang/Qwen/Qwen3.5-122B-A10B-FP8";
+    model = "hhdev-glm5-fp8/zai-org/GLM-5-FP8";
+    small_model = "hhdev-glm5-fp8/zai-org/GLM-5-FP8";
 
     permission = {
       edit = "ask";

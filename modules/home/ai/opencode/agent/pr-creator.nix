@@ -1,7 +1,7 @@
 {
   description = "Creates PR in Forgejo from current branch. Uses tea CLI to create PR with brief Russian description based on commits.";
   mode = "subagent";
-  model = "litellm/glm-5-fp8";
+  model = "hhdev-glm5-fp8/zai-org/GLM-5-FP8";
   temperature = 0.1;
 
   tools = {

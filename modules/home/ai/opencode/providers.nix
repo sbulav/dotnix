@@ -19,12 +19,12 @@
       "gpt-4.1" = {
         name = "ChatGPT 4.1";
       };
-      "gpt-5.3-codex" = {
-        name = "ChatGPT 5.3 Codex";
-      };
-      "gpt-5.3" = {
-        name = "ChatGPT 5.3";
-      };
+      # "gpt-5.3-codex" = {
+      #   name = "ChatGPT 5.3 Codex";
+      # };
+      # "gpt-5.3" = {
+      #   name = "ChatGPT 5.3";
+      # };
       "gpt-5.4" = {
         name = "ChatGPT 5.4";
       };
@@ -106,57 +106,35 @@
       baseURL = "https://llmgtw.hhdev.ru/proxy/xai";
     };
     models = {
-      "grok-4-1-fast-reasoning" = {
-        name = "Grok 4.1 Fast Reasoning";
+      "grok-4.20-0309-reasoning" = {
+        name = "Grok 4.20 Reasoning";
+      };
+      "grok-4.20-0309-non-reasoning" = {
+        name = "Grok 4.20";
+      };
+      "grok-4.20-multi-agent-0309" = {
+        name = "Grok 4.20 Multi-Agent";
       };
     };
   };
 
-  "litellm" = {
-    name = "HH";
+  "hhdev-glm5-fp8" = {
+    name = "GLM-5 FP8";
     npm = "@ai-sdk/openai-compatible";
     options = {
-      baseURL = "http://gpu1.pyn.ru:40000/v1";
-      apiKey = "sk-any";
+      baseURL = "https://llm-gateway.pyn.ru/proxy/glm5-fp8/v1";
+      apiKey = "{env:OPENAI_API_PYN_KEY}";
     };
     models = {
-      "glm-5-fp8" = {
+      "zai-org/GLM-5-FP8" = {
         name = "GLM-5 FP8";
       };
+      # limit = {
+      #   context = 8000;
+      #   output = 10000;
+      # };
     };
   };
-
-  # "hhdev-sglang" = {
-  #   name = "HHDev SGLang Local";
-  #   npm = "@ai-sdk/openai-compatible";
-  #   options = {
-  #     baseURL = "https://llmgtw.hhdev.ru/proxy/sglang/v1";
-  #     apiKey = "{env:OPENAI_API_KEY}";
-  #   };
-  #   models = {
-  #     "Qwen/Qwen3.5-122B-A10B-FP8" = {
-  #       name = "Qwen 3.5 122B A10B FP8";
-  #       limit = {
-  #         context = 32768;
-  #         output = 10000;
-  #       };
-  #     };
-  #   };
-  # };
-
-  # "pyn-glm5-fp8" = {
-  #   name = "GLM-5 FP8";
-  #   npm = "@ai-sdk/openai-compatible";
-  #   options = {
-  #     baseURL = "https://llm-gateway.pyn.ru/proxy/glm5-fp8/v1";
-  #     apiKey = "{env:OPENAI_API_KEY}";
-  #   };
-  #   models = {
-  #     "glm-5" = {
-  #       name = "GLM-5 FP8";
-  #     };
-  #   };
-  # };
 
   # "pyn-gpt-oss-120b" = {
   #   name = "GPT-OSS 120B";

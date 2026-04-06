@@ -2,7 +2,7 @@
   name = "default";
   description = "Senior DevOps/Software Engineer — default agent for general tasks. Use when no specialized agent fits, or as a fallback for infrastructure, DevOps, and general engineering tasks.";
   mode = "primary";
-  model = "litellm/glm-5-fp8";
+  model = "hhdev-glm5-fp8/zai-org/GLM-5-FP8";
   temperature = 0.1;
 
   tools = {

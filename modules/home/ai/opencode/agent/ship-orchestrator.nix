@@ -4,7 +4,7 @@ in
 {
   description = workflow.description;
   mode = "subagent";
-  model = "litellm/glm-5-fp8";
+  model = "hhdev-glm5-fp8/zai-org/GLM-5-FP8";
   temperature = 0.1;
 
   tools = {
