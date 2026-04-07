@@ -409,14 +409,10 @@ in
             ''}
 
             # Send email based on build status
-            if [ $SUCCESS_COUNT -eq $TOTAL_HOSTS ]; then
-              ${optionalString cfg.email.notifyOnSuccess ''
-                EMAIL_SHOULD_SEND="true"
-              ''}
-            else
-              ${optionalString cfg.email.notifyOnFailure ''
-                EMAIL_SHOULD_SEND="true"
-              ''}
+            if [ $SUCCESS_COUNT -eq $TOTAL_HOSTS ] && [ "${if cfg.email.notifyOnSuccess then "true" else "false"}" = "true" ]; then
+              EMAIL_SHOULD_SEND="true"
+            elif [ $SUCCESS_COUNT -lt $TOTAL_HOSTS ] && [ "${if cfg.email.notifyOnFailure then "true" else "false"}" = "true" ]; then
+              EMAIL_SHOULD_SEND="true"
             fi
 
             if [ "$EMAIL_SHOULD_SEND" = "true" ]; then
