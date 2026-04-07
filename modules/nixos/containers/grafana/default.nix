@@ -149,18 +149,7 @@ in
                   apiVersion = 1;
                   contactPoints = [
                     {
-                      name = "grafana-default-email";
-                      receivers = [
-                        {
-                          uid = "basic-email";
-                          type = "email";
-                          settings.addresses = config.${namespace}.user.email;
-                        }
-                      ];
-                    }
-
-                    {
-                      name = "Telegram";
+                      name = "default-alerts";
                       receivers = [
                         {
                           type = "telegram";
@@ -173,7 +162,22 @@ in
                             parse_mode = "HTML";
                           };
                         }
+                        {
+                          uid = "basic-email";
+                          type = "email";
+                          settings.addresses = "bulavintsev.sergey@gmail.com";
+                        }
                       ];
+                    }
+                  ];
+                };
+                policies.settings = {
+                  apiVersion = 1;
+                  policies = [
+                    {
+                      orgId = 1;
+                      receiver = "default-alerts";
+                      group_by = [ "alertname" ];
                     }
                   ];
                 };

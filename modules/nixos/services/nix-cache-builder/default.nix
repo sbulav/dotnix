@@ -77,6 +77,19 @@ in
         "low"
       ]) "high" "Notification priority for any failures";
     };
+
+    # Email Notifications (fallback when Telegram is unavailable)
+    email = {
+      enable = mkBoolOpt false "Enable email fallback notifications for build results";
+
+      recipient = mkOpt str "bulavintsev.sergey@gmail.com" "Email address to send notifications to";
+
+      notifyOnSuccess = mkBoolOpt false "Send email when all builds succeed";
+
+      notifyOnFailure = mkBoolOpt true "Send email when any builds fail";
+
+      sendOnTelegramFailure = mkBoolOpt true "Always send email if Telegram notification fails";
+    };
   };
 
   config = mkIf cfg.enable (mkMerge [
@@ -282,11 +295,11 @@ in
            echo "Available disk space: $(${pkgs.coreutils}/bin/df -h $CACHE_DIR | ${pkgs.coreutils}/bin/tail -1 | ${pkgs.gawk}/bin/awk '{print $4}')"
            echo "======================="
 
-          ${optionalString cfg.telegram.enable ''
-            # Send telegram notification with build results
+          ${optionalString (cfg.telegram.enable || cfg.email.enable) ''
+            # Prepare notification message
             echo ""
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
-            echo "📱 Preparing telegram notification..."
+            echo "Preparing notifications..."
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
             # Calculate cache statistics
@@ -313,50 +326,49 @@ in
               TIME_HUMAN="''${TOTAL_SECONDS}s"
             fi
 
-            # Determine notification status and priority
+            # Determine notification status
             if [ $SUCCESS_COUNT -eq $TOTAL_HOSTS ]; then
-              # Complete success
-              STATUS_EMOJI="✅"
               STATUS_TEXT="SUCCESS"
-              SHOULD_NOTIFY="${if cfg.telegram.notifyOnSuccess then "true" else "false"}"
+            elif [ $SUCCESS_COUNT -eq 0 ]; then
+              STATUS_TEXT="FAILED"
+            else
+              STATUS_TEXT="PARTIAL"
+            fi
+
+            # Build notification message
+            if [ $SUCCESS_COUNT -eq 0 ]; then
+              message=$(printf 'Cache Build Status:\n%s\n==========\n⏱️ %s total' \
+                "$BUILD_RESULTS" \
+                "$TIME_HUMAN")
+            else
+              message=$(printf 'Cache Build Status:\n%s\n==========\n⏱️ %s total\n💾 Cache: %s (%s)\n💿 Free: %s' \
+                "$BUILD_RESULTS" \
+                "$TIME_HUMAN" \
+                "$CACHE_SIZE_HUMAN" \
+                "$CACHE_DIFF_HUMAN" \
+                "$DISK_FREE")
+            fi
+
+            TELEGRAM_SENT="false"
+          ''}
+
+          ${optionalString cfg.telegram.enable ''
+            # Determine Telegram notification priority
+            if [ $SUCCESS_COUNT -eq $TOTAL_HOSTS ]; then
+              TG_SHOULD_NOTIFY="${if cfg.telegram.notifyOnSuccess then "true" else "false"}"
               PRIORITY="${cfg.telegram.successPriority}"
             elif [ $SUCCESS_COUNT -eq 0 ]; then
-              # Complete failure
-              STATUS_EMOJI="🔥"
-              STATUS_TEXT="FAILED"
-              SHOULD_NOTIFY="${if cfg.telegram.notifyOnFailure then "true" else "false"}"
+              TG_SHOULD_NOTIFY="${if cfg.telegram.notifyOnFailure then "true" else "false"}"
               PRIORITY="${cfg.telegram.failurePriority}"
             else
-              # Partial success
-              STATUS_EMOJI="⚠️"
-              STATUS_TEXT="PARTIAL"
-              SHOULD_NOTIFY="${if cfg.telegram.notifyOnPartialSuccess then "true" else "false"}"
+              TG_SHOULD_NOTIFY="${if cfg.telegram.notifyOnPartialSuccess then "true" else "false"}"
               PRIORITY="${cfg.telegram.failurePriority}"
             fi
 
-            if [ "$SHOULD_NOTIFY" = "true" ]; then
-              echo "Building notification message (status: $STATUS_TEXT)..."
+            if [ "$TG_SHOULD_NOTIFY" = "true" ]; then
+              echo "📱 Sending Telegram notification (priority: $PRIORITY)..."
 
-              # Build message
-              if [ $SUCCESS_COUNT -eq 0 ]; then
-                # Complete failure - shorter message
-                message=$(printf 'Cache Build Status:\n%s\n==========\n⏱️ %s total' \
-                  "$BUILD_RESULTS" \
-                  "$TIME_HUMAN")
-              else
-                # Success or partial - full stats
-                message=$(printf 'Cache Build Status:\n%s\n==========\n⏱️ %s total\n💾 Cache: %s (%s)\n💿 Free: %s' \
-                  "$BUILD_RESULTS" \
-                  "$TIME_HUMAN" \
-                  "$CACHE_SIZE_HUMAN" \
-                  "$CACHE_DIFF_HUMAN" \
-                  "$DISK_FREE")
-              fi
-
-              # Send notification
               disable_notification=$([ "$PRIORITY" = "low" ] && echo "true" || echo "false")
-
-              echo "Sending telegram notification (priority: $PRIORITY)..."
 
               data=$(${pkgs.jq}/bin/jq -n \
                 --arg chat_id "${cfg.telegram.chatId}" \
@@ -364,22 +376,62 @@ in
                 --argjson disable_notification "$disable_notification" \
                 '{chat_id: $chat_id, text: $text, disable_notification: $disable_notification}')
 
-              response=$(${pkgs.curl}/bin/curl -s -X POST \
+              response=$(${pkgs.curl}/bin/curl -s --connect-timeout 10 --max-time 30 -X POST \
                 -H 'Content-Type: application/json' \
                 -d "$data" \
                 "https://api.telegram.org/bot''${TELEGRAM_TOKEN}/sendMessage") || {
-                echo "⚠️ Failed to send telegram notification" >&2
-                echo "Response: $response" >&2
+                echo "⚠️ Failed to send Telegram notification (network error)" >&2
               }
 
               if echo "$response" | ${pkgs.jq}/bin/jq -e '.ok' >/dev/null 2>&1; then
                 echo "✓ Telegram notification sent successfully"
+                TELEGRAM_SENT="true"
               else
-                echo "⚠️ Telegram notification may have failed" >&2
+                echo "⚠️ Telegram notification failed" >&2
                 echo "Response: $response" >&2
               fi
             else
-              echo "Skipping telegram notification (disabled for $STATUS_TEXT)"
+              echo "Skipping Telegram notification (disabled for $STATUS_TEXT)"
+              TELEGRAM_SENT="skipped"
+            fi
+          ''}
+
+          ${optionalString cfg.email.enable ''
+            # Determine if email should be sent
+            EMAIL_SHOULD_SEND="false"
+
+            # Send email if Telegram failed and sendOnTelegramFailure is enabled
+            ${optionalString cfg.email.sendOnTelegramFailure ''
+              if [ "$TELEGRAM_SENT" = "false" ]; then
+                EMAIL_SHOULD_SEND="true"
+                echo "📧 Telegram failed, falling back to email..."
+              fi
+            ''}
+
+            # Send email based on build status
+            if [ $SUCCESS_COUNT -eq $TOTAL_HOSTS ]; then
+              ${optionalString cfg.email.notifyOnSuccess ''
+                EMAIL_SHOULD_SEND="true"
+              ''}
+            else
+              ${optionalString cfg.email.notifyOnFailure ''
+                EMAIL_SHOULD_SEND="true"
+              ''}
+            fi
+
+            if [ "$EMAIL_SHOULD_SEND" = "true" ]; then
+              echo "📧 Sending email notification to ${cfg.email.recipient}..."
+
+              printf 'Subject: [nix-cache-builder] %s - %s\nFrom: ZANOZA-notifications <zppfan@gmail.com>\nTo: ${cfg.email.recipient}\nContent-Type: text/plain; charset=UTF-8\n\n%s\n' \
+                "$STATUS_TEXT" \
+                "$(date '+%Y-%m-%d %H:%M')" \
+                "$message" | ${pkgs.msmtp}/bin/msmtp -a gmail "${cfg.email.recipient}" && {
+                echo "✓ Email notification sent successfully"
+              } || {
+                echo "⚠️ Failed to send email notification" >&2
+              }
+            else
+              echo "Skipping email notification"
             fi
           ''}
         '';

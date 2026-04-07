@@ -97,6 +97,21 @@ in
       successPriority = "low"; # Silent for full success
       failurePriority = "high"; # Sound for any failures
     };
+
+    # Email fallback when Telegram is blocked/unavailable
+    email = {
+      enable = true;
+      recipient = "bulavintsev.sergey@gmail.com";
+      notifyOnSuccess = false; # Don't spam on success
+      notifyOnFailure = true; # Email on any failures
+      sendOnTelegramFailure = true; # Always email if TG fails
+    };
+  };
+
+  # Email service for notifications
+  custom.containers.msmtp = {
+    enable = true;
+    secret_file = "secrets/beez/default.yaml";
   };
 
   services.journald.extraConfig = ''
