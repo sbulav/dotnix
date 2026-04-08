@@ -213,6 +213,7 @@ in
                   let
                     prometheus = {
                       name = "Prometheus";
+                      uid = "prometheus";
                       type = "prometheus";
                       access = "proxy";
                       url = "http://${cfg.hostAddress}:9090";
@@ -223,6 +224,7 @@ in
                         [
                           {
                             name = "Loki";
+                            uid = "loki";
                             type = "loki";
                             access = "proxy";
                             url = "http://${cfg.hostAddress}:3030";
@@ -236,6 +238,27 @@ in
               # TODO: add dashboard for UPS
               dashboards.settings.providers =
                 let
+                  homelabOverview = {
+                    name = "Homelab Overview";
+                    folder = "Overview";
+                    options.path = ./dashboards/homelab-overview.json;
+                    orgId = 1;
+                  };
+
+                  scrapeHealth = {
+                    name = "Scrape Health";
+                    folder = "Overview";
+                    options.path = ./dashboards/scrape-health.json;
+                    orgId = 1;
+                  };
+
+                  storageOverview = {
+                    name = "Storage Overview";
+                    folder = "Infrastructure";
+                    options.path = ./dashboards/storage-overview.json;
+                    orgId = 1;
+                  };
+
                   nodeExporterFull = {
                     name = "Node Exporter Full";
                     options.path = pkgs.fetchurl {
@@ -327,6 +350,9 @@ in
                       [ ];
                 in
                 [
+                  homelabOverview
+                  scrapeHealth
+                  storageOverview
                   nodeExporterFull
                   smartctlExporter
                   zfsStats
