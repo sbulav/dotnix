@@ -21,112 +21,105 @@ let
   mkTargetLabels =
     name: hostCfg:
     {
-      instance = name;
+      host = name;
       role = hostCfg.role;
     }
     // hostCfg.labels;
 
-  localNodesScrapeConfig =
-    if currentHost != null then
-      let
-        baseTargets =
-          optional currentHost.exporters.node.enable "127.0.0.1:${toString currentHost.exporters.node.port}"
-          ++ optional currentHost.exporters.smartctl.enable "127.0.0.1:${toString currentHost.exporters.smartctl.port}";
-
-        autheliaTarget =
-          if config.${namespace}.containers.authelia.enable then
-            [ "${config.${namespace}.containers.authelia.localAddress}:9959" ]
-          else
-            [ ];
-      in
-      optional ((baseTargets ++ autheliaTarget) != [ ]) {
-        job_name = "nodes";
-        static_configs = [
-          {
-            targets = baseTargets ++ autheliaTarget;
-            labels = mkTargetLabels hostName currentHost;
-          }
-        ];
-      }
-    else
-      let
-        baseTargets = [
-          "127.0.0.1:3021"
-          "127.0.0.1:9633"
-        ];
-
-        autheliaTarget =
-          if config.${namespace}.containers.authelia.enable then
-            [ "${config.${namespace}.containers.authelia.localAddress}:9959" ]
-          else
-            [ ];
-      in
-      [
+  mkScrapeConfig =
+    {
+      jobName,
+      metricsPath ? null,
+      targets,
+      labels ? { },
+    }:
+    {
+      job_name = jobName;
+      static_configs = [
         {
-          job_name = "nodes";
-          static_configs = [
-            {
-              targets = baseTargets ++ autheliaTarget;
-            }
-          ];
+          inherit targets labels;
         }
       ];
+    }
+    // optionalAttrs (metricsPath != null) {
+      metrics_path = metricsPath;
+    };
 
-  localNutScrapeConfig =
-    if currentHost != null && currentHost.exporters.nut.enable then
-      [
-        {
-          job_name = "nut";
-          metrics_path = currentHost.exporters.nut.metricsPath;
-          static_configs = [
-            {
-              targets = [ "127.0.0.1:${toString currentHost.exporters.nut.port}" ];
-              labels = mkTargetLabels hostName currentHost;
-            }
-          ];
-        }
-      ]
+  localScrapeConfigs =
+    if currentHost != null then
+      (optional currentHost.exporters.node.enable (mkScrapeConfig {
+        jobName = "node";
+        targets = [ "127.0.0.1:${toString currentHost.exporters.node.port}" ];
+        labels = mkTargetLabels hostName currentHost;
+      }))
+      ++ (optional currentHost.exporters.smartctl.enable (mkScrapeConfig {
+        jobName = "smartctl";
+        targets = [ "127.0.0.1:${toString currentHost.exporters.smartctl.port}" ];
+        labels = mkTargetLabels hostName currentHost;
+      }))
+      ++ (optional currentHost.exporters.nut.enable (mkScrapeConfig {
+        jobName = "nut";
+        metricsPath = currentHost.exporters.nut.metricsPath;
+        targets = [ "127.0.0.1:${toString currentHost.exporters.nut.port}" ];
+        labels = mkTargetLabels hostName currentHost;
+      }))
+      ++ (optional config.${namespace}.containers.authelia.enable (mkScrapeConfig {
+        jobName = "authelia";
+        targets = [ "${config.${namespace}.containers.authelia.localAddress}:9959" ];
+        labels = mkTargetLabels hostName currentHost;
+      }))
     else
-      optional config.${namespace}.containers.ups.enable {
-        job_name = "nut";
-        metrics_path = "/ups_metrics";
-        static_configs = [
-          {
-            targets = [ "127.0.0.1:9199" ];
-          }
-        ];
-      };
+      [
+        (mkScrapeConfig {
+          jobName = "node";
+          targets = [ "127.0.0.1:3021" ];
+        })
+        (mkScrapeConfig {
+          jobName = "smartctl";
+          targets = [ "127.0.0.1:9633" ];
+        })
+      ]
+      ++ optional config.${namespace}.containers.ups.enable (mkScrapeConfig {
+        jobName = "nut";
+        metricsPath = "/ups_metrics";
+        targets = [ "127.0.0.1:9199" ];
+      })
+      ++ optional config.${namespace}.containers.authelia.enable (mkScrapeConfig {
+        jobName = "authelia";
+        targets = [ "${config.${namespace}.containers.authelia.localAddress}:9959" ];
+      });
 
-  remoteScrapeConfigs =
-    mapAttrsToList
-      (
-        name: hostCfg:
-        let
-          targets =
-            optional hostCfg.exporters.node.enable "${hostCfg.address}:${toString hostCfg.exporters.node.port}"
-            ++ optional hostCfg.exporters.smartctl.enable "${hostCfg.address}:${toString hostCfg.exporters.smartctl.port}";
-        in
-        {
-          job_name = name;
-          static_configs = [
-            {
-              inherit targets;
-              labels = mkTargetLabels name hostCfg;
-            }
-          ];
-        }
-      )
-      (
-        filterAttrs (
-          _: hostCfg: hostCfg.exporters.node.enable || hostCfg.exporters.smartctl.enable
-        ) remoteHosts
-      );
+  remoteScrapeConfigs = flatten (
+    mapAttrsToList (
+      name: hostCfg:
+      (optional hostCfg.exporters.node.enable (mkScrapeConfig {
+        jobName = "node";
+        targets = [ "${hostCfg.address}:${toString hostCfg.exporters.node.port}" ];
+        labels = mkTargetLabels name hostCfg;
+      }))
+      ++ (optional hostCfg.exporters.smartctl.enable (mkScrapeConfig {
+        jobName = "smartctl";
+        targets = [ "${hostCfg.address}:${toString hostCfg.exporters.smartctl.port}" ];
+        labels = mkTargetLabels name hostCfg;
+      }))
+      ++ (optional hostCfg.exporters.nut.enable (mkScrapeConfig {
+        jobName = "nut";
+        metricsPath = hostCfg.exporters.nut.metricsPath;
+        targets = [ "${hostCfg.address}:${toString hostCfg.exporters.nut.port}" ];
+        labels = mkTargetLabels name hostCfg;
+      }))
+    ) remoteHosts
+  );
 in
 {
   options.${namespace}.containers.prometheus = with types; {
     enable = mkBoolOpt false "Enable the Prometheus monitoring service ;";
     host = mkOpt str "prometheus.sbulav.ru" "The host to serve prometheus on";
     smartctl_devices = mkOpt (listOf str) [ ] "List of devices to monitor, in the format ['/dev/sda']";
+    scrapeInterval = mkOpt str "30s" "Global Prometheus scrape interval";
+    evaluationInterval = mkOpt str "30s" "Global Prometheus evaluation interval";
+    retentionTime = mkOpt str "30d" "How long Prometheus should retain metrics";
+    externalLabels = mkOpt (attrsOf str) { } "External labels applied to all Prometheus metrics";
     inventory = mkOpt (attrsOf (submodule {
       options = {
         enable = mkBoolOpt true "Whether to include this host in the Prometheus inventory";
@@ -177,6 +170,18 @@ in
     services.prometheus = {
       port = 9090;
       enable = true;
+      retentionTime = cfg.retentionTime;
+      ruleFiles = [
+        ./rules/recording.yml
+        ./rules/alerts.yml
+      ];
+      globalConfig = {
+        scrape_interval = cfg.scrapeInterval;
+        evaluation_interval = cfg.evaluationInterval;
+      }
+      // optionalAttrs (cfg.externalLabels != { }) {
+        external_labels = cfg.externalLabels;
+      };
 
       exporters = {
         node = {
@@ -194,7 +199,7 @@ in
       };
 
       # Ingest the published nodes
-      scrapeConfigs = localNodesScrapeConfig ++ localNutScrapeConfig ++ remoteScrapeConfigs;
+      scrapeConfigs = localScrapeConfigs ++ remoteScrapeConfigs;
     };
   };
 }

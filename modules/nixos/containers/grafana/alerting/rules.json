@@ -1,30 +1,28 @@
 [
   {
-    "uid": "feaqoutpe914wa",
-    "title": "NODE - Devices missing",
+    "uid": "instance-down",
+    "title": "MONITORING - target down",
     "condition": "C",
     "data": [
       {
         "refId": "A",
         "relativeTimeRange": {
-          "from": 21600,
+          "from": 300,
           "to": 0
         },
         "datasourceUid": "PBFA97CFB590B2093",
         "model": {
-          "adhocFilters": [],
           "datasource": {
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "sum(smartctl_device{instance=~\"127\\\\.0\\\\.0\\\\.1:9633\", job=\"nodes\"})",
+          "expr": "sum by(host, job) (up{job=~\"node|smartctl|nut|authelia\"} == 0)",
           "format": "time_series",
-          "instant": false,
-          "interval": "",
-          "intervalMs": 15000,
+          "instant": true,
+          "intervalMs": 1000,
           "maxDataPoints": 43200,
-          "range": true,
+          "range": false,
           "refId": "A"
         }
       },
@@ -36,27 +34,6 @@
         },
         "datasourceUid": "__expr__",
         "model": {
-          "conditions": [
-            {
-              "evaluator": {
-                "params": [],
-                "type": "gt"
-              },
-              "operator": {
-                "type": "and"
-              },
-              "query": {
-                "params": [
-                  "B"
-                ]
-              },
-              "reducer": {
-                "params": [],
-                "type": "last"
-              },
-              "type": "query"
-            }
-          ],
           "datasource": {
             "type": "__expr__",
             "uid": "__expr__"
@@ -81,9 +58,9 @@
             {
               "evaluator": {
                 "params": [
-                  5
+                  0
                 ],
-                "type": "lt"
+                "type": "gt"
               },
               "operator": {
                 "type": "and"
@@ -112,46 +89,68 @@
         }
       }
     ],
-    "dashboardUid": "smartctl",
-    "panelId": 2,
-    "noDataState": "NoData",
+    "noDataState": "OK",
     "execErrState": "Error",
-    "for": "1m",
+    "for": "5m",
     "annotations": {
-      "__dashboardUid__": "smartctl",
-      "__panelId__": "2"
+      "summary": "A monitored target is down",
+      "description": "Prometheus cannot scrape one of the core monitoring targets for 5 minutes."
     },
-    "labels": {},
+    "labels": {
+      "severity": "critical",
+      "category": "monitoring"
+    },
     "isPaused": false,
     "notification_settings": {
       "receiver": "default-alerts"
     }
   },
   {
-    "uid": "aeaje2nu3xh4wd",
-    "title": "SMART - disk errors",
+    "uid": "filesystem-high",
+    "title": "NODE - filesystem usage high",
     "condition": "C",
     "data": [
       {
         "refId": "A",
         "relativeTimeRange": {
-          "from": 600,
+          "from": 900,
           "to": 0
         },
         "datasourceUid": "PBFA97CFB590B2093",
         "model": {
-          "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "rate(smartctl_device_error_log_count{instance=\"127.0.0.1:9633\"}[5m])",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "expr": "100 * (1 - (node_filesystem_avail_bytes{job=\"node\", fstype!=\"\", mountpoint!=\"\", device!~\"rootfs|tmpfs\"} / node_filesystem_size_bytes{job=\"node\", fstype!=\"\", mountpoint!=\"\", device!~\"rootfs|tmpfs\"}))",
+          "format": "time_series",
           "instant": true,
+          "legendFormat": "{{host}} {{mountpoint}}",
           "intervalMs": 1000,
-          "legendFormat": "__auto",
           "maxDataPoints": 43200,
           "range": false,
-          "refId": "A",
-          "useBackend": false
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "datasourceUid": "__expr__",
+        "model": {
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "expression": "A",
+          "intervalMs": 1000,
+          "maxDataPoints": 43200,
+          "reducer": "last",
+          "refId": "B",
+          "type": "reduce"
         }
       },
       {
@@ -166,7 +165,7 @@
             {
               "evaluator": {
                 "params": [
-                  1
+                  85
                 ],
                 "type": "gt"
               },
@@ -189,7 +188,7 @@
             "type": "__expr__",
             "uid": "__expr__"
           },
-          "expression": "A",
+          "expression": "B",
           "intervalMs": 1000,
           "maxDataPoints": 43200,
           "refId": "C",
@@ -197,18 +196,16 @@
         }
       }
     ],
-    "dashboardUid": "smartctl",
-    "panelId": 23,
-    "noDataState": "NoData",
+    "noDataState": "OK",
     "execErrState": "Error",
-    "for": "1m",
+    "for": "15m",
     "annotations": {
-      "__dashboardUid__": "smartctl",
-      "__panelId__": "23"
+      "summary": "Filesystem usage is high",
+      "description": "A filesystem has been above 85 percent for 15 minutes."
     },
     "labels": {
-      "category": "smart",
-      "host": "zanoza"
+      "severity": "warning",
+      "category": "storage"
     },
     "isPaused": false,
     "notification_settings": {
@@ -216,8 +213,8 @@
     }
   },
   {
-    "uid": "aeajokfuiswzke",
-    "title": "SMART - DISK temperature",
+    "uid": "smart-failing",
+    "title": "SMART - status check failed",
     "condition": "C",
     "data": [
       {
@@ -228,18 +225,146 @@
         },
         "datasourceUid": "PBFA97CFB590B2093",
         "model": {
-          "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "sum by(instance, device) (smartctl_device_temperature{instance=\"127.0.0.1:9633\"})",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "expr": "max by(host, device) (1 - smartctl_device_smart_status{job=\"smartctl\"})",
+          "format": "time_series",
           "instant": true,
+          "legendFormat": "{{host}} {{device}}",
           "intervalMs": 1000,
-          "legendFormat": "__auto",
           "maxDataPoints": 43200,
           "range": false,
-          "refId": "A",
-          "useBackend": false
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "datasourceUid": "__expr__",
+        "model": {
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "expression": "A",
+          "intervalMs": 1000,
+          "maxDataPoints": 43200,
+          "reducer": "last",
+          "refId": "B",
+          "type": "reduce"
+        }
+      },
+      {
+        "refId": "C",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "datasourceUid": "__expr__",
+        "model": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  0
+                ],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": [
+                  "C"
+                ]
+              },
+              "reducer": {
+                "params": [],
+                "type": "last"
+              },
+              "type": "query"
+            }
+          ],
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "expression": "B",
+          "intervalMs": 1000,
+          "maxDataPoints": 43200,
+          "refId": "C",
+          "type": "threshold"
+        }
+      }
+    ],
+    "noDataState": "OK",
+    "execErrState": "Error",
+    "for": "5m",
+    "annotations": {
+      "summary": "SMART status check failed",
+      "description": "A disk reports SMART failure."
+    },
+    "labels": {
+      "severity": "critical",
+      "category": "storage"
+    },
+    "isPaused": false,
+    "notification_settings": {
+      "receiver": "default-alerts"
+    }
+  },
+  {
+    "uid": "smart-temperature-high",
+    "title": "SMART - disk temperature high",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "PBFA97CFB590B2093",
+        "model": {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "PBFA97CFB590B2093"
+          },
+          "editorMode": "code",
+          "expr": "max by(host, device) (smartctl_device_temperature{job=\"smartctl\", temperature_type=\"current\"})",
+          "format": "time_series",
+          "instant": true,
+          "legendFormat": "{{host}} {{device}}",
+          "intervalMs": 1000,
+          "maxDataPoints": 43200,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "B",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "datasourceUid": "__expr__",
+        "model": {
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "expression": "A",
+          "intervalMs": 1000,
+          "maxDataPoints": 43200,
+          "reducer": "last",
+          "refId": "B",
+          "type": "reduce"
         }
       },
       {
@@ -277,7 +402,7 @@
             "type": "__expr__",
             "uid": "__expr__"
           },
-          "expression": "A",
+          "expression": "B",
           "intervalMs": 1000,
           "maxDataPoints": 43200,
           "refId": "C",
@@ -285,18 +410,16 @@
         }
       }
     ],
-    "dashboardUid": "smartctl",
-    "panelId": 14,
-    "noDataState": "NoData",
+    "noDataState": "OK",
     "execErrState": "Error",
-    "for": "1m",
+    "for": "10m",
     "annotations": {
-      "__dashboardUid__": "smartctl",
-      "__panelId__": "14"
+      "summary": "Disk temperature is high",
+      "description": "A disk has been above 65C for 10 minutes."
     },
     "labels": {
-      "category": "smart",
-      "host": "zanoza"
+      "severity": "warning",
+      "category": "storage"
     },
     "isPaused": false,
     "notification_settings": {
@@ -304,8 +427,8 @@
     }
   },
   {
-    "uid": "deajp4o4hk3k0b",
-    "title": "SMART - status check failed",
+    "uid": "zpool-not-healthy",
+    "title": "ZFS - pool not healthy",
     "condition": "C",
     "data": [
       {
@@ -316,186 +439,19 @@
         },
         "datasourceUid": "PBFA97CFB590B2093",
         "model": {
-          "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "sum by(instance, device) (smartctl_device_smart_status{instance=\"127.0.0.1:9633\"})",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
-          "instant": true,
-          "intervalMs": 1000,
-          "legendFormat": "__auto",
-          "maxDataPoints": 43200,
-          "range": false,
-          "refId": "A",
-          "useBackend": false
-        }
-      },
-      {
-        "refId": "C",
-        "relativeTimeRange": {
-          "from": 0,
-          "to": 0
-        },
-        "datasourceUid": "__expr__",
-        "model": {
-          "conditions": [
-            {
-              "evaluator": {
-                "params": [
-                  1
-                ],
-                "type": "lt"
-              },
-              "operator": {
-                "type": "and"
-              },
-              "query": {
-                "params": [
-                  "C"
-                ]
-              },
-              "reducer": {
-                "params": [],
-                "type": "last"
-              },
-              "type": "query"
-            }
-          ],
-          "datasource": {
-            "type": "__expr__",
-            "uid": "__expr__"
-          },
-          "expression": "A",
-          "intervalMs": 1000,
-          "maxDataPoints": 43200,
-          "refId": "C",
-          "type": "threshold"
-        }
-      }
-    ],
-    "noDataState": "NoData",
-    "execErrState": "Error",
-    "for": "1m",
-    "labels": {
-      "category": "smart",
-      "host": "zanoza"
-    },
-    "isPaused": false,
-    "notification_settings": {
-      "receiver": "default-alerts"
-    }
-  },
-  {
-    "uid": "ceajpo02hmlmoa",
-    "title": "ZFS - zpool TANK offline",
-    "condition": "C",
-    "data": [
-      {
-        "refId": "A",
-        "relativeTimeRange": {
-          "from": 600,
-          "to": 0
-        },
-        "datasourceUid": "PBFA97CFB590B2093",
-        "model": {
-          "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "sum by(instance) (node_zfs_zpool_state{zpool=\"tank\"})",
-          "fullMetaSearch": false,
-          "includeNullMetadata": true,
-          "instant": true,
-          "intervalMs": 1000,
-          "legendFormat": "__auto",
-          "maxDataPoints": 43200,
-          "range": false,
-          "refId": "A",
-          "useBackend": false
-        }
-      },
-      {
-        "refId": "C",
-        "relativeTimeRange": {
-          "from": 0,
-          "to": 0
-        },
-        "datasourceUid": "__expr__",
-        "model": {
-          "conditions": [
-            {
-              "evaluator": {
-                "params": [
-                  1
-                ],
-                "type": "lt"
-              },
-              "operator": {
-                "type": "and"
-              },
-              "query": {
-                "params": [
-                  "C"
-                ]
-              },
-              "reducer": {
-                "params": [],
-                "type": "last"
-              },
-              "type": "query"
-            }
-          ],
-          "datasource": {
-            "type": "__expr__",
-            "uid": "__expr__"
-          },
-          "expression": "A",
-          "intervalMs": 1000,
-          "maxDataPoints": 43200,
-          "refId": "C",
-          "type": "threshold"
-        }
-      }
-    ],
-    "noDataState": "NoData",
-    "execErrState": "Error",
-    "for": "1m",
-    "labels": {
-      "category": "zfs",
-      "host": "zanoza"
-    },
-    "isPaused": false,
-    "notification_settings": {
-      "receiver": "default-alerts"
-    }
-  },
-  {
-    "uid": "aeajr4vix5e68d",
-    "title": "NODE - disk usage above 80 percent",
-    "condition": "C",
-    "data": [
-      {
-        "refId": "A",
-        "relativeTimeRange": {
-          "from": 86400,
-          "to": 0
-        },
-        "datasourceUid": "PBFA97CFB590B2093",
-        "model": {
-          "adhocFilters": [],
           "datasource": {
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
           "editorMode": "code",
-          "expr": "100 - ((node_filesystem_avail_bytes{instance=\"127.0.0.1:3021\",job=\"nodes\",device!~'rootfs'} * 100) / node_filesystem_size_bytes{instance=\"127.0.0.1:3021\",job=\"nodes\",device!~'rootfs'})",
+          "expr": "max by(host, zpool) (node_zfs_zpool_state{job=\"node\", state!=\"online\"})",
           "format": "time_series",
-          "interval": "",
-          "intervalFactor": 1,
-          "intervalMs": 15000,
-          "legendFormat": "{{mountpoint}}",
+          "instant": true,
+          "legendFormat": "{{host}} {{zpool}}",
+          "intervalMs": 1000,
           "maxDataPoints": 43200,
-          "range": true,
-          "refId": "A",
-          "step": 240
+          "range": false,
+          "refId": "A"
         }
       },
       {
@@ -506,27 +462,6 @@
         },
         "datasourceUid": "__expr__",
         "model": {
-          "conditions": [
-            {
-              "evaluator": {
-                "params": [],
-                "type": "gt"
-              },
-              "operator": {
-                "type": "and"
-              },
-              "query": {
-                "params": [
-                  "B"
-                ]
-              },
-              "reducer": {
-                "params": [],
-                "type": "last"
-              },
-              "type": "query"
-            }
-          ],
           "datasource": {
             "type": "__expr__",
             "uid": "__expr__"
@@ -551,7 +486,7 @@
             {
               "evaluator": {
                 "params": [
-                  80
+                  0
                 ],
                 "type": "gt"
               },
@@ -582,18 +517,16 @@
         }
       }
     ],
-    "dashboardUid": "rYdddlPWk",
-    "panelId": 152,
-    "noDataState": "NoData",
+    "noDataState": "OK",
     "execErrState": "Error",
-    "for": "1m",
+    "for": "5m",
     "annotations": {
-      "__dashboardUid__": "rYdddlPWk",
-      "__panelId__": "152"
+      "summary": "ZFS pool is not healthy",
+      "description": "A ZFS pool is not online."
     },
     "labels": {
-      "category": "node",
-      "host": "zanoza"
+      "severity": "critical",
+      "category": "zfs"
     },
     "isPaused": false,
     "notification_settings": {
@@ -601,63 +534,41 @@
     }
   },
   {
-    "uid": "feajrd3x0wzk0b",
-    "title": "NODE - Hardware temperature critical",
-    "condition": "G",
+    "uid": "ups-battery-low",
+    "title": "UPS - battery low",
+    "condition": "C",
     "data": [
       {
         "refId": "A",
         "relativeTimeRange": {
-          "from": 86400,
+          "from": 600,
           "to": 0
         },
         "datasourceUid": "PBFA97CFB590B2093",
         "model": {
-          "adhocFilters": [],
           "datasource": {
             "type": "prometheus",
             "uid": "PBFA97CFB590B2093"
           },
-          "expr": "node_hwmon_temp_celsius{instance=\"127.0.0.1:3021\",job=\"nodes\"} * on(chip) group_left(chip_name) node_hwmon_chip_names{instance=\"127.0.0.1:3021\",job=\"nodes\"}",
+          "editorMode": "code",
+          "expr": "min by(host, ups) (nut_battery_charge{job=\"nut\"})",
           "format": "time_series",
-          "interval": "",
-          "intervalFactor": 1,
-          "intervalMs": 15000,
-          "legendFormat": "{{ chip_name }} {{ sensor }} temp",
+          "instant": true,
+          "legendFormat": "{{host}} {{ups}}",
+          "intervalMs": 1000,
           "maxDataPoints": 43200,
-          "refId": "A",
-          "step": 240
+          "range": false,
+          "refId": "A"
         }
       },
       {
-        "refId": "F",
+        "refId": "B",
         "relativeTimeRange": {
           "from": 0,
           "to": 0
         },
         "datasourceUid": "__expr__",
         "model": {
-          "conditions": [
-            {
-              "evaluator": {
-                "params": [],
-                "type": "gt"
-              },
-              "operator": {
-                "type": "and"
-              },
-              "query": {
-                "params": [
-                  "F"
-                ]
-              },
-              "reducer": {
-                "params": [],
-                "type": "last"
-              },
-              "type": "query"
-            }
-          ],
           "datasource": {
             "type": "__expr__",
             "uid": "__expr__"
@@ -666,12 +577,12 @@
           "intervalMs": 1000,
           "maxDataPoints": 43200,
           "reducer": "last",
-          "refId": "F",
+          "refId": "B",
           "type": "reduce"
         }
       },
       {
-        "refId": "G",
+        "refId": "C",
         "relativeTimeRange": {
           "from": 0,
           "to": 0
@@ -682,16 +593,16 @@
             {
               "evaluator": {
                 "params": [
-                  85
+                  30
                 ],
-                "type": "gt"
+                "type": "lt"
               },
               "operator": {
                 "type": "and"
               },
               "query": {
                 "params": [
-                  "G"
+                  "C"
                 ]
               },
               "reducer": {
@@ -705,26 +616,24 @@
             "type": "__expr__",
             "uid": "__expr__"
           },
-          "expression": "F",
+          "expression": "B",
           "intervalMs": 1000,
           "maxDataPoints": 43200,
-          "refId": "G",
+          "refId": "C",
           "type": "threshold"
         }
       }
     ],
-    "dashboardUid": "rYdddlPWk",
-    "panelId": 158,
-    "noDataState": "NoData",
+    "noDataState": "OK",
     "execErrState": "Error",
     "for": "5m",
     "annotations": {
-      "__dashboardUid__": "rYdddlPWk",
-      "__panelId__": "158"
+      "summary": "UPS battery is low",
+      "description": "A UPS battery is below 30 percent for 5 minutes."
     },
     "labels": {
-      "category": "node",
-      "host": "zanoza"
+      "severity": "critical",
+      "category": "ups"
     },
     "isPaused": false,
     "notification_settings": {

@@ -177,7 +177,12 @@ in
                     {
                       orgId = 1;
                       receiver = "default-alerts";
-                      group_by = [ "alertname" ];
+                      group_by = [
+                        "severity"
+                        "category"
+                        "host"
+                        "alertname"
+                      ];
                     }
                   ];
                 };

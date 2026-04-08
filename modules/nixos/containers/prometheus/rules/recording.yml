@@ -1,0 +1,37 @@
+groups:
+  - name: node-recording
+    rules:
+      - record: node:cpu_utilisation:avg5m
+        expr: 100 * (1 - avg by (host, role, site) (rate(node_cpu_seconds_total{job="node", mode="idle"}[5m])))
+
+      - record: node:memory_utilisation:ratio
+        expr: |
+          1 - (
+            node_memory_MemAvailable_bytes{job="node"}
+            /
+            node_memory_MemTotal_bytes{job="node"}
+          )
+
+      - record: node:filesystem_utilisation:ratio
+        expr: |
+          1 - (
+            node_filesystem_avail_bytes{job="node", fstype!="", mountpoint!="", device!~"rootfs|tmpfs"}
+            /
+            node_filesystem_size_bytes{job="node", fstype!="", mountpoint!="", device!~"rootfs|tmpfs"}
+          )
+
+  - name: storage-recording
+    rules:
+      - record: smartctl:device_temperature:max
+        expr: max by (host, role, site, device) (smartctl_device_temperature{job="smartctl", temperature_type="current"})
+
+      - record: smartctl:device_failed:bool
+        expr: max by (host, role, site, device) (1 - smartctl_device_smart_status{job="smartctl"})
+
+      - record: zfs:zpool_state:bool
+        expr: max by (host, role, site, zpool, state) (node_zfs_zpool_state{job="node"})
+
+  - name: monitoring-recording
+    rules:
+      - record: prometheus:target_down:count
+        expr: count by (job) (up == 0)

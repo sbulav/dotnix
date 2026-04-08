@@ -1,0 +1,113 @@
+groups:
+  - name: infrastructure-alerts
+    rules:
+      - alert: InstanceDown
+        expr: up == 0
+        for: 5m
+        labels:
+          severity: critical
+          category: monitoring
+        annotations:
+          summary: "{{ $labels.host }} is down"
+          description: "Prometheus cannot scrape job {{ $labels.job }} on {{ $labels.host }} for 5 minutes."
+          runbook_url: "https://prometheus.io/docs/prometheus/latest/configuration/alerting_rules/"
+
+      - alert: FilesystemUsageHigh
+        expr: node:filesystem_utilisation:ratio > 0.85
+        for: 15m
+        labels:
+          severity: warning
+          category: storage
+        annotations:
+          summary: "Filesystem usage is high on {{ $labels.host }}"
+          description: "{{ $labels.mountpoint }} on {{ $labels.host }} is above 85% for 15 minutes."
+
+      - alert: FilesystemUsageCritical
+        expr: node:filesystem_utilisation:ratio > 0.95
+        for: 10m
+        labels:
+          severity: critical
+          category: storage
+        annotations:
+          summary: "Filesystem usage is critical on {{ $labels.host }}"
+          description: "{{ $labels.mountpoint }} on {{ $labels.host }} is above 95% for 10 minutes."
+
+      - alert: HostMemoryPressure
+        expr: node:memory_utilisation:ratio > 0.90
+        for: 15m
+        labels:
+          severity: warning
+          category: node
+        annotations:
+          summary: "Memory pressure on {{ $labels.host }}"
+          description: "Memory utilisation on {{ $labels.host }} is above 90% for 15 minutes."
+
+      - alert: HostHighCpuLoad
+        expr: node:cpu_utilisation:avg5m > 90
+        for: 15m
+        labels:
+          severity: warning
+          category: node
+        annotations:
+          summary: "High CPU load on {{ $labels.host }}"
+          description: "CPU utilisation on {{ $labels.host }} is above 90% for 15 minutes."
+
+      - alert: HostHighTemperature
+        expr: max by (host, role, site, chip_name, sensor) (node_hwmon_temp_celsius{job="node"} * on(chip, host, role, site) group_left(chip_name) node_hwmon_chip_names{job="node"}) > 85
+        for: 5m
+        labels:
+          severity: critical
+          category: node
+        annotations:
+          summary: "Hardware temperature is critical on {{ $labels.host }}"
+          description: "Sensor {{ $labels.chip_name }} {{ $labels.sensor }} on {{ $labels.host }} is above 85C for 5 minutes."
+
+      - alert: SmartctlFailing
+        expr: smartctl:device_failed:bool > 0
+        for: 5m
+        labels:
+          severity: critical
+          category: storage
+        annotations:
+          summary: "SMART check failed on {{ $labels.host }}"
+          description: "Device {{ $labels.device }} on {{ $labels.host }} reports SMART failure."
+
+      - alert: SmartctlTemperatureHigh
+        expr: smartctl:device_temperature:max > 65
+        for: 10m
+        labels:
+          severity: warning
+          category: storage
+        annotations:
+          summary: "Disk temperature is high on {{ $labels.host }}"
+          description: "Device {{ $labels.device }} on {{ $labels.host }} is above 65C for 10 minutes."
+
+      - alert: ZpoolNotHealthy
+        expr: max by (host, role, site, zpool) (node_zfs_zpool_state{job="node", state!="online"}) == 1
+        for: 5m
+        labels:
+          severity: critical
+          category: zfs
+        annotations:
+          summary: "ZFS pool is not healthy on {{ $labels.host }}"
+          description: "Pool {{ $labels.zpool }} on {{ $labels.host }} is not online."
+
+      - alert: UpsOnBattery
+        expr: nut_ups_status{job="nut", status="OB"} == 1
+        for: 2m
+        labels:
+          severity: warning
+          category: ups
+        annotations:
+          summary: "UPS is running on battery on {{ $labels.host }}"
+          description: "UPS {{ $labels.ups }} on {{ $labels.host }} has been on battery for at least 2 minutes."
+
+      - alert: UpsBatteryLow
+        expr: nut_battery_charge{job="nut"} < 30
+        for: 5m
+        labels:
+          severity: critical
+          category: ups
+        annotations:
+          summary: "UPS battery is low on {{ $labels.host }}"
+          description: "UPS {{ $labels.ups }} on {{ $labels.host }} is below 30% charge."

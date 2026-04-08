@@ -6,41 +6,56 @@ templates:
     name: alert_list
     template: |
       {{ define "alert_list" }}
-        {{ if gt (len .Alerts.Firing) 0 }}
-          {{ len .Alerts.Firing }} firing:
-          {{ range .Alerts.Firing }} {{ template "alert_template" .}} {{ end }}
-        {{ end }}
-        {{ if gt (len .Alerts.Resolved) 0 }}
-          {{ len .Alerts.Resolved }} resolved:
-          {{ range .Alerts.Resolved }} {{ template "alert_template" .}} {{ end }}
-        {{ end }}
+      {{ if gt (len .Alerts.Firing) 0 }}
+      {{ len .Alerts.Firing }} firing:
+      {{ range .Alerts.Firing }}{{ template "alert_template" . }}{{ end }}
+      {{ end }}
+      {{ if gt (len .Alerts.Resolved) 0 }}
+      {{ len .Alerts.Resolved }} resolved:
+      {{ range .Alerts.Resolved }}{{ template "alert_template" . }}{{ end }}
+      {{ end }}
       {{ end }}
 
-
       {{ define "alert_template" }}
-        {{ if eq .Status "firing" }}🟥{{ else }}🟩{{ end }} {{ .Labels.grafana_folder }} - <b>{{ .Labels.alertname }}</b>
-        <b>Metric:</b> {{ .Values.B }}
+      {{ if eq .Status "firing" }}🟥{{ else }}🟩{{ end }} <b>{{ .Labels.alertname }}</b>
+      {{- if .Labels.severity }} [{{ .Labels.severity }}]{{ end }}
+      {{- if .Labels.category }} [{{ .Labels.category }}]{{ end }}
+      {{- if .Labels.grafana_folder }}
+      <b>Folder:</b> {{ .Labels.grafana_folder }}
+      {{- end }}
+      {{- if .Annotations.summary }}
+      <b>Summary:</b> {{ .Annotations.summary }}
+      {{- end }}
+      {{- if .Annotations.description }}
+      <b>Description:</b> {{ .Annotations.description }}
+      {{- end }}
+      {{- if .Labels.host }}
+      <b>Host:</b> {{ .Labels.host }}
+      {{- end }}
+      {{- if .Labels.job }}
+      <b>Job:</b> {{ .Labels.job }}
+      {{- end }}
+      {{- if .Labels.device }}
+      <b>Device:</b> {{ .Labels.device }}
+      {{- end }}
+      {{- if .Labels.mountpoint }}
+      <b>Mountpoint:</b> {{ .Labels.mountpoint }}
+      {{- end }}
+      {{- if .Labels.zpool }}
+      <b>Zpool:</b> {{ .Labels.zpool }}
+      {{- end }}
+      {{- if .Labels.ups }}
+      <b>UPS:</b> {{ .Labels.ups }}
+      {{- end }}
+      {{- if .Values.B }}
+      <b>Value:</b> {{ .Values.B }}
+      {{- else if .Values.A }}
+      <b>Value:</b> {{ .Values.A }}
+      {{- else if .Values.C }}
+      <b>Value:</b> {{ .Values.C }}
+      {{- end }}
+      {{- if .Annotations.runbook_url }}
+      <b>Runbook:</b> {{ .Annotations.runbook_url }}
+      {{- end }}
 
-        {{- if .Labels.host }}
-        <b>Host:</b> {{ .Labels.host }}
-        {{- end }}
-        {{- if .Labels.devicename }}
-        <b>Device name:</b> {{ .Labels.devicename }}
-        {{- end }}
-        {{- if .Labels.device }}
-        <b>Device:</b> {{ .Labels.device }}
-        {{- end }}
-        {{- if .Labels.path }}
-        <b>Path:</b> {{ .Labels.path }}
-        {{- end }}
-        {{- if .Labels.location }}
-        <b>Location:</b> {{ .Labels.location }}
-        {{- end }}
-
-        {{- if gt (len .Annotations) 0 }}
-        <b>Annotations:</b>
-        {{- range .Annotations.SortedPairs }}
-          {{ .Name }}: {{ .Value }}
-        {{- end }}
-        {{- end }}
       {{ end }}
