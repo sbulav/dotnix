@@ -30,86 +30,111 @@ let
     {
       jobName,
       metricsPath ? null,
-      targets,
-      labels ? { },
+      staticConfigs,
     }:
     {
       job_name = jobName;
-      static_configs = [
-        {
-          inherit targets labels;
-        }
-      ];
+      static_configs = staticConfigs;
     }
     // optionalAttrs (metricsPath != null) {
       metrics_path = metricsPath;
     };
 
-  localScrapeConfigs =
-    if currentHost != null then
-      (optional currentHost.exporters.node.enable (mkScrapeConfig {
-        jobName = "node";
-        targets = [ "127.0.0.1:${toString currentHost.exporters.node.port}" ];
-        labels = mkTargetLabels hostName currentHost;
-      }))
-      ++ (optional currentHost.exporters.smartctl.enable (mkScrapeConfig {
-        jobName = "smartctl";
-        targets = [ "127.0.0.1:${toString currentHost.exporters.smartctl.port}" ];
-        labels = mkTargetLabels hostName currentHost;
-      }))
-      ++ (optional currentHost.exporters.nut.enable (mkScrapeConfig {
-        jobName = "nut";
-        metricsPath = currentHost.exporters.nut.metricsPath;
-        targets = [ "127.0.0.1:${toString currentHost.exporters.nut.port}" ];
-        labels = mkTargetLabels hostName currentHost;
-      }))
-      ++ (optional config.${namespace}.containers.authelia.enable (mkScrapeConfig {
-        jobName = "authelia";
-        targets = [ "${config.${namespace}.containers.authelia.localAddress}:9959" ];
-        labels = mkTargetLabels hostName currentHost;
-      }))
-    else
-      [
-        (mkScrapeConfig {
-          jobName = "node";
-          targets = [ "127.0.0.1:3021" ];
-        })
-        (mkScrapeConfig {
-          jobName = "smartctl";
-          targets = [ "127.0.0.1:9633" ];
-        })
-      ]
-      ++ optional config.${namespace}.containers.ups.enable (mkScrapeConfig {
-        jobName = "nut";
-        metricsPath = "/ups_metrics";
-        targets = [ "127.0.0.1:9199" ];
-      })
-      ++ optional config.${namespace}.containers.authelia.enable (mkScrapeConfig {
-        jobName = "authelia";
-        targets = [ "${config.${namespace}.containers.authelia.localAddress}:9959" ];
-      });
+  mkStaticConfig =
+    {
+      targets,
+      labels ? { },
+    }:
+    {
+      inherit targets labels;
+    };
 
-  remoteScrapeConfigs = flatten (
-    mapAttrsToList (
-      name: hostCfg:
-      (optional hostCfg.exporters.node.enable (mkScrapeConfig {
-        jobName = "node";
-        targets = [ "${hostCfg.address}:${toString hostCfg.exporters.node.port}" ];
-        labels = mkTargetLabels name hostCfg;
-      }))
-      ++ (optional hostCfg.exporters.smartctl.enable (mkScrapeConfig {
-        jobName = "smartctl";
-        targets = [ "${hostCfg.address}:${toString hostCfg.exporters.smartctl.port}" ];
-        labels = mkTargetLabels name hostCfg;
-      }))
-      ++ (optional hostCfg.exporters.nut.enable (mkScrapeConfig {
-        jobName = "nut";
-        metricsPath = hostCfg.exporters.nut.metricsPath;
-        targets = [ "${hostCfg.address}:${toString hostCfg.exporters.nut.port}" ];
-        labels = mkTargetLabels name hostCfg;
-      }))
-    ) remoteHosts
-  );
+  mkInventoryStaticConfigs =
+    exporterName:
+    flatten (
+      mapAttrsToList (
+        name: hostCfg:
+        optional hostCfg.exporters.${exporterName}.enable (mkStaticConfig {
+          targets = [ "${hostCfg.address}:${toString hostCfg.exporters.${exporterName}.port}" ];
+          labels = mkTargetLabels name hostCfg;
+        })
+      ) remoteHosts
+    );
+
+  nodeStaticConfigs =
+    (
+      if currentHost != null && currentHost.exporters.node.enable then
+        [
+          (mkStaticConfig {
+            targets = [ "127.0.0.1:${toString currentHost.exporters.node.port}" ];
+            labels = mkTargetLabels hostName currentHost;
+          })
+        ]
+      else
+        [
+          (mkStaticConfig {
+            targets = [ "127.0.0.1:3021" ];
+          })
+        ]
+    )
+    ++ mkInventoryStaticConfigs "node";
+
+  smartctlStaticConfigs =
+    (
+      if currentHost != null && currentHost.exporters.smartctl.enable then
+        [
+          (mkStaticConfig {
+            targets = [ "127.0.0.1:${toString currentHost.exporters.smartctl.port}" ];
+            labels = mkTargetLabels hostName currentHost;
+          })
+        ]
+      else
+        [
+          (mkStaticConfig {
+            targets = [ "127.0.0.1:9633" ];
+          })
+        ]
+    )
+    ++ mkInventoryStaticConfigs "smartctl";
+
+  nutStaticConfigs =
+    (
+      if currentHost != null then
+        optional currentHost.exporters.nut.enable (mkStaticConfig {
+          targets = [ "127.0.0.1:${toString currentHost.exporters.nut.port}" ];
+          labels = mkTargetLabels hostName currentHost;
+        })
+      else
+        optional config.${namespace}.containers.ups.enable (mkStaticConfig {
+          targets = [ "127.0.0.1:9199" ];
+        })
+    )
+    ++ mkInventoryStaticConfigs "nut";
+
+  autheliaStaticConfigs = optional config.${namespace}.containers.authelia.enable (mkStaticConfig {
+    targets = [ "${config.${namespace}.containers.authelia.localAddress}:9959" ];
+    labels = optionalAttrs (currentHost != null) (mkTargetLabels hostName currentHost);
+  });
+
+  localScrapeConfigs = [
+    (mkScrapeConfig {
+      jobName = "node";
+      staticConfigs = nodeStaticConfigs;
+    })
+    (mkScrapeConfig {
+      jobName = "smartctl";
+      staticConfigs = smartctlStaticConfigs;
+    })
+  ]
+  ++ optional (nutStaticConfigs != [ ]) (mkScrapeConfig {
+    jobName = "nut";
+    metricsPath = if currentHost != null then currentHost.exporters.nut.metricsPath else "/ups_metrics";
+    staticConfigs = nutStaticConfigs;
+  })
+  ++ optional (autheliaStaticConfigs != [ ]) (mkScrapeConfig {
+    jobName = "authelia";
+    staticConfigs = autheliaStaticConfigs;
+  });
 in
 {
   options.${namespace}.containers.prometheus = with types; {
@@ -199,7 +224,7 @@ in
       };
 
       # Ingest the published nodes
-      scrapeConfigs = localScrapeConfigs ++ remoteScrapeConfigs;
+      scrapeConfigs = localScrapeConfigs;
     };
   };
 }
