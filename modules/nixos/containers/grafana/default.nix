@@ -209,6 +209,17 @@ in
               };
 
               datasources.settings = {
+                deleteDatasources = [
+                  {
+                    name = "Prometheus";
+                    orgId = 1;
+                  }
+                  {
+                    name = "Loki";
+                    orgId = 1;
+                  }
+                ];
+                prune = true;
                 datasources =
                   let
                     prometheus = {
