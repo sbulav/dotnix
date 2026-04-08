@@ -86,6 +86,45 @@ in
         "/dev/sdc"
         "/dev/sdd"
       ];
+      inventory = {
+        zanoza = {
+          address = "127.0.0.1";
+          role = "server";
+          labels.site = "homelab";
+          exporters = {
+            node = {
+              enable = true;
+              port = 3021;
+            };
+            smartctl = {
+              enable = true;
+              port = 9633;
+            };
+            nut = {
+              enable = true;
+              port = 9199;
+            };
+          };
+        };
+        beez = {
+          address = "beez";
+          role = "server";
+          labels.site = "homelab";
+          exporters = {
+            node.enable = true;
+            smartctl.enable = true;
+          };
+        };
+        mz = {
+          address = "mz";
+          role = "desktop";
+          labels.site = "homelab";
+          exporters = {
+            node.enable = true;
+            smartctl.enable = true;
+          };
+        };
+      };
     };
     msmtp = {
       enable = true;
@@ -194,39 +233,6 @@ in
       secret_file = "secrets/zanoza/default.yaml";
     }; # }}}
   };
-
-  services.prometheus.scrapeConfigs = [
-    {
-      job_name = "beez";
-      static_configs = [
-        {
-          targets = [
-            "beez:9100"
-            "beez:9633"
-          ];
-          labels = {
-            instance = "beez";
-            role = "server";
-          };
-        }
-      ];
-    }
-    {
-      job_name = "mz";
-      static_configs = [
-        {
-          targets = [
-            "mz:9100"
-            "mz:9633"
-          ];
-          labels = {
-            instance = "mz";
-            role = "desktop";
-          };
-        }
-      ];
-    }
-  ];
 
   environment.systemPackages = with pkgs; [
     nixd # LSP for nix
