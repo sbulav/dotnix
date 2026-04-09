@@ -270,6 +270,18 @@ in
                     orgId = 1;
                   };
 
+                  patchedLokiDashboard =
+                    name: url: hash:
+                    pkgs.writeText name (
+                      builtins.replaceStrings [ "P8E80F9AEF21F6940" ] [ "loki" ] (
+                        builtins.readFile (
+                          pkgs.fetchurl {
+                            inherit name url hash;
+                          }
+                        )
+                      )
+                    );
+
                   nodeExporterFull = {
                     name = "Node Exporter Full";
                     options.path = pkgs.fetchurl {
@@ -282,11 +294,8 @@ in
 
                   smartctlExporter = {
                     name = "Smartctl Exporter";
-                    options.path = pkgs.fetchurl {
-                      name = "smartctl-exporter-dashboard2.json";
-                      url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/smartctl/smartctl.json";
-                      hash = "sha256-B6cWUiGsM3dbx2BVUdnaqjYVQgTzd/y7DNm2Rq1Cvws=";
-                    };
+                    folder = "Infrastructure";
+                    options.path = ./dashboards/smartctl-exporter.json;
                     orgId = 1;
                   };
 
@@ -304,11 +313,11 @@ in
                       [
                         {
                           name = "Logs dashboard";
-                          options.path = pkgs.fetchurl {
-                            name = "logs-dashboard2.json";
-                            url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/monitoring/Logs-promtail.json";
-                            hash = "sha256-rBgTrpMWOphSOVXPHc7kayzuTy0PylPOzk50VSnRrRs=";
-                          };
+                          folder = "Logs";
+                          options.path =
+                            patchedLokiDashboard "logs-dashboard2.json"
+                              "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/monitoring/Logs-promtail.json"
+                              "sha256-rBgTrpMWOphSOVXPHc7kayzuTy0PylPOzk50VSnRrRs=";
                           orgId = 1;
                         }
                       ]
@@ -334,11 +343,11 @@ in
                       [
                         {
                           name = "Traefik via Loki dashboard";
-                          options.path = pkgs.fetchurl {
-                            name = "traefik-via-loki-dashboard2.json";
-                            url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/traefik/traefik-via-loki.json";
-                            hash = "sha256-jKXBG3PGYHwJVAkN44U7BmQ+KsHWE4KVAGllb3kt7g4=";
-                          };
+                          folder = "Logs";
+                          options.path =
+                            patchedLokiDashboard "traefik-via-loki-dashboard2.json"
+                              "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/traefik/traefik-via-loki.json"
+                              "sha256-jKXBG3PGYHwJVAkN44U7BmQ+KsHWE4KVAGllb3kt7g4=";
                           orgId = 1;
                         }
                       ]
@@ -349,11 +358,8 @@ in
                       [
                         {
                           name = "UPS info via NUT prometheus exporter";
-                          options.path = pkgs.fetchurl {
-                            name = "prometheus-nut-exporter2.json";
-                            url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/ups/prometheus-nut-exporter.json";
-                            hash = "sha256-quC1L5wv2iCcX5aorSFSDdp1napV69+FcPW+aQyqBtc=";
-                          };
+                          folder = "Infrastructure";
+                          options.path = ./dashboards/ups-overview.json;
                           orgId = 1;
                         }
                       ]
