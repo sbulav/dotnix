@@ -189,7 +189,6 @@ in
                 rules.settings =
                   let
                     rules = builtins.fromJSON (builtins.readFile ./alerting/rules.json);
-                    # ruleIds = map (r: r.uid) rules;
                   in
                   {
                     apiVersion = 1;
@@ -202,8 +201,17 @@ in
                         inherit rules;
                       }
                     ];
-                    # deleteRules seems to happen after creating the above rules, effectively rolling back
-                    # any updates.
+                    # Clean up old alert rules replaced by this rework.
+                    # Only list UIDs that are NOT in the current rules.json.
+                    deleteRules = map (uid: { orgId = 1; inherit uid; }) [
+                      "feaqoutpe914wa" # was: NODE - Devices missing
+                      "aeaje2nu3xh4wd" # was: SMART - disk errors
+                      "aeajokfuiswzke" # was: SMART - DISK temperature
+                      "deajp4o4hk3k0b" # was: SMART - status check failed
+                      "ceajpo02hmlmoa" # was: ZFS - zpool TANK offline
+                      "aeajr4vix5e68d" # was: NODE - disk usage above 80 percent
+                      "feajrd3x0wzk0b" # was: NODE - Hardware temperature critical
+                    ];
                   };
                 templates.path = ./alerting/templates.yaml;
               };
