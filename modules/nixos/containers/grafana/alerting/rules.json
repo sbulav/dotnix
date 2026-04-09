@@ -17,7 +17,7 @@
             "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "sum by(host, job) (up{job=~\"node|smartctl|nut|authelia\"} == 0)",
+          "expr": "up{host=\"beez\"}",
           "format": "time_series",
           "instant": true,
           "intervalMs": 1000,
@@ -58,9 +58,9 @@
             {
               "evaluator": {
                 "params": [
-                  0
+                  1
                 ],
-                "type": "gt"
+                "type": "lt"
               },
               "operator": {
                 "type": "and"
@@ -93,8 +93,8 @@
     "execErrState": "Error",
     "for": "5m",
     "annotations": {
-      "summary": "A monitored target is down",
-      "description": "Prometheus cannot scrape one of the core monitoring targets for 5 minutes."
+      "summary": "beez is down",
+      "description": "Prometheus cannot scrape beez for 5 minutes."
     },
     "labels": {
       "severity": "critical",
