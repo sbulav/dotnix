@@ -246,7 +246,6 @@ in
                   in
                   [ prometheus ] ++ loki;
               };
-              # TODO: add dashboard for UPS
               dashboards.settings.providers =
                 let
                   homelabOverview = {
@@ -258,14 +257,14 @@ in
 
                   scrapeHealth = {
                     name = "Scrape Health";
-                    folder = "Overview";
+                    folder = "Monitoring";
                     options.path = ./dashboards/scrape-health.json;
                     orgId = 1;
                   };
 
                   storageOverview = {
                     name = "Storage Overview";
-                    folder = "Infrastructure";
+                    folder = "Storage";
                     options.path = ./dashboards/storage-overview.json;
                     orgId = 1;
                   };
@@ -284,6 +283,7 @@ in
 
                   nodeExporterFull = {
                     name = "Node Exporter Full";
+                    folder = "Nodes";
                     options.path = pkgs.fetchurl {
                       name = "node-exporter-full-37-grafana-dashboard.json";
                       url = "https://grafana.com/api/dashboards/1860/revisions/37/download";
@@ -294,13 +294,14 @@ in
 
                   smartctlExporter = {
                     name = "Smartctl Exporter";
-                    folder = "Infrastructure";
+                    folder = "Storage";
                     options.path = ./dashboards/smartctl-exporter.json;
                     orgId = 1;
                   };
 
                   zfsStats = {
                     name = "ZFS stats";
+                    folder = "Storage";
                     options.path = pkgs.fetchurl {
                       name = "zfs-stats2.json";
                       url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/zfs/zfs-stats.json";
@@ -328,6 +329,7 @@ in
                       [
                         {
                           name = "Authelia dashboard";
+                          folder = "Security";
                           options.path = pkgs.fetchurl {
                             name = "authelia-dashboard.json";
                             url = "https://raw.githubusercontent.com/authelia/authelia/refs/heads/master/examples/grafana-dashboards/simple.json";

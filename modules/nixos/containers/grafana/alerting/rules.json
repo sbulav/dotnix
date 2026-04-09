@@ -10,11 +10,11 @@
           "from": 300,
           "to": 0
         },
-        "datasourceUid": "PBFA97CFB590B2093",
+        "datasourceUid": "prometheus",
         "model": {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "prometheus"
           },
           "editorMode": "code",
           "expr": "sum by(host, job) (up{job=~\"node|smartctl|nut|authelia\"} == 0)",
@@ -116,14 +116,14 @@
           "from": 900,
           "to": 0
         },
-        "datasourceUid": "PBFA97CFB590B2093",
+        "datasourceUid": "prometheus",
         "model": {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "100 * (1 - (node_filesystem_avail_bytes{job=\"node\", fstype!=\"\", mountpoint!=\"\", device!~\"rootfs|tmpfs\"} / node_filesystem_size_bytes{job=\"node\", fstype!=\"\", mountpoint!=\"\", device!~\"rootfs|tmpfs\"}))",
+          "expr": "node:filesystem_utilisation:ratio",
           "format": "time_series",
           "instant": true,
           "legendFormat": "{{host}} {{mountpoint}}",
@@ -165,7 +165,7 @@
             {
               "evaluator": {
                 "params": [
-                  85
+                  0.85
                 ],
                 "type": "gt"
               },
@@ -223,14 +223,14 @@
           "from": 600,
           "to": 0
         },
-        "datasourceUid": "PBFA97CFB590B2093",
+        "datasourceUid": "prometheus",
         "model": {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "max by(host, device) (1 - smartctl_device_smart_status{job=\"smartctl\"})",
+          "expr": "smartctl:device_failed:bool",
           "format": "time_series",
           "instant": true,
           "legendFormat": "{{host}} {{device}}",
@@ -330,14 +330,14 @@
           "from": 600,
           "to": 0
         },
-        "datasourceUid": "PBFA97CFB590B2093",
+        "datasourceUid": "prometheus",
         "model": {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "prometheus"
           },
           "editorMode": "code",
-          "expr": "max by(host, device) (smartctl_device_temperature{job=\"smartctl\", temperature_type=\"current\"})",
+          "expr": "smartctl:device_temperature:max",
           "format": "time_series",
           "instant": true,
           "legendFormat": "{{host}} {{device}}",
@@ -437,11 +437,11 @@
           "from": 600,
           "to": 0
         },
-        "datasourceUid": "PBFA97CFB590B2093",
+        "datasourceUid": "prometheus",
         "model": {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "prometheus"
           },
           "editorMode": "code",
           "expr": "max by(host, zpool) (node_zfs_zpool_state{job=\"node\", state!=\"online\"})",
@@ -544,11 +544,11 @@
           "from": 600,
           "to": 0
         },
-        "datasourceUid": "PBFA97CFB590B2093",
+        "datasourceUid": "prometheus",
         "model": {
           "datasource": {
             "type": "prometheus",
-            "uid": "PBFA97CFB590B2093"
+            "uid": "prometheus"
           },
           "editorMode": "code",
           "expr": "min by(host, ups) (nut_battery_charge{job=\"nut\"})",

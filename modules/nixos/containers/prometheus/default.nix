@@ -74,6 +74,7 @@ let
         [
           (mkStaticConfig {
             targets = [ "127.0.0.1:3021" ];
+            labels = { host = hostName; };
           })
         ]
     )
@@ -92,6 +93,7 @@ let
         [
           (mkStaticConfig {
             targets = [ "127.0.0.1:9633" ];
+            labels = { host = hostName; };
           })
         ]
     )
@@ -198,7 +200,6 @@ in
       retentionTime = cfg.retentionTime;
       ruleFiles = [
         ./rules/recording.yml
-        ./rules/alerts.yml
       ];
       globalConfig = {
         scrape_interval = cfg.scrapeInterval;
@@ -219,7 +220,7 @@ in
           devices = cfg.smartctl_devices;
         };
         nut = {
-          enable = true;
+          enable = (currentHost != null && currentHost.exporters.nut.enable) || config.${namespace}.containers.ups.enable;
         };
       };
 
