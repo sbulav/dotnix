@@ -505,6 +505,9 @@ in
         package = pkgs.nix-serve-ng;
       };
 
+      # Determinate Nix ignores extra-allowed-users; explicitly allow nix-serve user
+      nix.settings.allowed-users = [ "nix-serve" ];
+
       # Firewall: LAN-only access
       networking.firewall = {
         allowedTCPPorts = [ cfg.cacheServer.port ];
