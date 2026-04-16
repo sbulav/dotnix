@@ -119,15 +119,15 @@
   };
 
   "hhdev-glm5-fp8" = {
-    name = "GLM-5 FP8";
+    name = "GLM-5.1 FP8";
     npm = "@ai-sdk/openai-compatible";
     options = {
       baseURL = "https://llm-gateway.pyn.ru/proxy/glm5-fp8/v1";
       apiKey = "{env:OPENAI_API_PYN_KEY}";
     };
     models = {
-      "zai-org/GLM-5-FP8" = {
-        name = "GLM-5 FP8";
+      "zai-org/GLM-5.1-FP8" = {
+        name = "GLM-5.1 FP8";
       };
       # limit = {
       #   context = 8000;
