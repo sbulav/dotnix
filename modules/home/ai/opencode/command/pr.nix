@@ -1,7 +1,7 @@
 {
   description = "Создать PR в Forgejo из текущей ветки с кратким русским описанием (использует @pr-creator с tea CLI)";
   agent = "pr-creator";
-  model = "hhdev-glm5-fp8/zai-org/GLM-5-FP8";
+  model = "hhdev-glm5-fp8/zai-org/GLM-5.1-FP8";
 
   requirements = ''
     Создай Pull Request в Forgejo из текущей локальной ветки, используя tea CLI.

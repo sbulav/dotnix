@@ -1,7 +1,7 @@
 {
   description = "Draft (and optionally apply) a Conventional Commit for staged changes";
   agent = "committer";
-  model = "hhdev-glm5-fp8/zai-org/GLM-5-FP8";
+  model = "hhdev-glm5-fp8/zai-org/GLM-5.1-FP8";
 
   context = ''
     Staged summary:

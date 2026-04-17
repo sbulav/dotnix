@@ -2,7 +2,7 @@
   name = "doc-writer";
   description = "Documentation specialist for writing READMEs, API docs, guides, and technical documentation. Use when working on documentation where an isolated context is beneficial. Loads technical-writer and humanizer skills to ensure documentation quality.";
   mode = "primary";
-  model = "hhdev-glm5-fp8/zai-org/GLM-5-FP8";
+  model = "hhdev-glm5-fp8/zai-org/GLM-5.1-FP8";
   temperature = 0.1;
 
   tools = {

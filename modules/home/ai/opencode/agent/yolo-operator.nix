@@ -2,7 +2,7 @@
   name = "yolo-operator";
   description = "YOLO Agent — full autonomy Kubernetes operator developer. All permissions granted. Default agent for building K8s operators, controllers, and cloud-native infrastructure.";
   mode = "primary";
-  model = "hhdev-glm5-fp8/zai-org/GLM-5-FP8";
+  model = "hhdev-glm5-fp8/zai-org/GLM-5.1-FP8";
   temperature = 0.1;
 
   tools = {

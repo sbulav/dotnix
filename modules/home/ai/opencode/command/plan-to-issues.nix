@@ -4,7 +4,7 @@ in
 {
   description = workflow.description;
   agent = "plan-to-issues-orchestrator";
-  model = "hhdev-glm5-fp8/zai-org/GLM-5-FP8";
+  model = "hhdev-glm5-fp8/zai-org/GLM-5.1-FP8";
 
   requirements = ''
     Break a planned Forgejo issue into vertical-slice sub-issues.

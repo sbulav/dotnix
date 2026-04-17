@@ -1,7 +1,7 @@
 {
   description = "Forgejo issue handoff helper. Creates and reads append-only AI-HANDOFF comments for the current repo.";
   mode = "subagent";
-  model = "hhdev-glm5-fp8/zai-org/GLM-5-FP8";
+  model = "hhdev-glm5-fp8/zai-org/GLM-5.1-FP8";
   temperature = 0.1;
 
   tools = {
