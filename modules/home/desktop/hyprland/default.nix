@@ -25,8 +25,25 @@ let
       ws:
       let
         apps = assignments.${ws};
+        mkRule =
+          app:
+          let
+            parts = lib.splitString ":" app;
+            hasField =
+              builtins.length parts > 1
+              && builtins.elem (builtins.elemAt parts 0) [
+                "title"
+                "initialTitle"
+                "initialClass"
+              ];
+            field = if hasField then builtins.elemAt parts 0 else "class";
+            pattern = if hasField then lib.concatStringsSep ":" (builtins.tail parts) else app;
+            isTitleLike = field == "title" || field == "initialTitle";
+            regex = if isTitleLike then "^(.*${pattern}.*)$" else "^(${pattern})$";
+          in
+          "windowrulev2 = workspace ${ws} silent, ${field}:${regex}";
       in
-      concatMapStringsSep "\n" (app: "windowrulev2 = workspace ${ws} silent, class:^(${app})$") apps
+      concatMapStringsSep "\n" mkRule apps
     ) (builtins.attrNames assignments);
 
   mkWorkspaceMonitorBindings = bindings: mapAttrsToList (ws: mon: "${ws},monitor:${mon}") bindings;
@@ -139,7 +156,7 @@ in
         "6" = [ "virt-manager" ];
         "7" = [
           "Slack"
-          "obsidian"
+          "initialTitle:obsidian - Obsidian"
           "ktalk"
         ];
       } "Workspace to application class mappings";
