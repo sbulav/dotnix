@@ -374,7 +374,7 @@ let
   # Proxy wrapper - programs.claude-code will wrap this again for --mcp-config
   claudeWithProxy = pkgs.symlinkJoin {
     name = "claude-code";
-    paths = [ pkgs.unstable.claude-code ];
+    paths = [ pkgs.unstable.claude-code pkgs.sox ];
     nativeBuildInputs = [ pkgs.makeWrapper ];
     postBuild = ''
       wrapProgram $out/bin/claude \

@@ -23,7 +23,7 @@
      - Ask before `git commit`.
      - Ask before `tea pulls create`.
      - Never push automatically.
-     - Use `tea comment <issue-number> -R origin <body>` for handoff comments.
+     - Use `tea comment -R <forgejo-remote> <issue-number> $'...'` for handoff comments.
      - Never use `tea issue comment`, `tea api`, or `python3` for normal Forgejo workflow.
 
      Steps:

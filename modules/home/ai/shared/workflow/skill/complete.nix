@@ -19,7 +19,7 @@
      - Ask before closing a milestone.
      - Ask before deleting branches.
      - If delivery is partial, keep the issue open and post a fresh handoff instead.
-     - Use `tea comment <issue-number> -R origin <body>` for final handoff comments.
+     - Use `tea comment -R <forgejo-remote> <issue-number> $'...'` for final handoff comments.
      - Never use `tea issue comment`, `tea api`, or `python3` for normal Forgejo workflow.
 
      Steps:

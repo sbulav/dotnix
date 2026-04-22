@@ -25,7 +25,7 @@
      - Ask before creating or updating the issue.
      - Ask before switching branches.
      - When listing issues, only query the current repo via `tea` from the current working tree.
-     - Use `tea comment <issue-number> -R origin <body>` for handoff comments.
+     - Use `tea comment -R <forgejo-remote> <issue-number> $'...'` for handoff comments.
      - Never use `tea issue comment`, `tea api`, or `python3` for normal Forgejo workflow.
      - If a Jira key appears, enrich with a narrow query only. Never run a broad Jira search.
 

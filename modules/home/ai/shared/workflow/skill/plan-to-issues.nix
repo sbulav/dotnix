@@ -23,7 +23,7 @@
      - Ask one confirmation before creating all sub-issues.
      - Never create issues without user confirmation.
      - Use `tea` for issue creation.
-     - Use `tea comment <issue-number> -R origin <body>` for handoff comments.
+     - Use `tea comment -R <forgejo-remote> <issue-number> $'...'` for handoff comments.
      - Never use `tea issue comment`, `tea api`, or `python3` for normal Forgejo workflow.
      - If runtime mode or permissions block writes, do not probe tokens, `curl`, config files, or API auth. State that posting is blocked and return the exact bodies for the user to post manually.
      - For `tea comment`, prefer a single safely quoted argument such as `$'...'`; avoid heredocs, command substitution, or backgrounded comment commands.
@@ -31,8 +31,8 @@
 
     Workflow:
     1. Resolve parent issue from `$ARGUMENTS` or current branch.
-    2. Fetch parent issue with `tea issues <issue-number> -R origin`.
-    3. Fetch comments with `tea issues <issue-number> -R origin --comments -o json`.
+    2. Fetch parent issue with `tea issues -R <forgejo-remote> <issue-number>`.
+    3. Fetch comments with `tea issues -R <forgejo-remote> --comments -o json <issue-number>`.
     4. Extract the latest AI-HANDOFF and read the parent issue body.
     5. Explore the codebase to find existing patterns, validate assumptions, and identify integration points.
     6. Propose vertical slices. Each slice should be:

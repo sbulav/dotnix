@@ -34,8 +34,8 @@
 
      Steps:
      1. Resolve the issue number from `$ARGUMENTS`, or infer it from the current branch if unambiguous.
-     2. Fetch the issue for this repo only with `tea issues <issue-number> -R origin`.
-     3. Try to fetch comments with `tea issues <issue-number> -R origin --comments -o json`.
+     2. Fetch the issue for this repo only with `tea issues -R <forgejo-remote> <issue-number>`.
+     3. Try to fetch comments with `tea issues -R <forgejo-remote> --comments -o json <issue-number>`.
      4. Extract the latest handoff comment if present.
         - Prefer the exact `<!-- AI-HANDOFF -->` marker when available.
         - If JSON comments are unavailable, fall back to rendered `tea issues --comments` output and use the visible `**AI-HANDOFF**` heading plus the adjacent status block.
