@@ -108,7 +108,7 @@ in
     };
     tools = {
       direnv = disabled;
-      gh = disabled;
+      gh = enabled;
       git = {
         enable = true;
         enableSigning = true;
