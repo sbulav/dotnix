@@ -16,9 +16,26 @@ let
   cfg = config.custom.apps.whisper-dictation;
 
   socketPath = cfg.ydotoolSocketPath;
-  daemonExec = "${cfg.package}/bin/whisper-dictation --language ${cfg.language}${
-    optionalString (cfg.model != "") " --model ${cfg.model}"
-  }";
+
+  # Scoped CUDA build: only the C++ ctranslate2 rebuilds against CUDA.
+  # Everything else keeps its cached, CPU-only binary.
+  ct2cppCuda = pkgs.unstable.ctranslate2.override { withCUDA = true; };
+
+  python = pkgs.unstable.python312;
+  pythonEnv = python.withPackages (
+    ps: with ps; [
+      (faster-whisper.override {
+        ctranslate2 = ctranslate2.override { ctranslate2-cpp = ct2cppCuda; };
+      })
+      evdev
+      pygobject3
+      pyaudio
+      numpy
+      scipy
+      pyyaml
+    ]
+  );
+
   giTypelibPath = lib.concatStringsSep ":" [
     "${getOutput "out" pkgs.harfbuzz}/lib/girepository-1.0"
     "${getOutput "out" pkgs.pango}/lib/girepository-1.0"
@@ -27,127 +44,93 @@ let
     "${getOutput "out" pkgs.graphene}/lib/girepository-1.0"
     "${getOutput "out" pkgs.gtk4}/lib/girepository-1.0"
     "${getOutput "out" pkgs.glib}/lib/girepository-1.0"
+    "${pkgs.gobject-introspection}/lib/girepository-1.0"
   ];
+
+  whisper-dictation = pkgs.stdenv.mkDerivation {
+    pname = "whisper-dictation";
+    version = "0.1.0-faster-whisper";
+    src = inputs.whisper-dictation;
+
+    nativeBuildInputs = [ pkgs.makeWrapper ];
+
+    buildInputs = [
+      pythonEnv
+      pkgs.ffmpeg
+      pkgs.ydotool
+      pkgs.libnotify
+      pkgs.gtk4
+      pkgs.gobject-introspection
+    ];
+
+    postPatch = ''
+      cp ${./transcriber.py} src/whisper_dictation/transcriber.py
+      cp ${./paste.py} src/whisper_dictation/paste.py
+    '';
+
+    dontBuild = true;
+
+    installPhase = ''
+      runHook preInstall
+
+      mkdir -p $out/bin $out/lib/whisper-dictation
+      cp -r src/whisper_dictation $out/lib/whisper-dictation/
+
+      makeWrapper ${pythonEnv}/bin/python3 $out/bin/whisper-dictation \
+        --add-flags "-m whisper_dictation" \
+        --set PYTHONPATH "$out/lib/whisper-dictation" \
+        --prefix PATH : ${
+          lib.makeBinPath [
+            pkgs.ffmpeg
+            pkgs.ydotool
+            pkgs.libnotify
+            pkgs.wl-clipboard
+            pkgs.wtype
+            pkgs.procps
+          ]
+        } \
+        --prefix GI_TYPELIB_PATH : "${giTypelibPath}"
+
+      runHook postInstall
+    '';
+
+    meta = with lib; {
+      description = "Local push-to-talk speech-to-text dictation (faster-whisper backend)";
+      homepage = "https://github.com/jacopone/whisper-dictation";
+      license = licenses.mit;
+      platforms = platforms.linux;
+    };
+  };
+
+  daemonExec = "${whisper-dictation}/bin/whisper-dictation --language ${cfg.language}${
+    optionalString (cfg.model != "") " --model ${cfg.model}"
+  }";
 in
 {
   options.custom.apps.whisper-dictation = {
     enable = mkBoolOpt false "Whether to enable Whisper Dictation.";
 
-    package = mkOpt types.package (
-      inputs.whisper-dictation.packages.${pkgs.stdenv.hostPlatform.system}.default.overrideAttrs
-      (old: {
-        postPatch = (old.postPatch or "") + ''
-          python - <<'PY'
-          from pathlib import Path
-
-          lines = [
-              '"""Text pasting module using ydotool"""',
-              "",
-              "import logging",
-              "import subprocess",
-              "import time",
-              "",
-              "from evdev import ecodes",
-              "",
-              "logger = logging.getLogger(__name__)",
-              "",
-              "",
-              "class TextPaster:",
-              "    \"\"\"Pastes text into active window using ydotool\"\"\"",
-              "",
-              "    def __init__(self, config):",
-              "        self.config = config",
-              "        self._check_ydotool()",
-              "        self._paste_method = self.config.get(\"paste.method\", \"type\")",
-              "        self._paste_modifiers = self.config.get(\"paste.shortcut.modifiers\", [\"shift\"])",
-              "        self._paste_key = self.config.get(\"paste.shortcut.key\", \"insert\")",
-              "",
-              "        self._modifier_map = {",
-              "            \"super\": ecodes.KEY_LEFTMETA,",
-              "            \"ctrl\": ecodes.KEY_LEFTCTRL,",
-              "            \"alt\": ecodes.KEY_LEFTALT,",
-              "            \"shift\": ecodes.KEY_LEFTSHIFT,",
-              "        }",
-              "",
-              "        self._key_map = {",
-              "            \"insert\": ecodes.KEY_INSERT,",
-              "            \"v\": ecodes.KEY_V,",
-              "        }",
-              "",
-              "    def _check_ydotool(self):",
-              "        \"\"\"Check if ydotool daemon is running\"\"\"",
-              "        try:",
-              "            result = subprocess.run([\"pgrep\", \"-x\", \"ydotoold\"], capture_output=True)",
-              "            if result.returncode != 0:",
-              "                logger.warning(",
-              "                    \"ydotool daemon not running. Start with: systemctl --user start ydotool\"",
-              "                )",
-              "        except Exception as e:",
-              "            logger.error(f\"Error checking ydotool: {e}\")",
-              "",
-              "    def paste(self, text: str):",
-              "        \"\"\"Paste text into active window\"\"\"",
-              "        if not text:",
-              "            return",
-              "",
-              "        logger.info(f\"Pasting text: {text[:50]}...\")",
-              "",
-              "        try:",
-              "            # Small delay to ensure window focus",
-              "            time.sleep(self.config.get(\"typing.start_delay\", 0.3))",
-              "",
-              "            if self._paste_method == \"clipboard\":",
-              "                subprocess.run([\"wl-copy\"], input=text, text=True, check=True)",
-              "",
-              "                modifiers = [",
-              "                    self._modifier_map[m]",
-              "                    for m in self._paste_modifiers",
-              "                    if m in self._modifier_map",
-              "                ]",
-              "                keycode = self._key_map.get(self._paste_key)",
-              "",
-              "                if keycode is None:",
-              "                    raise ValueError(f\"Unsupported paste key: {self._paste_key}\")",
-              "",
-              "                key_events = []",
-              "                for code in modifiers:",
-              "                    key_events.append(f\"{code}:1\")",
-              "",
-              "                key_events.append(f\"{keycode}:1\")",
-              "                key_events.append(f\"{keycode}:0\")",
-              "",
-              "                for code in reversed(modifiers):",
-              "                    key_events.append(f\"{code}:0\")",
-              "",
-              "                subprocess.run([\"ydotool\", \"key\", *key_events], check=True)",
-              "            else:",
-              "                # Use wtype to type text (respects keyboard layout)",
-              "                subprocess.run(",
-              "                    [\"wtype\", text],",
-              "                    check=True,",
-              "                )",
-              "",
-              "            logger.info(\"Text pasted successfully\")",
-              "",
-              "        except subprocess.CalledProcessError as e:",
-              "            logger.error(f\"ydotool failed: {e}\")",
-              "            raise",
-              "        except Exception as e:",
-              "            logger.error(f\"Error pasting text: {e}\")",
-              "            raise",
-          ]
-
-          Path("src/whisper_dictation/paste.py").write_text("\n".join(lines) + "\n")
-          PY
-        '';
-      })
-    ) "Whisper Dictation package to install.";
+    package = mkOpt types.package whisper-dictation "Whisper Dictation package.";
 
     autoStart = mkBoolOpt true "Whether to auto-start the daemon on login.";
 
-    language = mkOpt types.str "auto" "Language code for dictation (auto, en, it, etc.).";
+    language = mkOpt types.str "auto" "Language code (auto, en, ru, it, ...).";
 
-    model = mkOpt types.str "base" "Whisper model to use (tiny, base, small, medium, large).";
+    model = mkOpt types.str "large-v3-turbo" "faster-whisper model name (tiny, base, small, medium, large-v3, large-v3-turbo, distil-large-v3).";
+
+    device = mkOpt types.str "cuda" "Compute device: cuda | cpu | auto.";
+
+    computeType = mkOpt types.str "float16" "CTranslate2 compute type (float16 | int8_float16 | int8 | float32).";
+
+    beamSize = mkOpt types.int 5 "Beam size for decoding. Higher = better, slower.";
+
+    initialPrompt = mkOpt types.str "" "Initial prompt to bias vocabulary (names, jargon). Empty to disable.";
+
+    vad = {
+      enable = mkBoolOpt true "Use Silero VAD to skip silence before decoding.";
+      minSilenceMs = mkOpt types.int 500 "Min silence duration (ms) to cut.";
+      speechPadMs = mkOpt types.int 200 "Padding around detected speech (ms).";
+    };
 
     hotkey = {
       modifiers = mkOpt (types.listOf types.str) [
@@ -174,15 +157,10 @@ in
       pkgs.procps
       pkgs.wl-clipboard
       pkgs.wtype
-      pkgs.harfbuzz
-      pkgs.pango
-      pkgs.cairo
-      pkgs.gdk-pixbuf
-      pkgs.graphene
-      pkgs.gtk4
+      pkgs.ffmpeg
     ];
 
-    home.file.".local/share/whisper/models/.keep".text = "";
+    home.file.".cache/whisper-dictation/.keep".text = "";
 
     home.configFile."whisper-dictation/config.yaml".text = ''
       hotkey:
@@ -196,6 +174,14 @@ in
       whisper:
         language: ${cfg.language}
         model: ${cfg.model}
+        device: ${cfg.device}
+        compute_type: ${cfg.computeType}
+        beam_size: ${toString cfg.beamSize}
+        initial_prompt: ${builtins.toJSON cfg.initialPrompt}
+        vad:
+          enable: ${lib.boolToString cfg.vad.enable}
+          min_silence_ms: ${toString cfg.vad.minSilenceMs}
+          speech_pad_ms: ${toString cfg.vad.speechPadMs}
     '';
 
     systemd.user.services.ydotoold = {
@@ -220,6 +206,7 @@ in
         pkgs.ydotool
         pkgs.wl-clipboard
         pkgs.wtype
+        pkgs.ffmpeg
       ];
       serviceConfig = {
         ExecStart = daemonExec;
