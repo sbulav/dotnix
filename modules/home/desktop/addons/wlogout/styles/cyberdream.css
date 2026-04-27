@@ -1,0 +1,35 @@
+/*
+ * wlogout – Cyberdream (mirror of waybar cyberdream palette).
+ */
+
+* {
+  background-image: none;
+  box-shadow: none;
+  font-family: JetBrainsMono Nerd Font, FiraCode Nerd Font, sans-serif;
+}
+
+window {
+  background-color: rgba(22, 24, 26, 0.85);
+}
+
+button {
+  color: #e7ecf2;
+  background-color: #1e2124;
+  border-style: solid;
+  border-width: 1px;
+  border-color: #3c4048;
+  border-radius: 14px;
+  margin: 18px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 25%;
+}
+
+button:focus,
+button:active,
+button:hover {
+  background-color: #262b2f;
+  color: #5ef1ff;
+  border-color: #b38cff;
+  outline-style: none;
+}

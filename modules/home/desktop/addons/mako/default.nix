@@ -9,6 +9,7 @@ with lib;
 with lib.custom;
 let
   cfg = config.custom.desktop.addons.mako;
+  c = config.custom.theme.colors;
 in
 {
   options.custom.desktop.addons.mako = with types; {
@@ -23,30 +24,30 @@ in
       enable = true;
       settings = {
         anchor = "top-right";
-        background-color = "#0d1117ee";
-        border-color = "#00000033";
+        background-color = "#${c.panel}ee";
+        border-color = "#${c.violet}66";
         border-radius = 5;
         border-size = "1";
         default-timeout = 5000;
         max-history = 5;
-        font = "FiraCode Nerd Font 10";
+        font = "JetBrainsMono Nerd Font 10";
         group-by = "app-name";
         icon-path = "${pkgs.papirus-icon-theme}/share/icons/Papirus-Dark";
         icons = true;
         layer = "overlay";
         margin = "5";
-        progress-color = "source #00d4aaee"; # 07b5efee
-        text-color = "#c9d1d9cc";
+        progress-color = "source #${c.cyan}ee";
+        text-color = "#${c.text}cc";
         max-icon-size = 32;
         "urgency=high" = {
-          border-color = "#ff6b6bee";
+          border-color = "#${c.pink}ee";
           default-timeout = 0;
         };
         "urgency=normal" = {
-          border-color = "#7c3aed33";
+          border-color = "#${c.violet}66";
         };
         "urgency=low" = {
-          border-color = "#00d4aa33";
+          border-color = "#${c.mint}66";
         };
       };
     };

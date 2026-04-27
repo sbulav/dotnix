@@ -14,6 +14,11 @@ in
     # Enable Bootloader
     boot.efi.enable = true;
     battery.enable = false; # Only for laptops, they will still work without it, just improves battery life
+    sleep = {
+      enable = true;
+      gvfsUnmountFix.enable = true;
+      audioResumeFix.enable = true;
+    };
 
     nix.cache-servers = [
       {

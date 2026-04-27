@@ -48,7 +48,7 @@ in
         target = "hyprland-session.target";
       };
 
-      style = "${builtins.readFile ./styles/cyberdream.css}";
+      style = builtins.readFile (./styles + "/${config.custom.theme.name}.css");
 
       settings = {
         mainBar = {

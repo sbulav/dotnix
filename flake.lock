@@ -333,11 +333,11 @@
     },
     "nixpkgs_3": {
       "locked": {
-        "lastModified": 1776560675,
-        "narHash": "sha256-p68udKWWh7+V4ZPpcMDq0gTHWNZJnr4JPI+kHPPE40o=",
+        "lastModified": 1777077449,
+        "narHash": "sha256-AIiMJiqvGrN4HyLEbKAoCSRRYn0rnlW5VbKNIMIYqm4=",
         "owner": "nixos",
         "repo": "nixpkgs",
-        "rev": "e07580dae39738e46609eaab8b154de2488133ce",
+        "rev": "a4bf06618f0b5ee50f14ed8f0da77d34ecc19160",
         "type": "github"
       },
       "original": {
@@ -488,11 +488,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1758773381,
-        "narHash": "sha256-PdyU/bVVsDy0xI7SPfM+BVp3aKb7eH5PO8BIMxDBdc0=",
+        "lastModified": 1777315876,
+        "narHash": "sha256-Rjg6gYsyptM8vPp62NsP/ZaPq4isN0ZPzX4V5VDmYts=",
         "owner": "sbulav",
         "repo": "wallpapers-nix",
-        "rev": "28121e3a73af50db83408632c43b4c133be6c596",
+        "rev": "f616bce2a800d3cb78bf17219b11e3b49777b428",
         "type": "github"
       },
       "original": {
