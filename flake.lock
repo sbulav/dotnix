@@ -488,11 +488,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1758773381,
-        "narHash": "sha256-PdyU/bVVsDy0xI7SPfM+BVp3aKb7eH5PO8BIMxDBdc0=",
+        "lastModified": 1777315876,
+        "narHash": "sha256-Rjg6gYsyptM8vPp62NsP/ZaPq4isN0ZPzX4V5VDmYts=",
         "owner": "sbulav",
         "repo": "wallpapers-nix",
-        "rev": "28121e3a73af50db83408632c43b4c133be6c596",
+        "rev": "f616bce2a800d3cb78bf17219b11e3b49777b428",
         "type": "github"
       },
       "original": {

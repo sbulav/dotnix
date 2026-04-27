@@ -206,16 +206,29 @@ in
       systemd.enable = false;
       xwayland.enable = true;
 
-      settings = {
-        monitor = cfg.monitors;
+      settings =
+        let
+          c = config.custom.theme.colors;
+        in
+        {
+          monitor = cfg.monitors;
 
-        workspace = mkWorkspaceMonitorBindings cfg.workspaces.monitorBindings;
+          workspace = mkWorkspaceMonitorBindings cfg.workspaces.monitorBindings;
 
-        cursor = {
-          enable_hyprcursor = true;
-          sync_gsettings_theme = true;
+          general = {
+            gaps_in = 5;
+            gaps_out = 5;
+            border_size = 2;
+            "col.active_border" = "rgba(${c.cyan}ff) rgba(${c.pink}ff) 45deg";
+            "col.inactive_border" = "rgba(${c.separator}aa)";
+            layout = "dwindle";
+          };
+
+          cursor = {
+            enable_hyprcursor = true;
+            sync_gsettings_theme = true;
+          };
         };
-      };
 
       extraConfig = ''
         ${builtins.readFile ./hyprland.conf}

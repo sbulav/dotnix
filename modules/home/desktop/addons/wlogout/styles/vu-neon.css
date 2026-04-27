@@ -1,0 +1,43 @@
+/*
+ * wlogout – VU-Neon
+ *  Dark glassy panels, neon cyan/pink hover, JetBrainsMono.
+ */
+
+* {
+  background-image: none;
+  box-shadow: none;
+  font-family: JetBrainsMono Nerd Font, FiraCode Nerd Font, sans-serif;
+}
+
+window {
+  background-color: rgba(11, 15, 26, 0.85);
+}
+
+button {
+  color: #cdd6f4;
+  background-color: #121826;
+  border-style: solid;
+  border-width: 1px;
+  border-color: #2a3142;
+  border-radius: 14px;
+  margin: 18px;
+  background-repeat: no-repeat;
+  background-position: center;
+  background-size: 25%;
+}
+
+button:focus,
+button:active,
+button:hover {
+  background-color: #1a2238;
+  color: #00e5ff;
+  border-color: #7c4dff;
+  outline-style: none;
+}
+
+#lock    { background-image: url("/usr/share/wlogout/icons/lock.png"); }
+#logout  { background-image: url("/usr/share/wlogout/icons/logout.png"); }
+#suspend { background-image: url("/usr/share/wlogout/icons/suspend.png"); }
+#hibernate { background-image: url("/usr/share/wlogout/icons/hibernate.png"); }
+#shutdown  { background-image: url("/usr/share/wlogout/icons/shutdown.png"); }
+#reboot    { background-image: url("/usr/share/wlogout/icons/reboot.png"); }

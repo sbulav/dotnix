@@ -13,6 +13,7 @@ in
 {
   options.hardware.audio = with types; {
     enable = mkBoolOpt false "Enable pipewire";
+    softMixer.enable = mkBoolOpt false "Whether to force WirePlumber to use software volume control for ALSA devices.";
   };
 
   config = mkIf cfg.enable {
@@ -32,6 +33,23 @@ in
           default.clock.quantum = 256;
           default.clock.min-quantum = 256;
           default.clock.max-quantum = 256;
+        };
+      };
+
+      wireplumber.extraConfig = mkIf cfg.softMixer.enable {
+        "99-alsa-soft-mixer" = {
+          monitor.alsa.rules = [
+            {
+              matches = [
+                {
+                  "device.name" = "~alsa_card.*";
+                }
+              ];
+              actions.update-props = {
+                "api.alsa.soft-mixer" = true;
+              };
+            }
+          ];
         };
       };
     };

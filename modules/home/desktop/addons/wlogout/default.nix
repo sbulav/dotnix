@@ -18,6 +18,7 @@ in
   config = mkIf cfg.enable {
     programs.wlogout = {
       enable = true;
+      style = builtins.readFile (./styles + "/${config.custom.theme.name}.css");
     };
   };
 }
