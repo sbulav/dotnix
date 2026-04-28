@@ -49,7 +49,7 @@ config.hide_tab_bar_if_only_one_tab = false
 config.tab_bar_at_bottom = true
 config.inactive_pane_hsb = {
 	saturation = 0.9,
-	brightness = 0.2,
+	brightness = 0.35,
 }
 config.quick_select_patterns = {
 	"[0-9a-f]{7,40}",

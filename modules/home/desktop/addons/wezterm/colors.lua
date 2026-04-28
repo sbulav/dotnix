@@ -47,6 +47,10 @@ local colors_oceanic = {
 }
 
 local theme = colors_cyberdream
+local tab_bar_bg = (custom_theme and custom_theme.base) or theme.black
+local inactive_tab_bg = (custom_theme and custom_theme.panel) or theme.bg_dark
+local active_tab_bg = (custom_theme and custom_theme.violet) or theme.green_dark
+local active_tab_fg = (custom_theme and custom_theme.text) or theme.fg
 
 -- config.color_scheme = "Oceanic-Next"
 command_palette_bg_color = theme.black
@@ -57,18 +61,18 @@ config.colors = {
 	-- The default background color
 	background = theme.black,
 	tab_bar = {
-		background = theme.black,
+		background = tab_bar_bg,
 		active_tab = {
-			bg_color = theme.green_dark,
-			fg_color = theme.fg,
+			bg_color = active_tab_bg,
+			fg_color = active_tab_fg,
 		},
 		inactive_tab = {
 			-- bg_color = base16_colors.bg_dark,
-			bg_color = theme.bg_dark,
+			bg_color = inactive_tab_bg,
 			fg_color = theme.fg_dark,
 		},
 		new_tab = {
-			bg_color = theme.bg_dark,
+			bg_color = inactive_tab_bg,
 			fg_color = theme.fg_dark,
 		},
 	},
