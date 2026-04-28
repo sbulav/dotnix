@@ -36,6 +36,12 @@ local kube_cache = {
 	ns = "-",
 }
 
+local PARK_TTL_SECONDS = 3
+local park_cache = {
+	last = 0,
+	count = 0,
+}
+
 -- replace your now_seconds() with this:
 local function now_seconds()
 	return os.time() -- simple, stable integer seconds
@@ -115,8 +121,21 @@ local function refresh_kube_cache()
 	kube_cache.last = t
 end
 
+local function refresh_park_cache()
+	local t = now_seconds()
+	if type(park_cache.last) ~= "number" then
+		park_cache.last = 0
+	end
+	if (t - park_cache.last) < PARK_TTL_SECONDS then
+		return
+	end
+	park_cache.count = #park_list()
+	park_cache.last = t
+end
+
 wezterm.on("update-right-status", function(window)
 	refresh_kube_cache()
+	refresh_park_cache()
 	local ctx = kube_cache.ctx
 	local ns = kube_cache.ns
 
@@ -127,6 +146,8 @@ wezterm.on("update-right-status", function(window)
 	local env_color = detect_env_color(theme, ctx, ns)
 
 	window:set_right_status(wezterm.format({
+		{ Foreground = { Color = theme.yellow } },
+		{ Text = wezterm.nerdfonts.cod_archive .. " " .. tostring(park_cache.count) .. "  " },
 		{ Foreground = { Color = theme.blue } },
 		{ Text = wezterm.nerdfonts.md_kubernetes },
 		{ Foreground = { Color = env_color } },

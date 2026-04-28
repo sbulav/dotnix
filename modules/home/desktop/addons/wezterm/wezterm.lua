@@ -63,3 +63,35 @@ config.quick_select_patterns = {
 }
 
 -- }}}
+-- Mux server (panes survive GUI close; reattach by reopening wezterm)
+-- {{{
+config.unix_domains = { { name = "unix" } }
+config.default_gui_startup_args = { "connect", "unix" }
+-- }}}
+-- Park / unpark (tmux-like detach via hidden workspace)
+-- {{{
+local PARKED_WS = "_parked"
+
+local function park_run(args)
+	-- Run wezterm cli; ignore failures silently to avoid blocking the UI.
+	wezterm.run_child_process(args)
+end
+
+local function park_list()
+	local ok, stdout = wezterm.run_child_process({ "wezterm", "cli", "list", "--format", "json" })
+	if not ok or type(stdout) ~= "string" or #stdout == 0 then
+		return {}
+	end
+	local parsed = wezterm.json_parse(stdout)
+	if type(parsed) ~= "table" then
+		return {}
+	end
+	local out = {}
+	for _, item in ipairs(parsed) do
+		if item.workspace == PARKED_WS then
+			table.insert(out, item)
+		end
+	end
+	return out
+end
+-- }}}

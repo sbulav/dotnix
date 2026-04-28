@@ -48,6 +48,60 @@ config.keys = {
   { key = "8", mods = "LEADER", action = wezterm.action { ActivateTab = 7 } },
   { key = "9", mods = "LEADER", action = wezterm.action { ActivateTab = 8 } },
   { key = "d", mods = "LEADER", action = wezterm.action { CloseCurrentPane = { confirm = true } } },
+
+  -- Park current pane: move to hidden _parked workspace, keep process alive.
+  {
+    key = "b",
+    mods = "LEADER",
+    action = wezterm.action_callback(function(window, pane)
+      park_run({
+        "wezterm", "cli", "move-pane-to-new-tab",
+        "--pane-id", tostring(pane:pane_id()),
+        "--new-window",
+        "--workspace", PARKED_WS,
+      })
+    end),
+  },
+
+  -- Find & unpark: fuzzy-pick a parked pane and move it to current workspace.
+  {
+    key = "f",
+    mods = "LEADER",
+    action = wezterm.action_callback(function(window, pane)
+      local parked = park_list()
+      if #parked == 0 then
+        window:toast_notification("wezterm", "No parked panes", nil, 2000)
+        return
+      end
+      local choices = {}
+      for _, item in ipairs(parked) do
+        local cwd = item.cwd or ""
+        cwd = cwd:gsub("^file://[^/]*", "")
+        local title = item.title or ""
+        table.insert(choices, {
+          id = tostring(item.pane_id),
+          label = string.format("%-24s  %s", title, cwd),
+        })
+      end
+      window:perform_action(
+        wezterm.action.InputSelector({
+          title = "Parked panes — pick to unpark",
+          choices = choices,
+          fuzzy = true,
+          action = wezterm.action_callback(function(w, p, id)
+            if not id or id == "" then return end
+            local target_window_id = w:mux_window():window_id()
+            park_run({
+              "wezterm", "cli", "move-pane-to-new-tab",
+              "--pane-id", id,
+              "--window-id", tostring(target_window_id),
+            })
+          end),
+        }),
+        pane
+      )
+    end),
+  },
 }
 
 config.mouse_bindings = {
