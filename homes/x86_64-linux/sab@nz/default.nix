@@ -36,7 +36,7 @@ in
         hyprlock = disabled;
         wezterm = enabled;
         "wlr-which-key" = enabled;
-        wallpaper = "${wallpapers}/share/wallpapers/unorganized/vu_meter_cyberdream.png";
+        wallpaper = "${wallpapers}/share/wallpapers/unorganized/vu_meter_code_neon.png";
 
         waypaper = {
           enable = true;
