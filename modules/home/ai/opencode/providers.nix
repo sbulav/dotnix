@@ -8,7 +8,10 @@
     };
     models = {
       "gpt-5.5-pro" = {
-        name = "ChatGPT 5 Pro";
+        name = "ChatGPT 5.5 Pro";
+      };
+      "gpt-5.5" = {
+        name = "ChatGPT 5.5";
       };
       "gpt-5-mini" = {
         name = "ChatGPT 5 Mini";
@@ -25,9 +28,9 @@
       # "gpt-5.3" = {
       #   name = "ChatGPT 5.3";
       # };
-      "gpt-5.4" = {
-        name = "ChatGPT 5.4";
-      };
+      # "gpt-5.4" = {
+      #   name = "ChatGPT 5.4";
+      # };
     };
   };
 
