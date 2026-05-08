@@ -13,16 +13,31 @@ This guide provides comprehensive instructions for AI agents and developers work
   - `modules/shared/` - Shared modules across systems
 - **Systems**: Defined in `systems/{arch}/{hostname}/default.nix`
 - **Homes**: Defined in `homes/{arch}/{user}@{hostname}/default.nix`
+- **Channel**: `nixpkgs` is pinned to `nixos-25.11` (stable). `nixos-unstable` is exposed via overlay as `pkgs.unstable`.
+- **Darwin status**: currently disabled in `flake.nix` via `systems.exclude = [ "darwin" ]` / `homes.exclude = [ "darwin" ]`. Historical configs are preserved under `modules/_darwin-disabled/`, `systems/_aarch64-darwin-disabled/`, and `homes/_aarch64-darwin-disabled/` but are not built. Skip Darwin-specific guidance unless re-enabling.
 
 ## Build/Test Commands
 
 ### System Operations
 - **Build NixOS system**: `nix build .#nixosConfigurations.{hostname}.config.system.build.toplevel`
   - Available hosts: `nz`, `zanoza`, `mz`, `beez`
-- **Build Darwin system**: `nix build .#darwinConfigurations.mbp16.config.system.build.toplevel`
+- **Build Darwin system** *(disabled)*: `nix build .#darwinConfigurations.mbp16.config.system.build.toplevel`
 - **Rebuild NixOS locally**: `sudo nixos-rebuild switch --flake .#{hostname}`
-- **Rebuild Darwin locally**: `darwin-rebuild switch --flake .#mbp16`
-- **Deploy to remote**: `nix run .#deploy.{hostname}` (zanoza, nz, mz)
+- **Rebuild Darwin locally** *(disabled)*: `darwin-rebuild switch --flake .#mbp16`
+- **Deploy to remote**: `nix run .#deploy.{hostname}` (zanoza, nz, mz, beez — deploy-rs auto-derives from `nixosConfigurations`)
+
+### Workflow Wrapper (`sys`)
+
+`packages/sys/default.nix` builds a `sys` shell wrapper used as the daily driver:
+
+| Command | Action |
+|---|---|
+| `sys rebuild` / `sys r` | `nixos-rebuild switch --flake .#` (or `darwin-rebuild` on macOS) |
+| `sys test` / `sys t` | `nixos-rebuild test --fast --flake .#` (ephemeral, no bootloader update) |
+| `sys update` / `sys u` | `nix flake update` |
+| `sys clean` / `sys c` | `nix store optimise && nix store gc` |
+
+Caveat: as of writing, the script hardcodes `--flake ~/dotfiles/nix#`. If the checkout lives elsewhere (e.g. `~/dotnix`), invoke the underlying `nixos-rebuild` / `nix` commands directly until the path is fixed.
 
 ### Development & Validation
 - **Format code**: `nix fmt` (uses nixfmt)
@@ -59,8 +74,16 @@ This guide provides comprehensive instructions for AI agents and developers work
 ├── lib/                   # Custom library functions
 │   ├── module/           # Module helpers (mkOpt, mkBoolOpt, etc.)
 │   └── deploy/           # Deployment helpers
-├── shells/                # Development shells
-└── secrets/               # SOPS encrypted secrets
+├── shells/                # Development shells (default, python)
+├── secrets/               # SOPS encrypted secrets
+├── docs/                  # Manual setup guides (e.g. yubikey-gpg)
+├── .github/
+│   ├── workflows/cachix.yaml  # CI: builds flake + pushes to cachix
+│   └── renovate.json          # Automated dep updates
+└── (disabled)             # Preserved-but-inactive Darwin trees:
+    modules/_darwin-disabled/
+    systems/_aarch64-darwin-disabled/
+    homes/_aarch64-darwin-disabled/
 ```
 
 ## Module Development Guidelines
@@ -102,34 +125,72 @@ Available in `lib.custom` (defined in `lib/module/default.nix`):
 - `enabled` - Shorthand for `{ enable = true; }`
 - `disabled` - Shorthand for `{ enable = false; }`
 
+Deploy helpers (`lib/deploy/default.nix`, also under `lib.custom.*`):
+- `mkDeploy { inherit self; }` - Generates the `deploy.nodes` attrset for deploy-rs from every entry in `nixosConfigurations` (and Darwin configs when re-enabled). Used in `flake.nix`: `deploy = lib.mkDeploy { inherit (inputs) self; }`.
+- `isDarwin system` - Predicate used by `mkDeploy` to dispatch profile type.
+
 ### Option Namespacing
 
-All custom options MUST be namespaced under `custom.{category}.{module}`:
+Two namespace conventions coexist in this repo. Match the surrounding modules in the same directory rather than forcing everything under `custom.*`.
 
-**Categories:**
-- `custom.tools.*` - CLI tools and utilities
-- `custom.cli-apps.*` - Interactive CLI applications
-- `custom.apps.*` - GUI applications
-- `custom.virtualisation.*` - Virtualization tools
-- `custom.security.*` - Security and secrets
-- `custom.user.*` - User configuration
-- `suites.*` - Grouped module suites (common, desktop, develop, games)
+**A. Snowfall system-level categories (no `custom` prefix)** — used by modules that configure the host itself:
+- `system.*` — `system.nix`, `system.fonts`, `system.locale`, `system.time`, `system.xkb`, `system.security.{doas,sudo,gpg}`
+- `hardware.*` — `hardware.audio`, `hardware.gpu.{nvidia,...}`, `hardware.networking`, `hardware.printing`, `hardware.cpu.*`
+- `services.*` — `services.ssh`, `services.logrotate`, `services.prometheus-exporters`, `services.nix-cache-builder`
+- `suites.*` — `common`, `desktop`, `develop`, `games`, `server`
+
+**B. `custom.*` user-feature categories** — used for opinionated user-facing features, especially in home-manager:
+- `custom.tools.*` — CLI tools and utilities
+- `custom.cli-apps.*` — interactive CLI apps (e.g. `neovim`)
+- `custom.apps.*` — GUI applications
+- `custom.virtualisation.*` — virtualization tooling
+- `custom.security.*` — security and secrets (incl. shared `custom.security.sops`)
+- `custom.user.*` — user identity / dotfiles
+- `custom.containers.*`, `custom.monitoring.*`, `custom.host.*`
+- `custom.desktop.*` — incl. nested `addons` (`hyprpaper`, `kitty`, `wallpaper`, …)
+- `custom.theme.*`
+- `custom.ai.*` — `claude`, `opencode`, `mcp-k8s-go`, `mcp-grafana`, plus `shared`
+
+**Choosing between A and B:** pick (A) when the option is a thin wrapper over an upstream NixOS / home-manager option group; pick (B) for opinionated, repo-specific features.
 
 **Examples:**
 ```nix
+# A — system-level
+system.nix.enable = true;
+hardware.audio.enable = true;
+services.ssh.enable = true;
+suites.common.enable = true;
+
+# B — custom.*
 custom.tools.http.enable = true;
 custom.cli-apps.neovim.enable = true;
 custom.security.sops.enable = true;
-suites.common.enable = true;
+custom.ai.opencode.enable = true;
 ```
 
 ## Code Style Guidelines
 
 ### Library Usage
-- **AVOID**: `with lib;` at the top level
-- **PREFER**: `with lib.custom; let ... in` pattern
-- **OR**: Explicit imports: `inherit (lib) mkIf mkMerge mkDefault types;`
-- **OR**: Inline prefixes: `lib.mkIf`, `lib.types.str`
+
+The dominant pattern in this repo combines both `with` clauses:
+
+```nix
+{ config, lib, pkgs, ... }:
+with lib;
+with lib.custom;
+let
+  cfg = config.<namespace>.<module>;
+in {
+  options.<namespace>.<module> = with types; { ... };
+  config = mkIf cfg.enable { ... };
+}
+```
+
+Both `with lib;` and `with lib.custom;` together is the convention used by `system.*`, `hardware.*`, `services.*`, `suites.*`, and most home modules — match the surrounding files rather than fighting it.
+
+Acceptable alternatives when scoping is needed:
+- `inherit (lib) mkIf mkMerge mkDefault types;` for explicit imports.
+- `lib.mkIf`, `lib.types.str` inline.
 
 ### Conditionals
 - Use `lib.mkIf condition { ... }` instead of `if condition then { ... } else { }`
@@ -332,6 +393,24 @@ Available through `lib.snowfall`:
 - `lib.snowfall.fs.get-file "path"` - Get file path relative to flake root
 - Use for secrets: `defaultSopsFile = lib.snowfall.fs.get-file "secrets/host/default.yaml";`
 
+## Notable Flake Inputs
+
+Defined in `flake.nix`:
+
+| Input | Purpose |
+|---|---|
+| `nixpkgs` | `nixos-25.11` (stable channel) |
+| `unstable` | `nixos-unstable`; exposed as `pkgs.unstable` via overlay in `flake.nix` |
+| `determinate` | Determinate Nix; `determinate.nixosModules.default` is auto-imported into every NixOS system |
+| `snowfall-lib` | Flake structure (`lib.mkFlake`, file discovery, namespace) |
+| `home-manager` | `release-25.11` |
+| `sops-nix` | Secrets; `nixosModules.sops` auto-imported into systems, `homeManagerModules.sops` into homes |
+| `deploy-rs` | Remote deploys (driven by `lib.mkDeploy`) |
+| `wallpapers-nix` | `sbulav/wallpapers-nix`; consumed by desktop wallpaper addons |
+| `whisper-dictation` | Speech-to-text helper |
+
+Darwin inputs (`darwin`, `nix-homebrew`, `homebrew-core`, `homebrew-cask`, `sops-nix-darwin`) are commented out and do not need to be touched unless re-enabling Darwin.
+
 ## System Configuration Pattern
 
 Host configurations in `systems/{arch}/{hostname}/default.nix`:
@@ -460,12 +539,17 @@ Before committing changes:
 1. **Format code**: `nix fmt`
 2. **Check flake**: `nix flake check`
 3. **Build system**: `nix build .#nixosConfigurations.{hostname}.config.system.build.toplevel`
-4. **Test locally**: `sudo nixos-rebuild test --flake .#{hostname}` (doesn't update bootloader, ALWAYS ASK BEFORE SWITCHING)
-5. **Apply changes**: `sudo nixos-rebuild switch --flake .#{hostname}` (ALWAYS ASK BEFORE SWITCHING)
+4. **Test locally**: `sys test` (preferred) or `sudo nixos-rebuild test --flake .#{hostname}` — ephemeral, no bootloader update. **ALWAYS ASK BEFORE SWITCHING.**
+5. **Apply changes**: `sys rebuild` (preferred) or `sudo nixos-rebuild switch --flake .#{hostname}`. **ALWAYS ASK BEFORE SWITCHING.**
 
 For remote systems:
 1. Test build locally first
-2. Deploy with: `nix run .#deploy.{hostname}`
+2. Deploy with: `nix run .#deploy.{hostname}` (deploy-rs)
+
+### CI
+
+- `.github/workflows/cachix.yaml` — builds the flake on every push and pushes results to cachix; an evaluation/build break will surface there.
+- `.github/renovate.json` — Renovate keeps flake inputs current; expect periodic input bumps in PRs.
 
 ## Troubleshooting
 
@@ -507,14 +591,16 @@ nix-instantiate --eval -E '(import ./modules/nixos/{path}/default.nix)'
 
 1. **Always check existing patterns** before creating new code
 2. **Use custom lib functions** (`lib.custom.mkOpt`, `lib.custom.mkBoolOpt`)
-3. **Namespace all options** under `custom.{category}.{module}`
+3. **Pick the right namespace** — `custom.*` for opinionated user features, `system.*` / `hardware.*` / `services.*` / `suites.*` for system-level wrappers. Match the surrounding directory.
 4. **Follow the module template** structure consistently
 5. **Run `nix fmt`** before considering changes complete
 6. **Test builds** with `nix flake check` and `nix build`
 7. **Never commit secrets** - use SOPS for sensitive data
 8. **Respect `stateVersion`** - never change it after initial installation
 9. **Use suites** for related module groups
-10. **Platform conditionals** when mixing Linux/Darwin configs
+10. **Don't assume Darwin is live** — `flake.nix` excludes it. Skip Darwin-specific work unless re-enabling.
+11. **Match the surrounding `with lib;` style** — the repo uses `with lib; with lib.custom;` together; the absolute "avoid `with lib;`" rule was aspirational and not enforced.
+12. **Reach for `sys` first** for daily rebuild/test/update/clean (see Workflow Wrapper section).
 
 
 ## References
