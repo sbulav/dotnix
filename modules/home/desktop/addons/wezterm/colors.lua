@@ -53,7 +53,7 @@ local active_tab_bg = (custom_theme and custom_theme.violet) or theme.green_dark
 local active_tab_fg = (custom_theme and custom_theme.text) or theme.fg
 
 -- config.color_scheme = "Oceanic-Next"
-command_palette_bg_color = theme.black
+config.command_palette_bg_color = theme.black
 -- https://wezfurlong.org/wezterm/config/appearance.html#retro-tab-bar-appearance
 config.colors = {
 	-- The default text color
