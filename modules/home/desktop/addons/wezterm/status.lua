@@ -8,6 +8,14 @@ local kube_cache = {
 	path = false,
 }
 
+local function theme_color(theme, name, fallback)
+	if custom_theme and custom_theme[name] then
+		return custom_theme[name]
+	end
+
+	return theme[name] or fallback
+end
+
 local function read_cmd(argv)
 	local success, stdout = wezterm.run_child_process(argv)
 	if not success or type(stdout) ~= "string" then
@@ -56,14 +64,14 @@ local function detect_env_color(theme, ctx, ns)
 	if lc:find("prod") or lc:find("production") then
 		return theme.red
 	elseif lc:find("staging") or lc:find("stage") then
-		return theme.orange or theme.yellow
+		return theme_color(theme, "amber", theme.orange or theme.yellow)
 	elseif lc:find("dev") or lc:find("sandbox") then
-		return theme.green_dark
+		return theme_color(theme, "mint", theme.green_dark)
 	elseif ns == "kube-system" or ns == "kube-public" then
-		return theme.comment
+		return theme_color(theme, "subtext", theme.comment)
 	end
 
-	return theme.magenta
+	return theme_color(theme, "violet", theme.magenta)
 end
 
 local function refresh_kube_cache(opts)
@@ -116,7 +124,8 @@ function status.kubernetes(theme, opts)
 	return {
 		icon = wezterm.nerdfonts.md_kubernetes,
 		label = label,
-		color = detect_env_color(theme, kube_cache.ctx, kube_cache.ns),
+		icon_color = theme_color(theme, "cyan", theme.blue),
+		label_color = detect_env_color(theme, kube_cache.ctx, kube_cache.ns),
 	}
 end
 
@@ -128,7 +137,7 @@ function status.clock(theme, opts)
 
 	return {
 		label = wezterm.strftime(opts.format or "%H:%M"),
-		color = theme.red,
+		label_color = theme_color(theme, "subtext", theme.comment),
 	}
 end
 
@@ -143,15 +152,21 @@ function status.render(theme, segments)
 	end
 
 	for index, segment in ipairs(visible) do
-		if index > 1 then
-			cells[#cells + 1] = { Foreground = { Color = theme.comment } }
-			cells[#cells + 1] = { Text = " | " }
+		if index == 1 then
+			cells[#cells + 1] = { Text = " " }
 		end
 
-		cells[#cells + 1] = { Foreground = { Color = segment.color or theme.fg } }
+		if index > 1 then
+			cells[#cells + 1] = { Foreground = { Color = theme_color(theme, "separator", theme.comment) } }
+			cells[#cells + 1] = { Text = " · " }
+		end
+
 		if segment.icon then
+			cells[#cells + 1] = { Foreground = { Color = segment.icon_color or segment.label_color or theme.fg } }
 			cells[#cells + 1] = { Text = segment.icon .. " " }
 		end
+
+		cells[#cells + 1] = { Foreground = { Color = segment.label_color or theme.fg } }
 		cells[#cells + 1] = { Text = segment.label }
 	end
 
