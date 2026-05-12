@@ -7,7 +7,16 @@
 
     unstable.url = "github:nixos/nixpkgs/nixos-unstable";
 
-    determinate.url = "https://flakehub.com/f/DeterminateSystems/determinate/*";
+    determinate = {
+      url = "github:DeterminateSystems/determinate/v3.19.1";
+      inputs.nix.url = "github:NixOS/nix/35185ec4d4dcdfe34e08f0e48f6a66afd3b95007";
+      inputs.nix.inputs.flake-parts.url =
+        "github:hercules-ci/flake-parts/49f0870db23e8c1ca0b5259734a02cd9e1e371a1";
+      inputs.nix.inputs.git-hooks-nix.url =
+        "github:cachix/git-hooks.nix/80479b6ec16fefd9c1db3ea13aeb038c60530f46";
+      inputs.nix.inputs.nixpkgs.follows = "nixpkgs";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     snowfall-lib = {
       url = "github:snowfallorg/lib";
