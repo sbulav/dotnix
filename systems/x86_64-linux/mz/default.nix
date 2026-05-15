@@ -10,7 +10,7 @@ in
 {
   imports = [ ./hardware-configuration.nix ];
   system = {
-    wallpaper = "${wallpapers}/share/wallpapers/cities/1-osaka-jade-bg.jpg";
+    wallpaper = "${wallpapers}/share/wallpapers/unorganized/vu_meter_code_neon.png";
     # Enable Bootloader
     boot.efi.enable = true;
     battery.enable = false; # Only for laptops, they will still work without it, just improves battery life

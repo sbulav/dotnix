@@ -11,13 +11,20 @@ let
   cfg = config.custom.desktop.addons.hypridle;
 
   hyprctl = "${lib.getExe' config.wayland.windowManager.hyprland.package "hyprctl"}";
-  swaylock = "${pkgs.swaylock-effects}/bin/swaylock";
   systemctl = "${pkgs.systemd}/bin/systemctl";
+
+  lockScript = pkgs.writeShellScript "lock-screen" ''
+    WALLPAPER=$(${pkgs.gnugrep}/bin/grep '^wallpaper = ' "$HOME/.config/waypaper/config.ini" 2>/dev/null | ${pkgs.coreutils}/bin/cut -d' ' -f3-)
+    if [ -z "$WALLPAPER" ] || [ ! -f "$WALLPAPER" ]; then
+      WALLPAPER="${config.custom.desktop.addons.wallpaper}"
+    fi
+    exec ${pkgs.swaylock-effects}/bin/swaylock -fF --image "$WALLPAPER"
+  '';
 
   laptopListeners = [
     {
       timeout = 300;
-      on-timeout = "${swaylock} -fF";
+      on-timeout = "${lockScript}";
     }
     {
       timeout = 600;
@@ -34,7 +41,7 @@ let
   pcListeners = [
     {
       timeout = 600;
-      on-timeout = "${swaylock} -fF";
+      on-timeout = "${lockScript}";
     }
     {
       timeout = 900;
@@ -61,7 +68,7 @@ in
 
       settings = {
         general = {
-          lock_cmd = "${swaylock} -fF";
+          lock_cmd = "${lockScript}";
           ignore_dbus_inhibit = false;
           after_sleep_cmd = "${hyprctl} dispatch dpms on";
         };

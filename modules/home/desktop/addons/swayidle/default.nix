@@ -9,6 +9,14 @@ with lib;
 with lib.custom;
 let
   cfg = config.custom.desktop.addons.swayidle;
+
+  lockScript = pkgs.writeShellScript "lock-screen" ''
+    WALLPAPER=$(${pkgs.gnugrep}/bin/grep '^wallpaper = ' "$HOME/.config/waypaper/config.ini" 2>/dev/null | ${pkgs.coreutils}/bin/cut -d' ' -f3-)
+    if [ -z "$WALLPAPER" ] || [ ! -f "$WALLPAPER" ]; then
+      WALLPAPER="${config.custom.desktop.addons.wallpaper}"
+    fi
+    exec ${pkgs.swaylock-effects}/bin/swaylock -fF --image "$WALLPAPER"
+  '';
 in
 {
   options.custom.desktop.addons.swayidle = with types; {
@@ -22,7 +30,7 @@ in
       events = [
         {
           event = "lock";
-          command = "${pkgs.swaylock-effects}/bin/swaylock -fF";
+          command = "${lockScript}";
         }
         {
           event = "after-resume";
@@ -30,14 +38,14 @@ in
         }
         {
           event = "before-sleep";
-          command = "${pkgs.swaylock-effects}/bin/swaylock -fF";
+          command = "${lockScript}";
         }
       ];
       # 5 min lock, 10min turn the screen off, 20 min suspend
       timeouts = [
         {
           timeout = 300;
-          command = "${pkgs.swaylock-effects}/bin/swaylock -fF -C ~/.config/swaylock/config";
+          command = "${lockScript}";
         }
         {
           timeout = 600;
