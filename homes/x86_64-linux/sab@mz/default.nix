@@ -69,6 +69,9 @@ in
             criticalThreshold = 85;
             tooltip = true;
           };
+          micVuMeter = {
+            enable = true;
+          };
         };
         wlogout = enabled;
         hyprlock = disabled;
