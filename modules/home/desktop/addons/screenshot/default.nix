@@ -50,13 +50,16 @@ let
   gbSave =
     target: "grimblast ${mkFlags target [ ]} save ${target} \"${resolvedDir}/$(${getDateTime}).png\"";
 
-  gbStdoutPpm =
+  # PNG to stdout. grimblast's `save TARGET -` defaults to PNG which satty
+  # consumes directly. We avoid `--type`/`-t` here because the flag name
+  # varies between grimblast forks and PNG is the safe lingua franca.
+  gbStdoutPng =
     target:
     let
       useFreeze = cfg.freeze && (target == "area" || target == "active");
       flags = lib.optionalString useFreeze "--freeze";
     in
-    "grimblast ${flags} --type ppm save ${target} -";
+    "grimblast ${flags} save ${target} -";
 
   annotatorCmd =
     if cfg.annotator == "satty" then
@@ -70,7 +73,7 @@ let
 
   mkAnnotate =
     target:
-    "${gbStdoutPpm target} | ${lib.getExe (
+    "${gbStdoutPng target} | ${lib.getExe (
       pkgs.writeShellScriptBin "screenshot-annotate" ''
         exec ${annotatorCmd}
       ''
@@ -165,6 +168,14 @@ in
           output-filename = "${resolvedDir}/satty-%Y-%m-%d_%H:%M:%S.png";
           save-after-copy = false;
           default-hide-toolbars = false;
+          early-exit = true;
+          # Enter -> save to file + clipboard, then exit. Escape -> exit silently.
+          actions-on-enter = [
+            "save-to-clipboard"
+            "save-to-file"
+            "exit"
+          ];
+          actions-on-escape = [ "exit" ];
         };
       };
     };
