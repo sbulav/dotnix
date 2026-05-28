@@ -126,8 +126,37 @@ let
         '';
 
       extraBindings = concatMapStringsSep "\n" (binding: "bind = ${binding}") kb.extra;
+
+      screenshotCfg = config.custom.desktop.addons.screenshot;
+      sc = screenshotCfg.commands;
+      hasAnnotate = screenshotCfg.enable && screenshotCfg.annotator != "none";
+      screenshotBindings =
+        if !screenshotCfg.enable then
+          ""
+        else
+          # Print-key matrix:
+          #   ,Print               region  -> clipboard
+          #   SHIFT Print          region  -> file
+          #   ALT Print            region  -> annotate
+          #   CONTROL Print        window  -> clipboard
+          #   CONTROL SHIFT Print  window  -> file
+          #   SUPER Print          screen  -> file
+          #   SUPER SHIFT Print    screen  -> clipboard
+          concatMapStringsSep "\n" (b: "bind = ${b}") (
+            [
+              ",Print, exec, ${sc.region.clipboard}"
+              "SHIFT, Print, exec, ${sc.region.file}"
+              "CONTROL, Print, exec, ${sc.window.clipboard}"
+              "CONTROL SHIFT, Print, exec, ${sc.window.file}"
+              "SUPER, Print, exec, ${sc.screen.file}"
+              "SUPER SHIFT, Print, exec, ${sc.screen.clipboard}"
+            ]
+            ++ lib.optionals hasAnnotate [
+              "ALT, Print, exec, ${sc.region.annotate}"
+            ]
+          );
     in
-    appBindings + windowBindings + copyPasteBindings + extraBindings;
+    appBindings + windowBindings + copyPasteBindings + extraBindings + "\n" + screenshotBindings;
 in
 {
   options.custom.desktop.hyprland = {

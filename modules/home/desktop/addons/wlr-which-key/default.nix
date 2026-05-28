@@ -10,6 +10,85 @@ let
   cfg = config.custom.desktop.addons."wlr-which-key";
   yamlFormat = pkgs.formats.yaml { };
 
+  screenshotCfg = config.custom.desktop.addons.screenshot;
+  hasScreenshotAddon = screenshotCfg.enable;
+  hasAnnotate = hasScreenshotAddon && screenshotCfg.annotator != "none";
+
+  # Fallback commands for when the screenshot addon is disabled (legacy
+  # grim+slurp behavior). Keeps the menu working out of the box.
+  fallbackCommands = {
+    region = {
+      clipboard = ''grim -g "$(slurp)" - | wl-copy'';
+      file = ''grim -g "$(slurp)" ~/Pictures/Screenshots/$(date +'ss_%Y%m%d_%H%M%S.png')'';
+    };
+    window = {
+      clipboard = ''grim -g "$(slurp)" - | wl-copy'';
+      file = ''grim -g "$(slurp)" ~/Pictures/Screenshots/$(date +'ss_%Y%m%d_%H%M%S.png')'';
+    };
+    screen = {
+      clipboard = "grim - | wl-copy";
+      file = "grim ~/Pictures/Screenshots/$(date +'ss_%Y%m%d_%H%M%S.png')";
+    };
+  };
+
+  sc = if hasScreenshotAddon then screenshotCfg.commands else fallbackCommands;
+
+  mkCaptureSubmenu =
+    target:
+    [
+      {
+        key = "c";
+        desc = "To Clipboard";
+        cmd = sc.${target}.clipboard;
+      }
+      {
+        key = "f";
+        desc = "To File";
+        cmd = sc.${target}.file;
+      }
+    ]
+    ++ lib.optionals hasAnnotate [
+      {
+        key = "a";
+        desc = "Annotate";
+        cmd = sc.${target}.annotate;
+      }
+    ];
+
+  screenshotSubmenu = [
+    {
+      key = "a";
+      desc = "Region";
+      submenu = mkCaptureSubmenu "region";
+    }
+    {
+      key = "w";
+      desc = "Window";
+      submenu = mkCaptureSubmenu "window";
+    }
+    {
+      key = "s";
+      desc = "Full Screen";
+      submenu = mkCaptureSubmenu "screen";
+    }
+    {
+      key = "r";
+      desc = "Recording";
+      submenu = [
+        {
+          key = "t";
+          desc = "Toggle";
+          cmd = "record-screen toggle";
+        }
+        {
+          key = "x";
+          desc = "Stop";
+          cmd = "record-screen stop";
+        }
+      ];
+    }
+  ];
+
   defaultMenu = [
     {
       key = "a";
@@ -132,33 +211,7 @@ let
     {
       key = "s";
       desc = "Screenshot";
-      submenu = [
-        {
-          key = "r";
-          desc = "Region to File";
-          cmd = ''grim -g "$(slurp)" ~/Pictures/Screenshots/$(date +\'ss_%s.png\')'';
-        }
-        {
-          key = "c";
-          desc = "Region to Clipboard";
-          cmd = ''grim -g "$(slurp)" - | wl-copy'';
-        }
-        {
-          key = "f";
-          desc = "Full Screen";
-          cmd = "grim ~/Pictures/Screenshots/$(date +\'ss_%s.png\')";
-        }
-        {
-          key = "v";
-          desc = "Toggle Recording";
-          cmd = "record-screen toggle";
-        }
-        {
-          key = "x";
-          desc = "Stop Recording";
-          cmd = "record-screen stop";
-        }
-      ];
+      submenu = screenshotSubmenu;
     }
     {
       key = "m";

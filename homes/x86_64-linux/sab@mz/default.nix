@@ -44,7 +44,9 @@ in
           paste = "V";
           clipboard = "SHIFT C";
           extra = [
-            "ALT, Print, exec, record-screen toggle"
+            # ALT+Print is now region->annotate (screenshot addon).
+            # Move record-screen toggle to SUPER+ALT+Print.
+            "SUPER ALT, Print, exec, record-screen toggle"
           ];
         };
       };
@@ -77,6 +79,7 @@ in
         hyprlock = disabled;
         wezterm = enabled;
         "wlr-which-key" = enabled;
+        screenshot = enabled;
         wallpaper = "${wallpapers}/share/wallpapers/unorganized/vu_meter_code_neon.png";
 
         waypaper = {
