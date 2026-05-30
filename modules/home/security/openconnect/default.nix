@@ -9,11 +9,20 @@ with lib;
 with lib.custom;
 let
   cfg = config.${namespace}.security.openconnect;
+  configureResolvedSplitDns = ''
+    if sudo ${pkgs.systemd}/bin/systemctl -q is-active systemd-resolved.service && ${pkgs.iproute2}/bin/ip link show tun0 >/dev/null 2>&1; then
+      sudo ${pkgs.systemd}/bin/resolvectl dns tun0 94.124.205.83 94.124.204.83 || true
+      sudo ${pkgs.systemd}/bin/resolvectl domain tun0 '~pyn.ru' '~hh.ru' '~hhdev.ru' || true
+      sudo ${pkgs.systemd}/bin/resolvectl default-route tun0 no || true
+      sudo ${pkgs.systemd}/bin/resolvectl flush-caches || true
+    fi
+  '';
   route_delete_command =
     if pkgs.stdenv.isLinux then
       ''
         sudo ip route del 192.168.0.0/16
         sudo ip route add 10.8.0.1/32 via 192.168.90.1 #openconnect
+        ${configureResolvedSplitDns}
       ''
     else if pkgs.stdenv.isDarwin then
       ''

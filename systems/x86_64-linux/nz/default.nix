@@ -6,6 +6,50 @@
 }:
 let
   wallpapers = inputs.wallpapers-nix.packages.${pkgs.stdenv.hostPlatform.system}.full;
+  homeLabSplitDnsScript = pkgs.writeShellScript "home-lab-split-dns" ''
+    set -eu
+
+    apply_iface() {
+      iface="$1"
+
+      if [ -z "$iface" ]; then
+        return 0
+      fi
+
+      addresses="$(${pkgs.iproute2}/bin/ip -o -4 addr show dev "$iface" 2>/dev/null || true)"
+
+      case "$addresses" in
+        *" inet 192.168.8"[0-9].*|*" inet 192.168.9"[0-5].*)
+          ${pkgs.systemd}/bin/resolvectl dns "$iface" 172.16.64.104 || true
+          ${pkgs.systemd}/bin/resolvectl domain "$iface" '~sbulav.ru' sbulav.ru || true
+          ${pkgs.systemd}/bin/resolvectl default-route "$iface" no || true
+          ${pkgs.systemd}/bin/resolvectl flush-caches || true
+          ;;
+      esac
+    }
+
+    if ! ${pkgs.systemd}/bin/resolvectl status >/dev/null 2>&1; then
+      exit 0
+    fi
+
+    if [ "$#" -gt 0 ]; then
+      iface="$1"
+      event="''${2:-}"
+
+      case "$event" in
+        up|dhcp4-change|connectivity-change) ;;
+        *) exit 0 ;;
+      esac
+
+      apply_iface "$iface"
+      exit 0
+    fi
+
+    while IFS= read -r line; do
+      set -- $line
+      apply_iface "''${2%:}"
+    done < <(${pkgs.iproute2}/bin/ip -o -4 addr show)
+  '';
 in
 {
   imports = [ ./hardware-configuration.nix ];
@@ -69,6 +113,51 @@ in
       "mz"
       "mz.sbulav.ru"
     ];
+  };
+  networking.search = lib.mkForce [ ];
+
+  networking.networkmanager = {
+    dns = "systemd-resolved";
+    dispatcherScripts = [
+      {
+        source = homeLabSplitDnsScript;
+        type = "basic";
+      }
+    ];
+  };
+
+  services.resolved = {
+    enable = true;
+    dnssec = "false";
+    fallbackDns = [
+      "1.1.1.1"
+      "1.0.0.1"
+      "8.8.8.8"
+    ];
+    extraConfig = ''
+      DNS=1.1.1.1 1.0.0.1 8.8.8.8
+    '';
+  };
+
+  systemd.services = {
+    home-lab-split-dns = {
+      description = "Apply split DNS for home lab domains";
+      after = [
+        "NetworkManager.service"
+        "systemd-resolved.service"
+      ];
+      wants = [
+        "NetworkManager.service"
+        "systemd-resolved.service"
+      ];
+      wantedBy = [ "multi-user.target" ];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "${homeLabSplitDnsScript}";
+      };
+    };
+
+    systemd-resolved.postStart = "${homeLabSplitDnsScript}";
   };
 
   # limit systemd journal size
