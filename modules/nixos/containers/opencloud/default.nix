@@ -124,6 +124,15 @@ in
               # graph service: don't fall back to default role when OIDC mapping doesn't match
               GRAPH_USERNAME_MATCH = "none";
               GRAPH_ASSIGN_DEFAULT_USER_ROLE = "false";
+
+              # The web SPA does NOT take its client_id from config.json — it reads
+              # it from the WebFinger response (property `http://opencloud.eu/ns/oidc/client_id`).
+              # If unset, both config.json and WebFinger fall back to the upstream
+              # default "web" with scope "openid profile email", which Authelia
+              # rejects as "invalid_client". The env vars below propagate to both.
+              WEB_OIDC_CLIENT_ID = cfg.oidcClientId;
+              WEB_OIDC_SCOPE = "openid profile email groups offline_access";
+              WEB_OIDC_METADATA_URL = "${issuerUrl}/.well-known/openid-configuration";
             };
 
             settings = {
