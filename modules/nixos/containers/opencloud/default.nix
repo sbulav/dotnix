@@ -51,14 +51,9 @@ in
       externalInterface = "ens3";
     };
 
-    # The POSIX storage driver uses inotifywait to reconcile out-of-band changes
-    # (Jellyfin writes, torrent-client downloads, etc.) into the OpenCloud index.
-    # Each watched file consumes a kernel watch; defaults (~8k/128) are too low
-    # for media trees.
-    boot.kernel.sysctl = {
-      "fs.inotify.max_user_watches" = lib.mkDefault 1048576;
-      "fs.inotify.max_user_instances" = lib.mkDefault 1024;
-    };
+    # NOTE: nixpkgs already bumps fs.inotify.max_user_watches and
+    # max_user_instances to half a million each — plenty for the POSIX
+    # watcher on /tank/video + /tank/torrents/download, so we don't override.
 
     # Pre-create the POSIX storage root *and* the per-user mountpoints on the
     # host. The container's /var/lib/opencloud is bind-mounted from this path,
