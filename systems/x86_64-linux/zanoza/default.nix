@@ -199,7 +199,9 @@ in
       hostAddress = "172.16.64.10";
       localAddress = "172.16.64.110";
       secret_file = "secrets/zanoza/default.yaml";
-      primaryUser = "sab";
+      # Personal-space UUID for `sab` — read from
+      # /tank/opencloud/posix-storage/users/<uuid>/ after first OIDC login.
+      userId = "05307840-a7bf-4448-8dc4-6a9ca7375cb9";
       externalMounts = {
         Video = "/tank/video";
         Downloads = "/tank/torrents/download";

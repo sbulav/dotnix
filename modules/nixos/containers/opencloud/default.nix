@@ -24,9 +24,12 @@ in
     oidcClientId = mkOpt str "opencloud-web" "Web client ID registered in Authelia";
     adminGroup = mkOpt str "admins" "Authelia group that maps to the OpenCloud admin role";
     userGroup = mkOpt str "users" "Authelia group that maps to the OpenCloud user role";
-    # POSIX driver puts each user's personal space at <posix-root>/users/<preferred_username>/.
-    # Hardcoded here so external bind mounts have a stable target.
-    primaryUser = mkOpt str "sab" "OpenCloud personal-space owner (must match Authelia preferred_username)";
+    # POSIX driver names each personal space directory by the user's OpenCloud UUID
+    # (NOT preferred_username), e.g. /var/lib/opencloud/posix-storage/users/<uuid>/.
+    # After the user logs in for the first time, look up their UUID under
+    # /tank/opencloud/posix-storage/users/ and set it here. Leave empty to skip
+    # external-mount setup entirely.
+    userId = mkOpt str "" "OpenCloud user UUID (read from posix-storage/users/<uuid>/ after first login)";
     externalMounts = mkOpt (attrsOf str) { } "Map of <subfolder-in-personal-space> -> <hostPath> to bind into the user's personal space";
   };
 
@@ -67,14 +70,17 @@ in
     # oneshot before the container service to enforce ownership.
     systemd.tmpfiles.rules =
       let
-        userDir = "${cfg.dataPath}/posix-storage/users/${cfg.primaryUser}";
+        userDir = "${cfg.dataPath}/posix-storage/users/${cfg.userId}";
+        haveUser = cfg.userId != "";
       in
       [
         "d ${cfg.dataPath}/posix-storage          0750 998 998 -"
         "d ${cfg.dataPath}/posix-storage/users    0750 998 998 -"
+      ]
+      ++ lib.optionals haveUser [
         "d ${userDir}                             0750 998 998 -"
       ]
-      ++ lib.mapAttrsToList (sub: _: "d ${userDir}/${sub} 0750 998 998 -") cfg.externalMounts;
+      ++ lib.optionals haveUser (lib.mapAttrsToList (sub: _: "d ${userDir}/${sub} 0750 998 998 -") cfg.externalMounts);
 
     # Enforce 998:998 0750 on the posix-storage tree before each container
     # start. -R is safe here: the external bind mounts (Video, Downloads) are
@@ -90,9 +96,23 @@ in
         RemainAfterExit = false;
       };
       script = ''
-        mkdir -p ${cfg.dataPath}/posix-storage/users/${cfg.primaryUser}
-        chown -R 998:998 ${cfg.dataPath}/posix-storage
-        chmod -R u=rwX,g=rX,o= ${cfg.dataPath}/posix-storage
+        mkdir -p ${cfg.dataPath}/posix-storage/users
+        ${lib.optionalString (cfg.userId != "") "mkdir -p ${cfg.dataPath}/posix-storage/users/${cfg.userId}"}
+        chown 998:998 ${cfg.dataPath}/posix-storage ${cfg.dataPath}/posix-storage/users
+        chmod 0750     ${cfg.dataPath}/posix-storage ${cfg.dataPath}/posix-storage/users
+        ${lib.optionalString (cfg.userId != "") ''
+          # Only touch the user's own dir + our pre-created bind-mountpoints.
+          # Avoid -R so we never recurse into a still-mounted external source
+          # (which would chown e.g. /tank/video to 998 and break Jellyfin).
+          chown 998:998 ${cfg.dataPath}/posix-storage/users/${cfg.userId}
+          chmod 0750    ${cfg.dataPath}/posix-storage/users/${cfg.userId}
+        ''}
+        ${lib.concatStringsSep "\n" (
+          lib.mapAttrsToList (sub: _: ''
+            chown 998:998 ${cfg.dataPath}/posix-storage/users/${cfg.userId}/${sub} || true
+            chmod 0750    ${cfg.dataPath}/posix-storage/users/${cfg.userId}/${sub} || true
+          '') cfg.externalMounts
+        )}
       '';
     };
 
@@ -129,13 +149,18 @@ in
         # as ordinary folders. The watcher picks up out-of-band changes via
         # inotify. uid 998 on host must have rwx on the source paths (use
         # `setfacl -R -m u:998:rwx` if the source belongs to another service).
-        // lib.mapAttrs' (sub: src: {
-          name = "/var/lib/opencloud/posix-storage/users/${cfg.primaryUser}/${sub}";
-          value = {
-            hostPath = src;
-            isReadOnly = false;
-          };
-        }) cfg.externalMounts;
+        // (
+          if cfg.userId == "" then
+            { }
+          else
+            lib.mapAttrs' (sub: src: {
+              name = "/var/lib/opencloud/posix-storage/users/${cfg.userId}/${sub}";
+              value = {
+                hostPath = src;
+                isReadOnly = false;
+              };
+            }) cfg.externalMounts
+        );
 
       specialArgs = {
         inherit inputs;
