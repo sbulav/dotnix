@@ -72,6 +72,7 @@ widget image {
 #network:hover,
 #bluetooth:hover,
 #battery:hover,
+#custom-laptop-profile:hover,
 #clock:hover,
 #temperature:hover,
 #cpu:hover,
@@ -176,12 +177,13 @@ widget image {
 /* Network state */
 #network.disconnected { color: @pink; }
 
-/* Battery alert */
+/* Battery/profile alert */
 @keyframes blink {
   to { background-color: @pink; color: @base; }
 }
 
-#battery.warning:not(.charging):not(.plugged) {
+#battery.warning:not(.charging):not(.plugged),
+#custom-laptop-profile.warning:not(.charging) {
   background: rgba(255,46,136,0.6);
   color: @text;
   animation-name: blink;
@@ -192,6 +194,11 @@ widget image {
 }
 
 #battery.charging, #battery.plugged { color: @mint; }
+
+#custom-laptop-profile.profile-low-power { color: @mint; }
+#custom-laptop-profile.profile-balanced { color: @blue; }
+#custom-laptop-profile.profile-performance { color: @amber; }
+#custom-laptop-profile.charging { color: @mint; }
 
 /* Tray */
 #tray { padding: 0 6px; }

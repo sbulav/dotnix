@@ -262,9 +262,7 @@ in
 
     micVuMeter = {
       enable = mkBoolOpt false "Show an analog VU meter for the AKG mic in waybar.";
-      sourceMatch =
-        mkOpt str "AKG_C44"
-          "Substring matched against pactl source names to pick the mic.";
+      sourceMatch = mkOpt str "AKG_C44" "Substring matched against pactl source names to pick the mic.";
       svgPath =
         mkOpt str "${config.home.homeDirectory}/.cache/akg-vu.svg"
           "Where the meter SVG is written. Must be a stable absolute path; waybar config does not expand env vars.";
@@ -306,7 +304,7 @@ in
             "pulseaudio"
             "group/network"
             "tray"
-            "battery"
+            "custom/laptop-profile"
             "custom/power"
           ];
 
@@ -475,25 +473,15 @@ in
             "keyboard-name" = cfg.keyboardName;
             on-click = "${hyprctl} switchxkblayout ${cfg.keyboardName} next";
           };
-          "battery" = {
-            # on-click = "cpupower-gui";
-            bat = "BAT0";
-            states = {
-              "good" = 95;
-              "warning" = 30;
-              "critical" = 15;
-            };
-            format = "{icon} {capacity}%";
-            format-charging = " {capacity}%";
-            format-plugged = " {capacity}%";
-            format-alt = "{time} {icon}";
-            format-icons = [
-              " "
-              " "
-              " "
-              " "
-              " "
-            ];
+          "custom/laptop-profile" = {
+            exec = "laptop-profile status-json";
+            format = "{}";
+            interval = 5;
+            on-click = "laptop-profile next";
+            on-click-right = "laptop-profile menu";
+            return-type = "json";
+            signal = 8;
+            tooltip = true;
           };
           "tray" = {
             spacing = 10;

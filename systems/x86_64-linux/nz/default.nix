@@ -14,6 +14,7 @@ in
     # Enable Bootloader
     boot.efi.enable = true;
     battery.enable = true; # Only for laptops, they will still work without it, just improves battery life
+    laptopProfile.enable = true;
     sleep = {
       enable = true;
       gvfsUnmountFix.enable = true;
