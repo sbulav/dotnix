@@ -158,7 +158,11 @@ in
           ];
 
           # The POSIX watcher invokes inotifywait as an external binary; ship it.
+          # systemPackages alone is not enough — the upstream opencloud.service
+          # unit runs without /run/current-system/sw/bin on PATH, so add the
+          # package to the service's own PATH.
           environment.systemPackages = [ pkgs.inotify-tools ];
+          systemd.services.opencloud.path = [ pkgs.inotify-tools ];
 
           services.opencloud = {
             enable = true;
