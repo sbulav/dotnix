@@ -60,6 +60,11 @@ in
     # so the directory hierarchy must already exist before nspawn attempts the
     # nested external-folder binds below. uid/gid 998 = opencloud inside the
     # container (no idmap; private_users=no).
+    #
+    # tmpfiles alone is not enough: systemd-nspawn auto-creates any missing
+    # bind-target directory as root:root before the container starts, and on
+    # subsequent restarts will not re-chown them. We additionally run a
+    # oneshot before the container service to enforce ownership.
     systemd.tmpfiles.rules =
       let
         userDir = "${cfg.dataPath}/posix-storage/users/${cfg.primaryUser}";
@@ -70,6 +75,26 @@ in
         "d ${userDir}                             0750 998 998 -"
       ]
       ++ lib.mapAttrsToList (sub: _: "d ${userDir}/${sub} 0750 998 998 -") cfg.externalMounts;
+
+    # Enforce 998:998 0750 on the posix-storage tree before each container
+    # start. -R is safe here: the external bind mounts (Video, Downloads) are
+    # unmounted while the container is stopped, so chown only touches the
+    # OpenCloud-managed dirs and our pre-created mountpoints, never the
+    # /tank/video or /tank/torrents source trees.
+    systemd.services.opencloud-posix-storage-prepare = {
+      description = "Ensure ownership of OpenCloud POSIX storage tree";
+      wantedBy = [ "container@opencloud.service" ];
+      before = [ "container@opencloud.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = false;
+      };
+      script = ''
+        mkdir -p ${cfg.dataPath}/posix-storage/users/${cfg.primaryUser}
+        chown -R 998:998 ${cfg.dataPath}/posix-storage
+        chmod -R u=rwX,g=rX,o= ${cfg.dataPath}/posix-storage
+      '';
+    };
 
     custom.security.sops.secrets = {
       "opencloud-env" = lib.custom.secrets.containers.envFileWithRestart "opencloud" // {
