@@ -89,9 +89,9 @@
 
           namespace = "custom";
 
-          # Skip Darwin discovery to speed up evaluation
-          systems.exclude = [ "darwin" ];
-          homes.exclude = [ "darwin" ];
+          # Disabled Darwin systems/homes live under `.disabled/` so snowfall
+          # doesn't scan them (it identifies darwin by `hasInfix "darwin"` on
+          # the directory name and tries to build a darwinSystem otherwise).
         };
       };
     in
