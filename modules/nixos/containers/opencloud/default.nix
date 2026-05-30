@@ -117,6 +117,10 @@ in
               OC_LOG_LEVEL = "info";
               OC_EXCLUDE_RUN_SERVICES = "idp";
               OC_OIDC_ISSUER = issuerUrl;
+              # Traefik terminates TLS in front of us — serve plain HTTP on the
+              # backend, otherwise the proxy listens with a self-signed cert and
+              # Traefik logs "client sent an HTTP request to an HTTPS server".
+              PROXY_TLS = "false";
               # graph service: don't fall back to default role when OIDC mapping doesn't match
               GRAPH_USERNAME_MATCH = "none";
               GRAPH_ASSIGN_DEFAULT_USER_ROLE = "false";
