@@ -163,6 +163,11 @@ let
             ac_online_path="${cfg.acOnlinePath}"
             battery_capacity_path="${cfg.batteryCapacityPath}"
             battery_status_path="${cfg.batteryStatusPath}"
+            battery_energy_now_path="${cfg.batteryEnergyNowPath}"
+            battery_power_now_path="${cfg.batteryPowerNowPath}"
+            ratio_low_power="${toString cfg.profileDrawRatio.low-power}"
+            ratio_balanced="${toString cfg.profileDrawRatio.balanced}"
+            ratio_performance="${toString cfg.profileDrawRatio.performance}"
             root_cmd="${rootController}/bin/laptop-profile-root"
             # Use the NixOS setuid wrapper, not the plain sudo binary —
             # `writeShellApplication` would otherwise add a non-setuid sudo to PATH.
@@ -318,6 +323,38 @@ let
               refresh_waybar
             }
 
+            ratio_for_profile() {
+              case "$1" in
+                low-power) printf '%s' "$ratio_low_power" ;;
+                balanced) printf '%s' "$ratio_balanced" ;;
+                performance) printf '%s' "$ratio_performance" ;;
+                *) printf '1' ;;
+              esac
+            }
+
+            # Project battery hours remaining for $1, scaling the live power draw
+            # by the ratio between the target profile and the currently-active one.
+            estimate_runtime_h() {
+              local target="$1" energy power cur
+              [ -r "$battery_energy_now_path" ] && [ -r "$battery_power_now_path" ] \
+                || { printf '?'; return; }
+              energy="$(cat "$battery_energy_now_path")"
+              power="$(cat "$battery_power_now_path")"
+              [ "$power" -gt 0 ] 2>/dev/null || { printf '?'; return; }
+              cur="$(current_profile)"
+              LC_ALL=C awk \
+                -v e="$energy" -v p="$power" \
+                -v rc="$(ratio_for_profile "$cur")" \
+                -v rt="$(ratio_for_profile "$target")" '
+                BEGIN {
+                  if (rc <= 0) { printf "?"; exit }
+                  baseline = p / rc
+                  target_w = baseline * rt
+                  if (target_w <= 0) { printf "?"; exit }
+                  printf "%.1f", e / target_w
+                }'
+            }
+
             menu() {
               if ac_online; then
                 run_root apply
@@ -326,8 +363,16 @@ let
                 exit 0
               fi
 
-              local selected profile
-              selected="$({ printf '󰌪 Low power\n'; printf '󰾅 Balanced\n'; printf '󰓅 Performance\n'; } | rofi -dmenu -i -p 'Power profile')" || exit 0
+              local selected profile rt_low rt_bal rt_perf
+              rt_low="$(estimate_runtime_h low-power)"
+              rt_bal="$(estimate_runtime_h balanced)"
+              rt_perf="$(estimate_runtime_h performance)"
+
+              selected="$({
+                printf '󰌪 Low power     ~%sh\n' "$rt_low"
+                printf '󰾅 Balanced      ~%sh\n' "$rt_bal"
+                printf '󰓅 Performance   ~%sh\n' "$rt_perf"
+              } | rofi -dmenu -i -p 'Power profile')" || exit 0
               case "$selected" in
                 *Low*) profile="low-power" ;;
                 *Balanced*) profile="balanced" ;;
@@ -378,6 +423,20 @@ in
     batteryStatusPath =
       mkOpt str "/sys/class/power_supply/BAT0/status"
         "sysfs battery status path for Waybar.";
+    batteryEnergyNowPath =
+      mkOpt str "/sys/class/power_supply/BAT0/energy_now"
+        "sysfs path used to read remaining battery energy (µWh) for runtime estimates.";
+    batteryPowerNowPath =
+      mkOpt str "/sys/class/power_supply/BAT0/power_now"
+        "sysfs path used to read instantaneous battery power draw (µW) for runtime estimates.";
+    profileDrawRatio = mkOpt (attrsOf (oneOf [
+      int
+      float
+    ])) {
+      low-power = 0.98;
+      balanced = 1.0;
+      performance = 1.92;
+    } "Estimated idle CPU package draw ratio per profile, relative to balanced. Used to project battery life in the rofi popup.";
     stateDir =
       mkOpt str "/var/lib/laptop-profile"
         "Directory where the remembered battery profile is stored.";
