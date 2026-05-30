@@ -32,7 +32,7 @@ in
       host = cfg.host;
       url = "http://${cfg.localAddress}:9200";
       route_enabled = cfg.enable;
-      middleware = [ "secure-headers" ];
+      middleware = [ "secure-headers-opencloud" ];
     })
     (import ../shared/shared-adguard-dns-rewrite.nix {
       host = cfg.host;
@@ -54,7 +54,11 @@ in
     };
 
     containers.opencloud = {
-      ephemeral = true;
+      # Non-ephemeral: the upstream NixOS module's `opencloud-init-config` oneshot
+      # writes /etc/opencloud/opencloud.yaml with random internal-service secrets on
+      # first run. With ephemeral=true that file (and the secrets) is regenerated on
+      # every restart, invalidating IDM state and signed shares persisted in /var/lib.
+      ephemeral = false;
       autoStart = true;
 
       privateNetwork = true;
@@ -101,33 +105,35 @@ in
             port = 9200;
             url = opencloudUrl;
             stateDir = "/var/lib/opencloud";
+            # environmentFile is reserved for SECRETS only (OC_ADMIN_PASSWORD).
+            # Non-secret config lives in `settings` (yaml) below so it stays declarative
+            # and isn't silently shadowed by env entries written in sops.
             environmentFile = "/run/secrets/opencloud-env";
 
+            # Truly global config that the upstream module reads from env across many
+            # microservices. These have no clean yaml home, so they stay as env vars.
             environment = {
               OC_INSECURE = "true";
               OC_LOG_LEVEL = "info";
-
               OC_EXCLUDE_RUN_SERVICES = "idp";
               OC_OIDC_ISSUER = issuerUrl;
-
-              PROXY_AUTOPROVISION_ACCOUNTS = "true";
-              PROXY_USER_OIDC_CLAIM = "preferred_username";
-              PROXY_USER_CS3_CLAIM = "username";
-              PROXY_OIDC_REWRITE_WELLKNOWN = "true";
-              PROXY_OIDC_ACCESS_TOKEN_VERIFY_METHOD = "none";
-              PROXY_ROLE_ASSIGNMENT_DRIVER = "oidc";
-              PROXY_CSP_CONFIG_FILE_LOCATION = "/etc/opencloud/csp.yaml";
-
-              WEB_OIDC_CLIENT_ID = cfg.oidcClientId;
-              WEB_OIDC_SCOPE = "openid profile email groups offline_access";
-              WEB_OIDC_METADATA_URL = "${issuerUrl}/.well-known/openid-configuration";
-
+              # graph service: don't fall back to default role when OIDC mapping doesn't match
               GRAPH_USERNAME_MATCH = "none";
               GRAPH_ASSIGN_DEFAULT_USER_ROLE = "false";
             };
 
             settings = {
               proxy = {
+                auto_provision_accounts = true;
+                user_oidc_claim = "preferred_username";
+                user_cs3_claim = "username";
+                csp_config_file_location = "/etc/opencloud/csp.yaml";
+
+                oidc = {
+                  rewrite_well_known = true;
+                  access_token_verify_method = "none";
+                };
+
                 role_assignment = {
                   driver = "oidc";
                   oidc_role_mapper = {
@@ -144,6 +150,12 @@ in
                     ];
                   };
                 };
+              };
+
+              web.web.config.oidc = {
+                client_id = cfg.oidcClientId;
+                scope = "openid profile email groups offline_access";
+                metadata_url = "${issuerUrl}/.well-known/openid-configuration";
               };
 
               csp = {

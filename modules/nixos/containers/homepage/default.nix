@@ -157,6 +157,12 @@ in
                       };
                     };
                   }
+                  {
+                    "opencloud" = mkIf config.${namespace}.containers.opencloud.enable {
+                      icon = "opencloud";
+                      href = "https://${config.${namespace}.containers.opencloud.host}";
+                    };
+                  }
                 ];
               }
               {

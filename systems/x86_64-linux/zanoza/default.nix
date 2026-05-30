@@ -192,6 +192,13 @@ in
       hostAddress = "172.16.64.10";
       localAddress = "172.16.64.112";
       secret_file = "secrets/zanoza/default.yaml";
+    };
+    opencloud = {
+      enable = true;
+      host = "opencloud.sbulav.ru";
+      hostAddress = "172.16.64.10";
+      localAddress = "172.16.64.110";
+      secret_file = "secrets/zanoza/default.yaml";
     }; # }}}
   };
 

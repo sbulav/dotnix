@@ -8,6 +8,10 @@ with lib;
 with lib.custom;
 let
   cfg = config.${namespace}.containers.authelia;
+  # Reference OpenCloud's host directly so the redirect URIs follow the OpenCloud
+  # module if its host option ever changes (instead of silently desyncing from
+  # `opencloud.${cfg.domain}` here).
+  opencloudHost = config.${namespace}.containers.opencloud.host;
 in
 {
   options.${namespace}.containers.authelia = with types; {
@@ -168,6 +172,16 @@ in
 
                 identity_providers = {
                   oidc = {
+                    cors = {
+                      endpoints = [
+                        "authorization"
+                        "token"
+                        "revocation"
+                        "introspection"
+                        "userinfo"
+                      ];
+                      allowed_origins_from_client_redirect_uris = true;
+                    };
                     claims_policies = {
                       # https://github.com/pulsejet/nextcloud-oidc-login/issues/311
                       # https://www.authelia.com/integration/openid-connect/openid-connect-1.0-claims/#restore-functionality-prior-to-claims-parameter
@@ -179,6 +193,22 @@ in
                         "preferred_username"
                         "name"
                       ];
+                      opencloud_policy = {
+                        id_token = [
+                          "groups"
+                          "email"
+                          "email_verified"
+                          "preferred_username"
+                          "name"
+                        ];
+                        access_token = [
+                          "groups"
+                          "email"
+                          "email_verified"
+                          "preferred_username"
+                          "name"
+                        ];
+                      };
                     };
                     clients = [
                       {
@@ -233,6 +263,146 @@ in
                         redirect_uris = [ "https://grafana.${cfg.domain}/login/generic_oauth" ];
                         token_endpoint_auth_method = "client_secret_basic";
                         userinfo_signed_response_alg = "none";
+                      }
+                      {
+                        authorization_policy = "one_factor";
+                        client_id = "opencloud-web";
+                        client_name = "OpenCloud Web";
+                        claims_policy = "opencloud_policy";
+                        public = true;
+                        pkce_challenge_method = "S256";
+                        require_pkce = true;
+                        consent_mode = "implicit";
+                        token_endpoint_auth_method = "none";
+                        userinfo_signed_response_alg = "none";
+                        scopes = [
+                          "openid"
+                          "profile"
+                          "email"
+                          "groups"
+                          "offline_access"
+                        ];
+                        grant_types = [
+                          "authorization_code"
+                          "refresh_token"
+                        ];
+                        response_types = [ "code" ];
+                        response_modes = [
+                          "query"
+                          "fragment"
+                          "form_post"
+                        ];
+                        redirect_uris = [
+                          "https://${opencloudHost}/"
+                          "https://${opencloudHost}/oidc-callback.html"
+                          "https://${opencloudHost}/oidc-silent-redirect.html"
+                        ];
+                      }
+                      {
+                        authorization_policy = "one_factor";
+                        client_id = "OpenCloudDesktop";
+                        client_name = "OpenCloud Desktop";
+                        claims_policy = "opencloud_policy";
+                        public = true;
+                        pkce_challenge_method = "S256";
+                        require_pkce = true;
+                        consent_mode = "implicit";
+                        token_endpoint_auth_method = "none";
+                        userinfo_signed_response_alg = "none";
+                        scopes = [
+                          "openid"
+                          "profile"
+                          "email"
+                          "groups"
+                          "offline_access"
+                        ];
+                        grant_types = [
+                          "authorization_code"
+                          "refresh_token"
+                        ];
+                        response_types = [ "code" ];
+                        redirect_uris = [
+                          "http://127.0.0.1"
+                          "http://localhost"
+                        ];
+                      }
+                      {
+                        authorization_policy = "one_factor";
+                        client_id = "OpenCloudAndroid";
+                        client_name = "OpenCloud Android";
+                        claims_policy = "opencloud_policy";
+                        public = true;
+                        pkce_challenge_method = "S256";
+                        require_pkce = true;
+                        consent_mode = "implicit";
+                        token_endpoint_auth_method = "none";
+                        userinfo_signed_response_alg = "none";
+                        scopes = [
+                          "openid"
+                          "profile"
+                          "email"
+                          "groups"
+                          "offline_access"
+                        ];
+                        grant_types = [
+                          "authorization_code"
+                          "refresh_token"
+                        ];
+                        response_types = [ "code" ];
+                        redirect_uris = [ "oc://android.opencloud.eu" ];
+                      }
+                      {
+                        authorization_policy = "one_factor";
+                        client_id = "OpenCloudIOS";
+                        client_name = "OpenCloud iOS";
+                        claims_policy = "opencloud_policy";
+                        public = true;
+                        pkce_challenge_method = "S256";
+                        require_pkce = true;
+                        consent_mode = "implicit";
+                        token_endpoint_auth_method = "none";
+                        userinfo_signed_response_alg = "none";
+                        scopes = [
+                          "openid"
+                          "profile"
+                          "email"
+                          "groups"
+                          "offline_access"
+                        ];
+                        grant_types = [
+                          "authorization_code"
+                          "refresh_token"
+                        ];
+                        response_types = [ "code" ];
+                        redirect_uris = [ "oc://ios.opencloud.eu" ];
+                      }
+                      {
+                        authorization_policy = "one_factor";
+                        client_id = "Cyberduck";
+                        client_name = "Cyberduck";
+                        claims_policy = "opencloud_policy";
+                        public = true;
+                        pkce_challenge_method = "S256";
+                        require_pkce = true;
+                        consent_mode = "implicit";
+                        token_endpoint_auth_method = "none";
+                        userinfo_signed_response_alg = "none";
+                        scopes = [
+                          "openid"
+                          "profile"
+                          "email"
+                          "groups"
+                          "offline_access"
+                        ];
+                        grant_types = [
+                          "authorization_code"
+                          "refresh_token"
+                        ];
+                        response_types = [ "code" ];
+                        redirect_uris = [
+                          "x-cyberduck-action:oauth"
+                          "x-mountainduck-action:oauth"
+                        ];
                       }
                     ];
                   };
