@@ -267,7 +267,7 @@ let
 
               if ac_online; then
                 class="charging profile-$profile$capacity_class"
-                text=" $capacity% $profile_icon"
+                text="$profile_icon  $capacity%"
                 tooltip="Charging ($status): AC power forces $label"
               else
                 class="profile-$profile$capacity_class"
