@@ -24,6 +24,10 @@ in
     oidcClientId = mkOpt str "opencloud-web" "Web client ID registered in Authelia";
     adminGroup = mkOpt str "admins" "Authelia group that maps to the OpenCloud admin role";
     userGroup = mkOpt str "users" "Authelia group that maps to the OpenCloud user role";
+    # POSIX driver puts each user's personal space at <posix-root>/users/<preferred_username>/.
+    # Hardcoded here so external bind mounts have a stable target.
+    primaryUser = mkOpt str "sab" "OpenCloud personal-space owner (must match Authelia preferred_username)";
+    externalMounts = mkOpt (attrsOf str) { } "Map of <subfolder-in-personal-space> -> <hostPath> to bind into the user's personal space";
   };
 
   imports = [
@@ -47,6 +51,31 @@ in
       externalInterface = "ens3";
     };
 
+    # The POSIX storage driver uses inotifywait to reconcile out-of-band changes
+    # (Jellyfin writes, torrent-client downloads, etc.) into the OpenCloud index.
+    # Each watched file consumes a kernel watch; defaults (~8k/128) are too low
+    # for media trees.
+    boot.kernel.sysctl = {
+      "fs.inotify.max_user_watches" = lib.mkDefault 1048576;
+      "fs.inotify.max_user_instances" = lib.mkDefault 1024;
+    };
+
+    # Pre-create the POSIX storage root *and* the per-user mountpoints on the
+    # host. The container's /var/lib/opencloud is bind-mounted from this path,
+    # so the directory hierarchy must already exist before nspawn attempts the
+    # nested external-folder binds below. uid/gid 998 = opencloud inside the
+    # container (no idmap; private_users=no).
+    systemd.tmpfiles.rules =
+      let
+        userDir = "${cfg.dataPath}/posix-storage/users/${cfg.primaryUser}";
+      in
+      [
+        "d ${cfg.dataPath}/posix-storage          0750 998 998 -"
+        "d ${cfg.dataPath}/posix-storage/users    0750 998 998 -"
+        "d ${userDir}                             0750 998 998 -"
+      ]
+      ++ lib.mapAttrsToList (sub: _: "d ${userDir}/${sub} 0750 998 998 -") cfg.externalMounts;
+
     custom.security.sops.secrets = {
       "opencloud-env" = lib.custom.secrets.containers.envFileWithRestart "opencloud" // {
         sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
@@ -65,15 +94,28 @@ in
       hostAddress = cfg.hostAddress;
       localAddress = cfg.localAddress;
 
-      bindMounts = {
-        "${config.sops.secrets."opencloud-env".path}" = {
-          isReadOnly = true;
-        };
-        "/var/lib/opencloud" = {
-          hostPath = "${cfg.dataPath}";
-          isReadOnly = false;
-        };
-      };
+      bindMounts =
+        {
+          "${config.sops.secrets."opencloud-env".path}" = {
+            isReadOnly = true;
+          };
+          "/var/lib/opencloud" = {
+            hostPath = "${cfg.dataPath}";
+            isReadOnly = false;
+          };
+        }
+        # Externally-managed folders (Jellyfin libraries, torrent downloads,
+        # etc.) bound *inside* the POSIX user space so OpenCloud surfaces them
+        # as ordinary folders. The watcher picks up out-of-band changes via
+        # inotify. uid 998 on host must have rwx on the source paths (use
+        # `setfacl -R -m u:998:rwx` if the source belongs to another service).
+        // lib.mapAttrs' (sub: src: {
+          name = "/var/lib/opencloud/posix-storage/users/${cfg.primaryUser}/${sub}";
+          value = {
+            hostPath = src;
+            isReadOnly = false;
+          };
+        }) cfg.externalMounts;
 
       specialArgs = {
         inherit inputs;
@@ -94,6 +136,9 @@ in
           systemd.tmpfiles.rules = [
             "d /var/lib/opencloud 0750 opencloud opencloud -"
           ];
+
+          # The POSIX watcher invokes inotifywait as an external binary; ship it.
+          environment.systemPackages = [ pkgs.inotify-tools ];
 
           services.opencloud = {
             enable = true;
@@ -133,6 +178,21 @@ in
               WEB_OIDC_CLIENT_ID = cfg.oidcClientId;
               WEB_OIDC_SCOPE = "openid profile email groups offline_access";
               WEB_OIDC_METADATA_URL = "${issuerUrl}/.well-known/openid-configuration";
+
+              # POSIX storage driver: files live as plain files under
+              # /var/lib/opencloud/posix-storage/users/<username>/, so /tank/video
+              # and friends bind-mounted under there appear natively in OpenCloud
+              # while still being usable by Jellyfin/torrent client/etc.
+              # Caveat: the decomposed default layout at
+              # /var/lib/opencloud/storage/users/ is left untouched but unused
+              # after this switch — fine while OpenCloud is empty; clean up
+              # /tank/opencloud/storage if you want the disk back.
+              STORAGE_USERS_DRIVER = "posix";
+              STORAGE_USERS_ID_CACHE_STORE = "nats-js-kv";
+              STORAGE_USERS_POSIX_ROOT = "/var/lib/opencloud/posix-storage";
+              STORAGE_USERS_POSIX_WATCH_FS = "true";
+              STORAGE_USERS_POSIX_WATCH_PATH = "/var/lib/opencloud/posix-storage";
+              STORAGE_USERS_POSIX_WATCH_TYPE = "inotifywait";
             };
 
             settings = {

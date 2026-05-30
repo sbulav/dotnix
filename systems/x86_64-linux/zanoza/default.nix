@@ -199,6 +199,11 @@ in
       hostAddress = "172.16.64.10";
       localAddress = "172.16.64.110";
       secret_file = "secrets/zanoza/default.yaml";
+      primaryUser = "sab";
+      externalMounts = {
+        Video = "/tank/video";
+        Downloads = "/tank/torrents/download";
+      };
     }; # }}}
   };
 
