@@ -193,19 +193,22 @@ in
                         "preferred_username"
                         "name"
                       ];
-                      # access_token claims intentionally not configured: Authelia
-                      # only adds policy claims for granted scopes, and the OpenCloud
-                      # mobile apps hardcode a scope set that excludes `groups`, so
-                      # populating access_token here would be a no-op for them. Role
-                      # assignment is handled by OpenCloud's graph service instead
-                      # (GRAPH_ASSIGN_DEFAULT_USER_ROLE = "true").
-                      opencloud_policy.id_token = [
-                        "groups"
-                        "email"
-                        "email_verified"
-                        "preferred_username"
-                        "name"
-                      ];
+                      opencloud_policy = {
+                        id_token = [
+                          "groups"
+                          "email"
+                          "email_verified"
+                          "preferred_username"
+                          "name"
+                        ];
+                        access_token = [
+                          "groups"
+                          "email"
+                          "email_verified"
+                          "preferred_username"
+                          "name"
+                        ];
+                      };
                     };
                     clients = [
                       {
@@ -272,6 +275,13 @@ in
                         consent_mode = "implicit";
                         token_endpoint_auth_method = "none";
                         userinfo_signed_response_alg = "none";
+                        # Issue RFC9068 JWT access tokens so OpenCloud's proxy can verify them
+                        # locally (`proxy.oidc.access_token_verify_method = "jwt"`) and read
+                        # the `groups` claim straight from the JWT — the userinfo endpoint only
+                        # returns claims for granted scopes, and the mobile apps never request
+                        # the `groups` scope. Setting must be on every OpenCloud client since
+                        # the proxy's verify_method is global.
+                        access_token_signed_response_alg = "RS256";
                         scopes = [
                           "openid"
                           "profile"
@@ -306,6 +316,7 @@ in
                         consent_mode = "implicit";
                         token_endpoint_auth_method = "none";
                         userinfo_signed_response_alg = "none";
+                        access_token_signed_response_alg = "RS256";
                         scopes = [
                           "openid"
                           "profile"
@@ -334,6 +345,7 @@ in
                         consent_mode = "implicit";
                         token_endpoint_auth_method = "none";
                         userinfo_signed_response_alg = "none";
+                        access_token_signed_response_alg = "RS256";
                         scopes = [
                           "openid"
                           "profile"
@@ -359,6 +371,7 @@ in
                         consent_mode = "implicit";
                         token_endpoint_auth_method = "none";
                         userinfo_signed_response_alg = "none";
+                        access_token_signed_response_alg = "RS256";
                         scopes = [
                           "openid"
                           "profile"
@@ -384,6 +397,7 @@ in
                         consent_mode = "implicit";
                         token_endpoint_auth_method = "none";
                         userinfo_signed_response_alg = "none";
+                        access_token_signed_response_alg = "RS256";
                         scopes = [
                           "openid"
                           "profile"
