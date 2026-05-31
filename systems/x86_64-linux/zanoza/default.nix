@@ -159,7 +159,7 @@ in
       localAddress = "172.16.64.105";
     };
     nextcloud = {
-      enable = true;
+      enable = false;
       host = "nextcloud.sbulav.ru";
       secret_file = "secrets/zanoza/default.yaml";
       hostAddress = "172.16.64.10";
