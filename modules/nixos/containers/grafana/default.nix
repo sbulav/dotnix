@@ -208,6 +208,7 @@ in
                   let
                     prometheus = {
                       name = "Prometheus";
+                      uid = "prometheus";
                       type = "prometheus";
                       access = "proxy";
                       url = "http://${cfg.hostAddress}:9090";
@@ -218,6 +219,7 @@ in
                         [
                           {
                             name = "Loki";
+                            uid = "loki";
                             type = "loki";
                             access = "proxy";
                             url = "http://${cfg.hostAddress}:3030";
