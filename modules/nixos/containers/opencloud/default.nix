@@ -253,7 +253,17 @@ in
 
                 oidc = {
                   rewrite_well_known = true;
-                  access_token_verify_method = "none";
+                  # Verify Authelia-issued access tokens locally as JWTs (RFC9068) instead of
+                  # calling /userinfo for every request. Required so the `groups` claim reaches
+                  # OpenCloud regardless of what scopes the client asked for at /authorize —
+                  # mobile apps (Android/iOS) hardcode `openid profile email offline_access`
+                  # and never request `groups`, so /userinfo returns no groups and
+                  # role_assignment below fails with "no roles in user claims".
+                  # claims_policies.opencloud_policy.access_token in the Authelia client config
+                  # forces groups into the JWT, so reading the JWT directly side-steps the scope
+                  # restriction on the userinfo endpoint. Pair with
+                  # `access_token_signed_response_alg = "RS256"` on every OpenCloud client.
+                  access_token_verify_method = "jwt";
                 };
 
                 role_assignment = {
