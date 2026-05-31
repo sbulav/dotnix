@@ -217,7 +217,13 @@ in
               PROXY_TLS = "false";
               # graph service: don't fall back to default role when OIDC mapping doesn't match
               GRAPH_USERNAME_MATCH = "none";
-              GRAPH_ASSIGN_DEFAULT_USER_ROLE = "false";
+              # Mobile apps (Android/iOS) hardcode their OIDC scope set and do not request
+              # `groups`, so the access token has no role claim and the OIDC role driver
+              # fails with "no roles in user claims". We use the `default` role driver
+              # (see proxy.role_assignment below) which assigns `user` to anyone without
+              # a role in IDM. This env flag tells graph to also assign the default role
+              # at auto-provision time, so the assignment exists before first login.
+              GRAPH_ASSIGN_DEFAULT_USER_ROLE = "true";
 
               # The web SPA does NOT take its client_id from config.json — it reads
               # it from the WebFinger response (property `http://opencloud.eu/ns/oidc/client_id`).
@@ -253,35 +259,21 @@ in
 
                 oidc = {
                   rewrite_well_known = true;
-                  # Verify Authelia-issued access tokens locally as JWTs (RFC9068) instead of
-                  # calling /userinfo for every request. Required so the `groups` claim reaches
-                  # OpenCloud regardless of what scopes the client asked for at /authorize —
-                  # mobile apps (Android/iOS) hardcode `openid profile email offline_access`
-                  # and never request `groups`, so /userinfo returns no groups and
-                  # role_assignment below fails with "no roles in user claims".
-                  # claims_policies.opencloud_policy.access_token in the Authelia client config
-                  # forces groups into the JWT, so reading the JWT directly side-steps the scope
-                  # restriction on the userinfo endpoint. Pair with
-                  # `access_token_signed_response_alg = "RS256"` on every OpenCloud client.
+                  # Verify Authelia-issued access tokens locally as JWTs (RFC9068) instead
+                  # of calling /userinfo for every request. Saves a round-trip per API call.
+                  # Requires `access_token_signed_response_alg = "RS256"` on every
+                  # OpenCloud client in Authelia.
                   access_token_verify_method = "jwt";
                 };
 
-                role_assignment = {
-                  driver = "oidc";
-                  oidc_role_mapper = {
-                    role_claim = "groups";
-                    role_mapping = [
-                      {
-                        role_name = "admin";
-                        claim_value = cfg.adminGroup;
-                      }
-                      {
-                        role_name = "user";
-                        claim_value = cfg.userGroup;
-                      }
-                    ];
-                  };
-                };
+                # IDM-persisted role assignment. Admin role is set once via the web UI
+                # (or `opencloud graph assign-role` equivalent) and stored in libregraph.
+                # `default` driver only fires for users with no role at login time, so
+                # existing admins keep their role and new mobile users get `user`.
+                # We do NOT use the `oidc` driver because mobile clients
+                # (OpenCloudAndroid/IOS) cannot request the `groups` scope, so their
+                # access token never carries a role claim.
+                role_assignment.driver = "default";
               };
 
               web.web.config.oidc = {
