@@ -25,7 +25,6 @@ end)
 ----------------------------------------------------------------
 hl.env("HYPRCURSOR_THEME", "Adwaita")
 hl.env("HYPRCURSOR_SIZE", "24")
-hl.env("GDK_SCALE", "2")
 hl.env("GDK_BACKEND", "wayland,x11,*")
 hl.env("QT_QPA_PLATFORM", "wayland;xcb")
 hl.env("QT_STYLE_OVERRIDE", "kvantum")
@@ -86,11 +85,9 @@ hl.config({
 })
 
 -- Per-device tweaks
-hl.config({
-  device = {
-    name = "epic-mouse-v1",
-    sensitivity = -0.5,
-  },
+hl.device({
+  name = "epic-mouse-v1",
+  sensitivity = -0.5,
 })
 
 ----------------------------------------------------------------
@@ -101,13 +98,13 @@ hl.layer_rule({ match = { namespace = "waybar" }, no_anim = true })
 ----------------------------------------------------------------
 -- Animations
 ----------------------------------------------------------------
-hl.curve("myBezier", { type = "bezier", points = { 0.05, 0.9, 0.1, 1.05 } })
-hl.animation({ leaf = "windows",     enabled = true, speed = 7,  curve = "myBezier" })
-hl.animation({ leaf = "windowsOut",  enabled = true, speed = 7,  curve = "default", style = "popin 80%" })
-hl.animation({ leaf = "border",      enabled = true, speed = 10, curve = "default" })
-hl.animation({ leaf = "borderangle", enabled = true, speed = 8,  curve = "default" })
-hl.animation({ leaf = "fade",        enabled = true, speed = 7,  curve = "default" })
-hl.animation({ leaf = "workspaces",  enabled = true, speed = 6,  curve = "default" })
+hl.curve("myBezier", { type = "bezier", points = { { 0.05, 0.9 }, { 0.1, 1.05 } } })
+hl.animation({ leaf = "windows",     enabled = true, speed = 7,  bezier = "myBezier" })
+hl.animation({ leaf = "windowsOut",  enabled = true, speed = 7,  bezier = "default", style = "popin 80%" })
+hl.animation({ leaf = "border",      enabled = true, speed = 10, bezier = "default" })
+hl.animation({ leaf = "borderangle", enabled = true, speed = 8,  bezier = "default" })
+hl.animation({ leaf = "fade",        enabled = true, speed = 7,  bezier = "default" })
+hl.animation({ leaf = "workspaces",  enabled = true, speed = 6,  bezier = "default" })
 
 ----------------------------------------------------------------
 -- Static keybindings (navigation, workspaces, media, mouse)

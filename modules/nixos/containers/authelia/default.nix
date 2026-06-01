@@ -182,6 +182,11 @@ in
                       ];
                       allowed_origins_from_client_redirect_uris = true;
                     };
+                    lifespans.custom.opencloud_mobile = {
+                      access_token = "1d";
+                      id_token = "1h";
+                      refresh_token = "30d";
+                    };
                     claims_policies = {
                       # https://github.com/pulsejet/nextcloud-oidc-login/issues/311
                       # https://www.authelia.com/integration/openid-connect/openid-connect-1.0-claims/#restore-functionality-prior-to-claims-parameter
@@ -339,6 +344,7 @@ in
                         client_id = "OpenCloudAndroid";
                         client_name = "OpenCloud Android";
                         claims_policy = "opencloud_policy";
+                        lifespan = "opencloud_mobile";
                         public = true;
                         pkce_challenge_method = "S256";
                         require_pkce = true;
@@ -365,6 +371,7 @@ in
                         client_id = "OpenCloudIOS";
                         client_name = "OpenCloud iOS";
                         claims_policy = "opencloud_policy";
+                        lifespan = "opencloud_mobile";
                         public = true;
                         pkce_challenge_method = "S256";
                         require_pkce = true;
