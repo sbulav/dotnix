@@ -24,7 +24,12 @@ in
         hyprland = {
           prettyName = "Hyprland";
           comment = "Hyprland compositor managed by UWSM";
-          binPath = "/run/current-system/sw/bin/Hyprland";
+          # Launch via start-hyprland (Hyprland's official entrypoint) rather
+          # than the raw Hyprland binary. Hyprland 0.55+ warns at startup
+          # ("launched without start-hyprland") whenever its process is started
+          # by execing the bare binary; start-hyprland sets up the session
+          # correctly and silences that warning.
+          binPath = "/run/current-system/sw/bin/start-hyprland";
         };
       };
     };
