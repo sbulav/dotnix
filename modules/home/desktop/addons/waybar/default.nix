@@ -11,6 +11,7 @@ let
   cfg = config.custom.desktop.addons.waybar;
   hyprctl = "${pkgs.hyprland}/bin/hyprctl";
   blueberry = "${pkgs.blueman}/bin/blueman-manager";
+  waybar = pkgs.waybar;
 
   # Analog VU meter sampler — taps the mic source via pw-cat, computes peak
   # over 100 ms windows with ballistic smoothing, writes an SVG and nudges
@@ -272,7 +273,7 @@ in
   config = mkIf cfg.enable {
     programs.waybar = {
       enable = true;
-      package = pkgs.waybar;
+      package = waybar;
 
       systemd = {
         enable = false;
@@ -336,11 +337,10 @@ in
 
           "hyprland/workspaces" = {
             format = "{icon} {windows}";
-            on-click = "activate";
             all-outputs = false;
             on-scroll-up = "${getExe' config.wayland.windowManager.hyprland.package "hyprctl"} dispatch workspace e+1";
             on-scroll-down = "${getExe' config.wayland.windowManager.hyprland.package "hyprctl"} dispatch workspace e-1";
-            active-only = "false";
+            active-only = false;
             format-icons = {
               "1" = "󰎤";
               "2" = "󰎧";
