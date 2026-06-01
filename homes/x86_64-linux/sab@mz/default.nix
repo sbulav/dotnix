@@ -46,7 +46,7 @@ in
           extra = [
             # ALT+Print is now region->annotate (screenshot addon).
             # Move record-screen toggle to SUPER+ALT+Print.
-            "SUPER ALT, Print, exec, record-screen toggle"
+            ''hl.bind("SUPER + ALT + Print", hl.dsp.exec_cmd("record-screen toggle"))''
           ];
         };
       };

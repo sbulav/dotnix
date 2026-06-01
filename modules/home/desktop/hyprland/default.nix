@@ -72,13 +72,23 @@ let
 
   # Parse a monitor string like ",preferred,auto,auto" or
   # "DP-1,1920x1080@60,0x0,1" into hl.monitor(...) call.
+  # `scale` is rendered as a Lua number; non-numeric values like "auto"
+  # collapse to 1 (Hyprland's documented fallback).
   mkMonitor =
     s:
     let
       p = lib.splitString "," s;
       get = i: if builtins.length p > i then builtins.elemAt p i else "";
+      rawScale = get 3;
+      scaleLua =
+        if rawScale == "" || rawScale == "auto" then
+          "1"
+        else if builtins.match "[0-9]+(\\.[0-9]+)?" rawScale != null then
+          rawScale
+        else
+          luaStr rawScale;
     in
-    "hl.monitor({ output = ${luaStr (get 0)}, mode = ${luaStr (get 1)}, position = ${luaStr (get 2)}, scale = ${luaStr (get 3)} })";
+    "hl.monitor({ output = ${luaStr (get 0)}, mode = ${luaStr (get 1)}, position = ${luaStr (get 2)}, scale = ${scaleLua} })";
 
   mkWorkspaceMonitorBindings =
     bindings:
@@ -110,11 +120,11 @@ let
     else if verb == "exit" then
       "hl.dsp.exit()"
     else if verb == "fullscreen" then
-      "hl.dsp.window.fullscreen()"
+      "hl.dsp.window.fullscreen({ action = \"toggle\" })"
     else if verb == "togglefloating" then
-      "hl.dsp.window.float()"
+      "hl.dsp.window.float({ action = \"toggle\" })"
     else if verb == "pseudo" then
-      "hl.dsp.window.pseudo()"
+      "hl.dsp.window.pseudo({ action = \"toggle\" })"
     else if verb == "layoutmsg" then
       "hl.dsp.layout(${luaStr argTrim})"
     else
@@ -289,6 +299,21 @@ in
         wtype
         hyprpicker
       ];
+
+      # Hyprland 0.55 reads hyprland.lua. If a session ever starts before
+      # home-manager has linked the lua file, Hyprland writes a STUB
+      # hyprland.conf in its place and keeps using it. Wipe that stub on
+      # activation so a subsequent reload picks up the real config.
+      activation.removeHyprlandStubConf = {
+        after = [ "writeBoundary" ];
+        before = [ ];
+        data = ''
+          stub="$HOME/.config/hypr/hyprland.conf"
+          if [ -f "$stub" ] && [ ! -L "$stub" ] && grep -q "STUB" "$stub" 2>/dev/null; then
+            $DRY_RUN_CMD rm -f "$stub"
+          fi
+        '';
+      };
     };
 
     wayland.windowManager.hyprland = {
