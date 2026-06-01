@@ -58,7 +58,7 @@ in
     environment.systemPackages = with pkgs; [
       pavucontrol
       pulsemixer
-      helvum
+      crosspipe
     ];
   };
 }

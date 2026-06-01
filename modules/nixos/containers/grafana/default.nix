@@ -116,6 +116,7 @@ in
               security = {
                 admin_email = config.${namespace}.user.email;
                 admin_password = "$__file{${config.sops.secrets."grafana/admin_password".path}}";
+                secret_key = "SW2YcwTIb9zpOOhoPsMm";
               };
               analytics.reporting_enabled = false;
               users.auto_assign_org = true;
@@ -353,9 +354,7 @@ in
 
           services.resolved = {
             enable = true;
-            extraConfig = ''
-              DNS=172.16.64.104
-            '';
+            settings.Resolve.DNS = "172.16.64.104";
           };
           system.stateVersion = "24.11";
         };

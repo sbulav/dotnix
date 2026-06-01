@@ -17,6 +17,6 @@ in
 
   config = mkIf cfg.enable {
     hardware.bluetooth.enable = true;
-    environment.systemPackages = with pkgs; [ blueberry ];
+    environment.systemPackages = with pkgs; [ blueman ];
   };
 }

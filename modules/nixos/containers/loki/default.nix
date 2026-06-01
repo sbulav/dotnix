@@ -91,89 +91,48 @@ in
       };
     };
 
-    services.promtail = {
-      enable = true;
-      configuration = {
-        server = {
-          http_listen_port = 3031;
-          grpc_listen_port = 0;
-        };
-        positions = {
-          filename = "/tmp/positions.yaml";
-        };
-        clients = [
-          {
-            url = "http://127.0.0.1:${toString config.services.loki.configuration.server.http_listen_port}/loki/api/v1/push";
-          }
-        ];
-        scrape_configs = [
-          {
-            job_name = "journal";
-            journal = {
-              max_age = "12h";
-              labels = {
-                job = "systemd-journal";
-                host = config.system.name;
-              };
-            };
-            relabel_configs = [
-              {
-                source_labels = [ "__journal__systemd_unit" ];
-                target_label = "unit";
-              }
-            ];
-          }
-          {
-            job_name = "system";
-            pipeline_stages = [ ];
-            static_configs = [
-              {
-                labels = {
-                  job = "traefik-access-log";
-                  host = config.system.name;
-                  __path__ = "/tank/traefik/logs/access.log";
-                };
-              }
-              {
-                labels = {
-                  job = "traefik-log";
-                  host = config.system.name;
-                  __path__ = "/tank/traefik/logs/traefik.log";
-                };
-              }
-              {
-                labels = {
-                  job = "authelia";
-                  host = config.system.name;
-                  __path__ = "/tank/authelia/logs/authelia.log";
-                };
-              }
-              {
-                labels = {
-                  job = "grafana";
-                  host = config.system.name;
-                  __path__ = "/tank/grafana/data/log/grafana.log";
-                };
-              }
-              {
-                labels = {
-                  job = "jellyfin";
-                  host = config.system.name;
-                  __path__ = "/tank/jellyfin/log/*.log";
-                };
-              }
-              {
-                labels = {
-                  job = "v2raya";
-                  host = config.system.name;
-                  __path__ = "/tank/v2raya/logs/*.log";
-                };
-              }
-            ];
-          }
-        ];
-      };
-      # extraFlags
-    };
+    services.alloy.enable = true;
+
+    environment.etc."alloy/config.alloy".text = ''
+      loki.write "local" {
+        endpoint {
+          url = "http://127.0.0.1:${toString config.services.loki.configuration.server.http_listen_port}/loki/api/v1/push"
+        }
+      }
+
+      loki.relabel "journal" {
+        forward_to = []
+        rule {
+          source_labels = ["__journal__systemd_unit"]
+          target_label  = "unit"
+        }
+      }
+
+      loki.source.journal "journal" {
+        max_age       = "12h"
+        labels        = {
+          job  = "systemd-journal",
+          host = "${config.system.name}",
+        }
+        relabel_rules = loki.relabel.journal.rules
+        forward_to    = [loki.write.local.receiver]
+      }
+
+      local.file_match "system_logs" {
+        path_targets = [
+          {__path__ = "/tank/traefik/logs/access.log",       job = "traefik-access-log", host = "${config.system.name}"},
+          {__path__ = "/tank/traefik/logs/traefik.log",      job = "traefik-log",        host = "${config.system.name}"},
+          {__path__ = "/tank/authelia/logs/authelia.log",    job = "authelia",           host = "${config.system.name}"},
+          {__path__ = "/tank/grafana/data/log/grafana.log",  job = "grafana",            host = "${config.system.name}"},
+          {__path__ = "/tank/jellyfin/log/*.log",            job = "jellyfin",           host = "${config.system.name}"},
+          {__path__ = "/tank/v2raya/logs/*.log",             job = "v2raya",             host = "${config.system.name}"},
+        ]
+      }
+
+      loki.source.file "system" {
+        targets    = local.file_match.system_logs.targets
+        forward_to = [loki.write.local.receiver]
+      }
+    '';
   };
 }

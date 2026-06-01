@@ -10,7 +10,7 @@ with lib.custom;
 let
   cfg = config.custom.desktop.addons.waybar;
   hyprctl = "${pkgs.hyprland}/bin/hyprctl";
-  blueberry = "${pkgs.blueberry}/bin/blueberry";
+  blueberry = "${pkgs.blueman}/bin/blueman-manager";
 
   # Analog VU meter sampler — taps the mic source via pw-cat, computes peak
   # over 100 ms windows with ballistic smoothing, writes an SVG and nudges
@@ -331,7 +331,7 @@ in
             "tooltip-format" = "{controller_alias}\t{controller_address}";
             "tooltip-format-connected" = "{controller_alias}\t{controller_address}\n\n{device_enumerate}";
             "tooltip-format-enumerate-connected" = "{device_alias}\t\t{device_address}";
-            "on-click" = "blueberry";
+            "on-click" = "blueman-manager";
           };
 
           "hyprland/workspaces" = {

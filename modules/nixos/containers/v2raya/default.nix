@@ -98,9 +98,7 @@ in
           };
           services.resolved = {
             enable = true;
-            extraConfig = ''
-              DNS=172.16.64.104
-            '';
+            settings.Resolve.DNS = "172.16.64.104";
           };
           system.stateVersion = "24.11";
         };

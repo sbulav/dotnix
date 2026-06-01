@@ -99,7 +99,6 @@ in
         linkInputs = true;
       };
 
-    system.rebuild.enableNg = true;
     system.activationScripts.diff = {
       supportsDryActivation = true;
       text = ''
