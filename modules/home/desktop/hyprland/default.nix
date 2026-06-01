@@ -110,7 +110,7 @@ let
           ${mkBind mainMod kb.pseudo "pseudo,"}
         ''
         + optionalString (kb.split != null) ''
-          ${mkBind mainMod kb.split "togglesplit,"}
+          ${mkBind mainMod kb.split "layoutmsg, togglesplit"}
         '';
 
       copyPasteBindings =
