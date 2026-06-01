@@ -276,7 +276,7 @@ in
 
       systemd = {
         enable = false;
-        target = "hyprland-session.target";
+        targets = [ "hyprland-session.target" ];
       };
 
       style = builtins.readFile (./styles + "/${config.custom.theme.name}.css");

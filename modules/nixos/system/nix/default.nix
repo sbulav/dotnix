@@ -38,7 +38,7 @@ in
       nil
       nix-index
       nix-prefetch-git
-      nixfmt-rfc-style
+      nixfmt
       nvd
     ];
 
