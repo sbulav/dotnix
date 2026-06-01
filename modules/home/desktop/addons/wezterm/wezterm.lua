@@ -10,7 +10,7 @@ end
 -- Force XWayland on Hyprland: native Wayland backend mis-maps selection
 -- and scroll coords against HiDPI logical size (wezterm #1111, #7156,
 -- #7232). xwayland.force_zero_scaling in hyprland.lua keeps it crisp.
-config.enable_wayland = false
+-- config.enable_wayland = false
 
 -- Fonts
 -- {{{
