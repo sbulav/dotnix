@@ -19,6 +19,7 @@ in
     programs.yazi = {
       enable = true;
       package = pkgs.yazi;
+      shellWrapperName = "yy";
 
       enableBashIntegration = true;
       enableFishIntegration = true;

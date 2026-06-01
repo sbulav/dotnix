@@ -234,6 +234,7 @@ in
       enable = true;
       systemd.enable = false;
       xwayland.enable = true;
+      configType = "hyprlang";
 
       settings =
         let
