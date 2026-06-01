@@ -13,11 +13,46 @@ let
     mkEnableOption
     mapAttrsToList
     concatMapStringsSep
+    concatStringsSep
     optionalString
+    optionals
     ;
   inherit (lib.custom) mkBoolOpt mkOpt;
 
   cfg = config.custom.desktop.hyprland;
+
+  # ---------- Lua helpers -----------------------------------------------------
+
+  # "foo" → "\"foo\""
+  luaStr = s: "\"" + lib.replaceStrings [ "\\" "\"" ] [ "\\\\" "\\\"" ] s + "\"";
+
+  # Parse "title:something" or "initialClass:foo" → { field, pattern }
+  parseMatch =
+    app:
+    let
+      parts = lib.splitString ":" app;
+      hasField =
+        builtins.length parts > 1
+        && builtins.elem (builtins.elemAt parts 0) [
+          "title"
+          "initialTitle"
+          "initialClass"
+        ];
+      rawField = if hasField then builtins.elemAt parts 0 else "class";
+      pattern = if hasField then lib.concatStringsSep ":" (builtins.tail parts) else app;
+      # Lua API uses snake_case
+      field =
+        {
+          "title" = "title";
+          "initialTitle" = "initial_title";
+          "initialClass" = "initial_class";
+          "class" = "class";
+        }
+        .${rawField};
+      isTitleLike = rawField == "title" || rawField == "initialTitle";
+      regex = if isTitleLike then "^(.*${pattern}.*)$" else "^(${pattern})$";
+    in
+    { inherit field regex; };
 
   mkWorkspaceRules =
     assignments:
@@ -28,35 +63,73 @@ let
         mkRule =
           app:
           let
-            parts = lib.splitString ":" app;
-            hasField =
-              builtins.length parts > 1
-              && builtins.elem (builtins.elemAt parts 0) [
-                "title"
-                "initialTitle"
-                "initialClass"
-              ];
-            field = if hasField then builtins.elemAt parts 0 else "class";
-            pattern = if hasField then lib.concatStringsSep ":" (builtins.tail parts) else app;
-            isTitleLike = field == "title" || field == "initialTitle";
-            regex = if isTitleLike then "^(.*${pattern}.*)$" else "^(${pattern})$";
+            m = parseMatch app;
           in
-          "windowrulev2 = workspace ${ws} silent, ${field}:${regex}";
+          "hl.window_rule({ match = { ${m.field} = ${luaStr m.regex} }, workspace = ${luaStr "${ws} silent"} })";
       in
       concatMapStringsSep "\n" mkRule apps
     ) (builtins.attrNames assignments);
 
-  mkWorkspaceMonitorBindings = bindings: mapAttrsToList (ws: mon: "${ws},monitor:${mon}") bindings;
+  # Parse a monitor string like ",preferred,auto,auto" or
+  # "DP-1,1920x1080@60,0x0,1" into hl.monitor(...) call.
+  mkMonitor =
+    s:
+    let
+      p = lib.splitString "," s;
+      get = i: if builtins.length p > i then builtins.elemAt p i else "";
+    in
+    "hl.monitor({ output = ${luaStr (get 0)}, mode = ${luaStr (get 1)}, position = ${luaStr (get 2)}, scale = ${luaStr (get 3)} })";
+
+  mkWorkspaceMonitorBindings =
+    bindings:
+    mapAttrsToList (
+      ws: mon: "hl.workspace_rule({ workspace = ${luaStr ws}, monitor = ${luaStr mon} })"
+    ) bindings;
+
+  # Translate a hyprlang-style action into a Lua dispatcher expression.
+  # Examples:
+  #   "exec, wezterm"           → hl.dsp.exec_cmd("wezterm")
+  #   "killactive,"             → hl.dsp.window.close()
+  #   "exit"                    → hl.dsp.exit()
+  #   "fullscreen,"             → hl.dsp.window.fullscreen()
+  #   "togglefloating,"         → hl.dsp.window.float()
+  #   "pseudo,"                 → hl.dsp.window.pseudo()
+  #   "layoutmsg, togglesplit"  → hl.dsp.layout("togglesplit")
+  translateAction =
+    action:
+    let
+      parts = map lib.trim (lib.splitString "," action);
+      verb = builtins.elemAt parts 0;
+      arg = if builtins.length parts > 1 then concatStringsSep "," (builtins.tail parts) else "";
+      argTrim = lib.trim arg;
+    in
+    if verb == "exec" then
+      "hl.dsp.exec_cmd(${luaStr argTrim})"
+    else if verb == "killactive" then
+      "hl.dsp.window.close()"
+    else if verb == "exit" then
+      "hl.dsp.exit()"
+    else if verb == "fullscreen" then
+      "hl.dsp.window.fullscreen()"
+    else if verb == "togglefloating" then
+      "hl.dsp.window.float()"
+    else if verb == "pseudo" then
+      "hl.dsp.window.pseudo()"
+    else if verb == "layoutmsg" then
+      "hl.dsp.layout(${luaStr argTrim})"
+    else
+      throw "translateAction: unsupported verb '${verb}' in '${action}'";
 
   mkBind =
-    mainMod: key: action:
+    mainMod: keySpec: action:
     let
-      parts = lib.splitString " " key;
-      hasModifiers = builtins.length parts > 1;
-      mods = if hasModifiers then "${mainMod} ${lib.concatStringsSep " " (lib.init parts)}" else mainMod;
-      actualKey = if hasModifiers then lib.last parts else key;
+      keyParts = lib.splitString " " keySpec;
+      hasModifiers = builtins.length keyParts > 1;
+      extraMods = if hasModifiers then lib.init keyParts else [ ];
+      actualKey = if hasModifiers then lib.last keyParts else keySpec;
+      keyStr = concatStringsSep " + " ([ mainMod ] ++ extraMods ++ [ actualKey ]);
     in
-    "bind = ${mods}, ${actualKey}, ${action}";
+    "hl.bind(${luaStr keyStr}, ${translateAction action})";
 
   mkKeybindings =
     kb:
@@ -114,45 +187,33 @@ let
         '';
 
       copyPasteBindings =
-        # optionalString (kb.copy != null) ''
-        #   ${mkBind mainMod kb.copy "exec, wl-copy"}
-        # ''
-        # + optionalString (kb.paste != null) ''
-        #   ${mkBind mainMod kb.paste "exec, cliphist list | head -n 1 | cliphist decode | wl-copy && wtype -M ctrl v -m ctrl"}
-        # ''
-        # + optionalString (kb.floating != null && kb.paste != null) ''
         optionalString (kb.floating != null && kb.paste != null) ''
           ${mkBind mainMod "SHIFT ${kb.floating}" "togglefloating,"}
         '';
 
-      extraBindings = concatMapStringsSep "\n" (binding: "bind = ${binding}") kb.extra;
+      # `extra` entries are now expected to be full Lua statements.
+      extraBindings = concatStringsSep "\n" kb.extra;
 
       screenshotCfg = config.custom.desktop.addons.screenshot;
       sc = screenshotCfg.commands;
       hasAnnotate = screenshotCfg.enable && screenshotCfg.annotator != "none";
+      mkPrintBind =
+        modKey: cmd: "hl.bind(${luaStr modKey}, hl.dsp.exec_cmd(${luaStr cmd}))";
       screenshotBindings =
         if !screenshotCfg.enable then
           ""
         else
-          # Print-key matrix:
-          #   ,Print               region  -> clipboard
-          #   SHIFT Print          region  -> file
-          #   ALT Print            region  -> annotate
-          #   CONTROL Print        window  -> clipboard
-          #   CONTROL SHIFT Print  window  -> file
-          #   SUPER Print          screen  -> file
-          #   SUPER SHIFT Print    screen  -> clipboard
-          concatMapStringsSep "\n" (b: "bind = ${b}") (
+          concatStringsSep "\n" (
             [
-              ",Print, exec, ${sc.region.clipboard}"
-              "SHIFT, Print, exec, ${sc.region.file}"
-              "CONTROL, Print, exec, ${sc.window.clipboard}"
-              "CONTROL SHIFT, Print, exec, ${sc.window.file}"
-              "SUPER, Print, exec, ${sc.screen.file}"
-              "SUPER SHIFT, Print, exec, ${sc.screen.clipboard}"
+              (mkPrintBind "Print" sc.region.clipboard)
+              (mkPrintBind "SHIFT + Print" sc.region.file)
+              (mkPrintBind "CONTROL + Print" sc.window.clipboard)
+              (mkPrintBind "CONTROL + SHIFT + Print" sc.window.file)
+              (mkPrintBind "SUPER + Print" sc.screen.file)
+              (mkPrintBind "SUPER + SHIFT + Print" sc.screen.clipboard)
             ]
-            ++ lib.optionals hasAnnotate [
-              "ALT, Print, exec, ${sc.region.annotate}"
+            ++ optionals hasAnnotate [
+              (mkPrintBind "ALT + Print" sc.region.annotate)
             ]
           );
     in
@@ -164,7 +225,7 @@ in
 
     monitors = mkOpt (types.listOf types.str) [
       ",preferred,auto,auto"
-    ] "Monitor configuration strings";
+    ] "Monitor configuration strings (output,mode,position,scale)";
 
     workspaces = {
       assignments = mkOpt (types.attrsOf (types.listOf types.str)) {
@@ -217,7 +278,7 @@ in
       copy = mkOpt (types.nullOr types.str) null "Copy to clipboard keybinding";
       paste = mkOpt (types.nullOr types.str) null "Paste from clipboard keybinding";
 
-      extra = mkOpt (types.listOf types.str) [ ] "Additional custom keybindings";
+      extra = mkOpt (types.listOf types.str) [ ] "Additional custom keybindings (raw Lua statements)";
     };
   };
 
@@ -234,39 +295,51 @@ in
       enable = true;
       systemd.enable = false;
       xwayland.enable = true;
-      configType = "hyprlang";
+      configType = "lua";
 
-      settings =
+      # All directives are emitted via extraConfig (Lua); `settings` would
+      # need each top-level key to map cleanly onto an `hl.<key>(...)` call,
+      # which doesn't fit our gradient/list shapes — easier to render raw.
+      settings = { };
+
+      extraConfig =
         let
           c = config.custom.theme.colors;
+          themeAndGeneral = ''
+            hl.config({
+              general = {
+                gaps_in = 5,
+                gaps_out = 5,
+                border_size = 2,
+                ["col.active_border"] = { colors = { "rgba(${c.cyan}ff)", "rgba(${c.pink}ff)" }, angle = 45 },
+                ["col.inactive_border"] = "rgba(${c.separator}aa)",
+                layout = "dwindle",
+              },
+            })
+          '';
+          monitors = concatStringsSep "\n" (map mkMonitor cfg.monitors);
+          monitorBindings = concatStringsSep "\n" (
+            mkWorkspaceMonitorBindings cfg.workspaces.monitorBindings
+          );
         in
-        {
-          monitor = cfg.monitors;
+        ''
+          ${builtins.readFile ./hyprland.lua}
 
-          workspace = mkWorkspaceMonitorBindings cfg.workspaces.monitorBindings;
+          -- Theme-driven general block
+          ${themeAndGeneral}
 
-          general = {
-            gaps_in = 5;
-            gaps_out = 5;
-            border_size = 2;
-            "col.active_border" = "rgba(${c.cyan}ff) rgba(${c.pink}ff) 45deg";
-            "col.inactive_border" = "rgba(${c.separator}aa)";
-            layout = "dwindle";
-          };
+          -- Monitors
+          ${monitors}
 
-          cursor = {
-            enable_hyprcursor = true;
-            sync_gsettings_theme = true;
-          };
-        };
+          -- Workspace ↔ monitor bindings
+          ${monitorBindings}
 
-      extraConfig = ''
-        ${builtins.readFile ./hyprland.conf}
+          -- Workspace assignments (windows → workspaces)
+          ${mkWorkspaceRules cfg.workspaces.assignments}
 
-        ${mkWorkspaceRules cfg.workspaces.assignments}
-
-        ${mkKeybindings cfg.keybindings}
-      '';
+          -- Keybindings
+          ${mkKeybindings cfg.keybindings}
+        '';
     };
   };
 }
