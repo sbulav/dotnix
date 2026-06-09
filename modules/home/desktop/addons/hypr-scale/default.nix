@@ -73,13 +73,18 @@ let
       }
 
       apply_next() {
-        local mon name width height refresh x y cur new rr
+        local mon name width height refresh x y cur new rr lua
         mon="$(focused_monitor)"
         [ -n "$mon" ] || exit 0
         IFS=$'\t' read -r name width height refresh x y cur <<< "$mon"
         new="$(next_scale "$cur")"
         rr="$(awk -v r="$refresh" 'BEGIN { printf "%.0f", r }')"
-        hyprctl keyword monitor "$name,''${width}x''${height}@''${rr},''${x}x''${y},''${new}" >/dev/null
+        # Hyprland 0.55+ Lua configs reject `hyprctl keyword monitor`
+        # ("keyword can't work with non-legacy parsers"); drive the Lua
+        # hl.monitor() API via `hyprctl eval` instead — the same call the
+        # Nix-generated monitor config emits at startup.
+        lua="hl.monitor({ output = \"$name\", mode = \"''${width}x''${height}@''${rr}\", position = \"''${x}x''${y}\", scale = ''${new} })"
+        hyprctl eval "$lua" >/dev/null
         pkill -"$signum" waybar 2>/dev/null || true
       }
 
