@@ -307,6 +307,7 @@ in
             "hyprland/language"
             "group/stats"
           ]
+          ++ lib.optional config.custom.desktop.addons.hypr-scale.enable "custom/hypr-scale"
           ++ lib.optional cfg.micVuMeter.enable "image#mic-vu"
           ++ [
             "pulseaudio"
@@ -491,6 +492,16 @@ in
             on-click-right = "laptop-profile menu";
             return-type = "json";
             signal = 8;
+            tooltip = true;
+          };
+          "custom/hypr-scale" = lib.mkIf config.custom.desktop.addons.hypr-scale.enable {
+            exec = "hypr-scale status-json";
+            return-type = "json";
+            format = "{}";
+            interval = 5; # slow fallback; on-click refreshes via SIGRTMIN+8
+            signal = 8;
+            on-click = "hypr-scale next";
+            on-click-right = "hypr-scale info";
             tooltip = true;
           };
           "tray" = {

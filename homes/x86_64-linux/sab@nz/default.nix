@@ -32,6 +32,7 @@ in
         swaylock = enabled;
         hypridle = enabled;
         waybar = enabled;
+        hypr-scale = enabled;
         wlogout = enabled;
         hyprlock = disabled;
         wezterm = enabled;
