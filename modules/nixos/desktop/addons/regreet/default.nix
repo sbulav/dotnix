@@ -11,7 +11,7 @@ let
   cfg = config.custom.desktop.addons.regreet;
   wallpaper = options.system.wallpaper.value;
   dbus-run-session = lib.getExe' pkgs.dbus "dbus-run-session";
-  hyprland = lib.getExe config.programs.hyprland.package;
+  start-hyprland = lib.getExe' config.programs.hyprland.package "start-hyprland";
   hyprland-conf = pkgs.writeText "greetd-hyprland.conf" ''
     bind = SUPER SHIFT, E, killactive,
     misc {
@@ -340,7 +340,10 @@ in
         "/var/lib/regreet".d = defaultConfig;
       };
     security.pam.services.greetd.enableGnomeKeyring = true;
+    # Use start-hyprland (Hyprland's official entrypoint) so the greeter
+    # session does not emit the "launched without start-hyprland" warning
+    # before login. Args after `--` are passed through to Hyprland.
     services.greetd.settings.default_session.command =
-      "${dbus-run-session} ${hyprland} --config ${hyprland-conf} &> /dev/null";
+      "${dbus-run-session} ${start-hyprland} -- --config ${hyprland-conf} &> /dev/null";
   };
 }
