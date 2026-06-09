@@ -211,6 +211,17 @@ in
               OC_LOG_LEVEL = "info";
               OC_EXCLUDE_RUN_SERVICES = "idp";
               OC_OIDC_ISSUER = issuerUrl;
+
+              # OpenCloud 7.0.0 made the inter-service "service account" mandatory
+              # for the `sharing` service (older configs only carried it in a few
+              # service blocks). `opencloud init` never rewrites the persisted
+              # /etc/opencloud/opencloud.yaml on upgrade, so the stale config lacks
+              # it and the server aborts at startup with "service account id has
+              # not been configured for sharing" → Bad Gateway. Set the credentials
+              # globally so every service picks them up regardless of the generated
+              # file. Reuses the id/secret already provisioned in the config so it
+              # stays consistent with IDM. The secret lives in the sops env file.
+              OC_SERVICE_ACCOUNT_ID = "d5b49f10-dc63-4d31-8904-b4c675caa1f7";
               # Traefik terminates TLS in front of us — serve plain HTTP on the
               # backend, otherwise the proxy listens with a self-signed cert and
               # Traefik logs "client sent an HTTP request to an HTTPS server".
