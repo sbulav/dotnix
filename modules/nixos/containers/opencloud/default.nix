@@ -332,6 +332,21 @@ in
           };
 
           networking = {
+            # The adguard DNS rewrite resolves *.sbulav.ru to the public IP
+            # (46.164.242.115), but this container cannot hairpin-NAT back to its
+            # own public IP: every backend OIDC call to the issuer
+            # (authelia.sbulav.ru) and every internal data-service call to
+            # opencloud.sbulav.ru times out with "context deadline exceeded".
+            # Pin both hostnames to the Traefik bridge IP (cfg.hostAddress) so the
+            # traffic stays on the internal network. Traefik serves the real
+            # Let's Encrypt cert under the same SNI, so TLS still validates, and
+            # the issuer URL is unchanged so the token `iss` claim still matches.
+            hosts = {
+              "${cfg.hostAddress}" = [
+                cfg.oidcIssuerHost
+                cfg.host
+              ];
+            };
             firewall = {
               enable = true;
               allowedTCPPorts = [ 9200 ];
