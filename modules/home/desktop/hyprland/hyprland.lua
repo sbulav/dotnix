@@ -17,7 +17,6 @@ hl.on("hyprland.start", function()
   hl.exec_cmd("firefox")
   hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP --all")
   hl.exec_cmd("hyprctl setcursor Adwaita 24")
-  hl.exec_cmd("nm-applet --indicator")
 end)
 
 ----------------------------------------------------------------

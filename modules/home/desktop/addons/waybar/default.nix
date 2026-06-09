@@ -261,6 +261,13 @@ in
       tooltip = mkBoolOpt false "Whether to show tooltip on hover.";
     };
 
+    memory = {
+      enable = mkBoolOpt false "Whether to display memory usage in the stats group.";
+    };
+    disk = {
+      enable = mkBoolOpt false "Whether to display disk usage in the stats group.";
+    };
+
     micVuMeter = {
       enable = mkBoolOpt false "Show an analog VU meter for the AKG mic in waybar.";
       sourceMatch = mkOpt str "AKG_C44" "Substring matched against pactl source names to pick the mic.";
@@ -313,9 +320,9 @@ in
             orientation = "horizontal";
             modules = [
               "cpu"
-              "memory"
-              "disk"
             ]
+            ++ lib.optionals cfg.memory.enable [ "memory" ]
+            ++ lib.optionals cfg.disk.enable [ "disk" ]
             ++ lib.optionals cfg.temperature.enable [ "temperature" ];
           };
           "group/network" = {
@@ -404,10 +411,10 @@ in
             tooltip = false;
             on-click = "wezterm -e btm";
           };
-          "memory" = {
+          "memory" = lib.mkIf cfg.memory.enable {
             format = " {}%";
           };
-          "disk" = {
+          "disk" = lib.mkIf cfg.disk.enable {
             interval = 30;
             format = " {percentage_used}%";
             path = "/";
@@ -431,6 +438,9 @@ in
             exec = "uname -r";
           };
           network = {
+            # Left-click toggles format-alt (bandwidth); right-click opens the rofi
+            # network picker — this replaces the removed nm-applet tray menu.
+            on-click-right = "${pkgs.networkmanager_dmenu}/bin/networkmanager_dmenu";
             format-wifi = "󰖩 {signalStrength}%";
             format-ethernet = "{ifname}: {ipaddr}/{cidr} 󰈀";
             format-linked = "{ifname} (No IP) 󰈀";
@@ -492,6 +502,34 @@ in
           };
         };
       };
+    };
+
+    # Cross-cutting bits that exist because waybar now owns the bluetooth and
+    # network indicators — co-located here to keep the "waybar is the single
+    # status surface" decision in one place.
+    xdg.configFile = {
+      # blueman-applet autostarts via /etc/xdg/autostart/blueman.desktop (blueman
+      # is in systemPackages + xdg.autostart.enable). Waybar's bluetooth module is
+      # now the sole BT indicator, so shadow the system entry to stop the duplicate
+      # tray applet. blueman-manager (the GUI, opened on bar click) stays available.
+      "autostart/blueman.desktop".text = ''
+        [Desktop Entry]
+        Hidden=true
+      '';
+      # Backs the network module's right-click picker; drive it through rofi
+      # (already this session's launcher) instead of the default dmenu.
+      "networkmanager-dmenu/config.ini".text = ''
+        [dmenu]
+        dmenu_command = rofi
+        highlight = True
+        compact = True
+        wifi_chars = ▂▄▆█
+        prompt = Networks
+
+        [editor]
+        gui_if_available = True
+        gui = nm-connection-editor
+      '';
     };
 
     systemd.user.services.akg-vu-meter = mkIf cfg.micVuMeter.enable {
