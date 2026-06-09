@@ -34,12 +34,35 @@
       command || ""
     )
 
+  // Protect secret-bearing dirs/files (~/.ssh, ~/.kube, kubeconfig) regardless of
+  // whether the tool was handed an absolute or relative path. These sit outside
+  // the workspace, so the relative-escape check never sees them.
+  const isProtectedPath = (value) => {
+    if (typeof value !== "string" || value === "") return false
+    const expanded = expandHome(value)
+    return (
+      /(?:^|\/)\.ssh(?:\/|$)/i.test(expanded) ||
+      /(?:^|\/)\.kube(?:\/|$)/i.test(expanded) ||
+      /(?:^|\/)kubeconfig(?:$|\.)/i.test(expanded)
+    )
+  }
+
   export const SecurityPlugin = async ({ directory, worktree }) => {
     const workspace = worktree || directory
     const dangerousPatterns = [
       /\b(curl|wget)\b[^|]*\|\s*\b(sh|bash)\b/i,
       /\beval\b.*\$\(/,
-      /:\(\)\{.*:\|:.*\};:/
+      /:\(\)\{.*:\|:.*\};:/,
+      // Reading SSH/Kubernetes credentials via bash (mirrors the Claude hook)
+      /\.ssh(?:\/|$|\s)/i,
+      /\.kube(?:\/|$|\s)/i,
+      /kubeconfig/i,
+      /\$KUBECONFIG/,
+      // Dumping the environment (which carries injected secrets)
+      /(?:source|\.)\s+.*\.env(?:$|\s)/,
+      /\bprintenv\b/,
+      /\bdeclare\s+-p\b/,
+      /\bexport\s+-p\b/
     ]
 
     return {
@@ -70,6 +93,9 @@
           if (isProtectedEnvFile(output.args.filePath)) {
             throw new Error(".env files are protected")
           }
+          if (isProtectedPath(output.args.filePath)) {
+            throw new Error("~/.ssh, ~/.kube, and kubeconfig files are protected")
+          }
         }
 
         if (["grep", "glob", "list"].includes(input.tool)) {
@@ -77,12 +103,18 @@
           if (input.tool === "grep" && output.args.path && isProtectedEnvFile(output.args.path)) {
             throw new Error(".env files are protected")
           }
+          if (isProtectedPath(output.args.path)) {
+            throw new Error("~/.ssh, ~/.kube, and kubeconfig files are protected")
+          }
         }
 
         if (input.tool === "glob") {
           const pattern = output.args.pattern || ""
           if (pattern === ".." || pattern.startsWith("../") || pattern.includes("/../")) {
             throw new Error("Glob pattern escapes the workspace")
+          }
+          if (isProtectedPath(pattern)) {
+            throw new Error("~/.ssh, ~/.kube, and kubeconfig files are protected")
           }
         }
       }

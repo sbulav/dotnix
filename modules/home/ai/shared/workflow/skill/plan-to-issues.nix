@@ -35,25 +35,29 @@
     3. Fetch comments with `tea issues -R <forgejo-remote> --comments -o json <issue-number>`.
     4. Extract the latest AI-HANDOFF and read the parent issue body.
     5. Explore the codebase to find existing patterns, validate assumptions, and identify integration points.
+       - If a read-only explorer subagent is available, delegate this exploration to it and work from its summary; otherwise explore directly with the read-only tools.
     6. Propose vertical slices. Each slice should be:
        - Small enough to implement in one focused session
        - Cross-layer (touches API/logic/storage, not just one layer)
-       - Has its own acceptance criteria
+       - Has its own acceptance criteria expressed as `- [ ]` checkboxes
        - Notes dependencies on other slices
+       - Tagged with an execution mode: HITL (needs human review or decisions mid-flight) or AFK (safe to run autonomously end-to-end)
     7. Present all slices to the user in a numbered list with:
        - Slice title
        - Goal (1 sentence)
        - What's in scope
-       - Acceptance criteria
+       - Acceptance criteria as `- [ ]` checkboxes
+       - Execution mode: HITL or AFK
        - Dependencies on other slices (if any)
     8. Ask one confirmation: "Create all N sub-issues? (y/n)"
-    9. Create sub-issues with title format: `#<parent> slice: <title>`
+    9. Create sub-issues with title format: `#<parent> slice: <title>`, applying the `hitl` or `afk` label that matches each slice's execution mode.
     10. Post AI-HANDOFF on parent issue with status `planned`, listing all created sub-issue numbers.
 
     Sub-issue body shape:
     - `## Цель`
     - `## Входит в scope`
-    - `## Критерии готовности`
+    - `## Режим` (HITL или AFK)
+    - `## Критерии готовности` — list each criterion as a `- [ ]` checkbox
     - `## Зависимости`
     - `## Родительский issue`
        `#<parent-number>`

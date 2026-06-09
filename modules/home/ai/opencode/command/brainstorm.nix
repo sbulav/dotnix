@@ -4,7 +4,6 @@ in
 {
   description = workflow.description;
   agent = "brainstorm-orchestrator";
-  model = "hhdev-glm5-fp8/zai-org/GLM-5.1-FP8";
 
   requirements = ''
     Use the Forgejo-first brainstorming workflow in the current repository.

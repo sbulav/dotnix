@@ -4,7 +4,6 @@ in
 {
   description = workflow.description;
   agent = "ship-orchestrator";
-  model = "hhdev-glm5-fp8/zai-org/GLM-5.1-FP8";
 
   requirements = ''
     Prepare commit and PR for the current issue branch.
