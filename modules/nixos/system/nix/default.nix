@@ -9,6 +9,7 @@ with lib;
 with lib.custom;
 let
   cfg = config.system.nix;
+  withPriority = cacheServer: "${cacheServer.url}?priority=${toString cacheServer.priority}";
 in
 {
   options.system.nix = with types; {
@@ -25,7 +26,7 @@ in
       options = {
         url = mkOpt str "" "Cache server URL";
         key = mkOpt str "" "Cache server public key";
-        priority = mkOpt int 40 "Substituter priority (lower = higher priority)";
+        priority = mkOpt int 10 "Substituter priority (lower = higher priority)";
       };
     })) [ ] "Additional binary cache servers to use as substituters";
   };
@@ -54,19 +55,22 @@ in
           allowed-users = users;
           auto-optimise-store = true;
           builders-use-substitutes = true;
+          connect-timeout = 5;
+          download-attempts = 1;
           experimental-features = "nix-command flakes";
+          fallback = true;
           http-connections = 50;
           keep-going = true;
           keep-outputs = true;
           log-lines = 50;
           sandbox = "relaxed";
+          stalled-download-timeout = 10;
           trusted-users = users;
           warn-dirty = false;
           substituters =
             # Add custom cache servers first (checked before public caches)
-            (optionals (cfg.cache-servers != [ ]) (map (cs: cs.url) cfg.cache-servers)) ++ [
-              "https://cache.nixos.org"
-              "https://install.determinate.systems"
+            (optionals (cfg.cache-servers != [ ]) (map withPriority cfg.cache-servers)) ++ [
+              "https://cache.nixos.org?priority=20"
               # "https://nix-community.cachix.org"
               # "https://dotnix.cachix.org"
               # "https://nixpkgs-unfree.cachix.org"

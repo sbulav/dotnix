@@ -68,7 +68,7 @@ in
       {
         url = "http://beez.sbulav.ru:5000";
         key = "beez.sbulav.ru:g3AGSm7ZgXhEvJCO/z7TPsykfj/F+aHGO4h7QcUGTD8=";
-        priority = 40;
+        priority = 10;
       }
     ];
   };
