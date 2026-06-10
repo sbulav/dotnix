@@ -169,6 +169,9 @@ let
             ''exec, rofi -dmenu -p "Search" | xargs -I{} xdg-open "https://www.google.com/search?q={}" && hyprctl dispatch focuswindow firefox''
           }
         ''
+        + optionalString (kb.woomer != null) ''
+          ${mkBind mainMod kb.woomer "exec, woomer"}
+        ''
         + optionalString (kb.lock != null) ''
           ${mkBind mainMod "SHIFT ${kb.lock}" "exec, swaylock"}
         ''
@@ -275,6 +278,7 @@ in
       clipboard = mkOpt (types.nullOr types.str) "C" "Clipboard manager keybinding";
       passwords = mkOpt (types.nullOr types.str) "P" "Password manager keybinding";
       search = mkOpt (types.nullOr types.str) "Z" "Web search keybinding";
+      woomer = mkOpt (types.nullOr types.str) null "Woomer (Wayland zoomer) keybinding";
       lock = mkOpt (types.nullOr types.str) "L" "Lock screen keybinding";
       logout = mkOpt (types.nullOr types.str) "P" "Logout menu keybinding";
 

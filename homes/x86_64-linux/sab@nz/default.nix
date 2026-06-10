@@ -38,6 +38,7 @@ in
         wezterm = enabled;
         "wlr-which-key" = enabled;
         screenshot = enabled;
+        woomer = enabled;
         wallpaper = "${wallpapers}/share/wallpapers/unorganized/vu_meter_code_neon.png";
 
         waypaper = {

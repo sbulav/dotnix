@@ -54,6 +54,7 @@ in
         hyprpaper = enabled;
         mako = enabled;
         rofi = enabled;
+        woomer = enabled;
         kitty = disabled;
         swaylock = enabled;
         hypridle = {
