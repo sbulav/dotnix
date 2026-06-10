@@ -23,6 +23,7 @@ in
 
     xdg.configFile."hypr/hyprpaper.conf".text = ''
       ipc = true
+      splash = false
 
       wallpaper {
         monitor =
