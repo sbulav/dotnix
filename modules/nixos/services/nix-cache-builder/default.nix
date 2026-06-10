@@ -224,6 +224,28 @@ in
           ${pkgs.nix}/bin/nix flake metadata "$FLAKE"
           echo "========================"
 
+          echo "Archiving flake inputs for cache clients..."
+          ARCHIVE_JSON=$(${pkgs.coreutils}/bin/mktemp)
+          if ${pkgs.coreutils}/bin/timeout 15m ${pkgs.nix}/bin/nix flake archive --json "$FLAKE" > "$ARCHIVE_JSON"; then
+            INPUT_PATHS=$(${pkgs.jq}/bin/jq -r '.. | objects | .path? // empty' "$ARCHIVE_JSON" | ${pkgs.coreutils}/bin/sort -u)
+
+            if [ -n "$INPUT_PATHS" ]; then
+              while IFS= read -r path; do
+                echo "Signing flake input: $path"
+                ${pkgs.nix}/bin/nix store sign \
+                  --recursive \
+                  --key-file ${config.sops.secrets."nix-cache-priv-key".path} \
+                  "$path"
+              done <<< "$INPUT_PATHS"
+              echo "✓ Archived and signed flake inputs"
+            else
+              echo "No flake input store paths found in archive output"
+            fi
+          else
+            echo "⚠ Warning: Failed to archive flake inputs, continuing with builds"
+          fi
+          rm -f "$ARCHIVE_JSON"
+
           # Build each host
           ${concatMapStringsSep "\n" (host: ''
                         echo ""
@@ -409,9 +431,13 @@ in
             ''}
 
             # Send email based on build status
-            if [ $SUCCESS_COUNT -eq $TOTAL_HOSTS ] && [ "${if cfg.email.notifyOnSuccess then "true" else "false"}" = "true" ]; then
+            if [ $SUCCESS_COUNT -eq $TOTAL_HOSTS ] && [ "${
+              if cfg.email.notifyOnSuccess then "true" else "false"
+            }" = "true" ]; then
               EMAIL_SHOULD_SEND="true"
-            elif [ $SUCCESS_COUNT -lt $TOTAL_HOSTS ] && [ "${if cfg.email.notifyOnFailure then "true" else "false"}" = "true" ]; then
+            elif [ $SUCCESS_COUNT -lt $TOTAL_HOSTS ] && [ "${
+              if cfg.email.notifyOnFailure then "true" else "false"
+            }" = "true" ]; then
               EMAIL_SHOULD_SEND="true"
             fi
 
@@ -504,6 +530,14 @@ in
         secretKeyFile = config.sops.secrets."nix-cache-priv-key".path;
         package = pkgs.nix-serve-ng;
       };
+
+      users.groups.nix-serve = { };
+      users.users.nix-serve = {
+        isSystemUser = true;
+        group = "nix-serve";
+      };
+
+      systemd.services.nix-serve.serviceConfig.DynamicUser = mkForce false;
 
       # Determinate Nix ignores extra-allowed-users; explicitly allow nix-serve user
       nix.settings.allowed-users = [ "nix-serve" ];
