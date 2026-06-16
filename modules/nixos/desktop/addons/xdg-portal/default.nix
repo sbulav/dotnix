@@ -43,13 +43,14 @@ in
           };
         };
 
-        xdgOpenUsePortal = true;
+        # Do NOT route xdg-open through the portal's OpenURI. On Hyprland +
+        # xdg-desktop-portal 1.20, OpenFile fails to introspect the caller
+        # (`Portal operation not allowed: Unable to open /proc/PID/root`),
+        # so every `open <file>`/link-open breaks. With this off, xdg-open
+        # launches the default handler (firefox) directly. Only Flatpak apps
+        # need portal-based opening, and there are none on these hosts.
+        xdgOpenUsePortal = false;
       };
-    };
-
-    # Ensure proper environment for portal integration
-    environment.sessionVariables = {
-      NIXOS_XDG_OPEN_USE_PORTAL = "1";
     };
   };
 }
