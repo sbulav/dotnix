@@ -16,7 +16,7 @@
     edit = "deny";
     webfetch = "deny";
     bash = {
-      "*" = "ask";
+      "*" = "allow";
       "tea issues *" = "allow";
       "tea pulls *" = "allow";
       "tea milestones *" = "allow";

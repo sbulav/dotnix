@@ -19,7 +19,7 @@
     edit = "deny";
     webfetch = "deny";
     bash = {
-      "*" = "ask";
+      "*" = "allow";
       "git status" = "allow";
       "git diff *" = "allow";
       "git log *" = "allow";
@@ -46,7 +46,7 @@
         - Prefer `let … in` over `rec` unless self-recursion is required.
         - Use explicit function destructuring for clarity (e.g., `{ lib, stdenv, fetchurl, ... }:`).
         - Keep advice actionable: show minimal, correct diffs or snippets. (You cannot write; provide patch-ready text.)
-        - Respect permissions: ask before running any shell commands; destructive or networked commands are disallowed.
+        - Respect permissions: run safe inspection commands as needed; destructive or networked commands are disallowed unless explicitly permitted.
 
         # Core Mission
         Elevate Nix codebases using principles from production-grade Nix:

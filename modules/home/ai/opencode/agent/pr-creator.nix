@@ -16,7 +16,7 @@
     edit = "deny";
     webfetch = "deny";
     bash = {
-      "*" = "ask";
+      "*" = "allow";
       "git status" = "allow";
       "git remote show *" = "allow";
       "git rev-parse *" = "allow";

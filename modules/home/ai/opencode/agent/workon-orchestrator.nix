@@ -18,7 +18,7 @@ in
   permission = {
     webfetch = "deny";
     bash = {
-      "*" = "ask";
+      "*" = "allow";
       "git status" = "allow";
       "git diff *" = "allow";
       "git log *" = "allow";

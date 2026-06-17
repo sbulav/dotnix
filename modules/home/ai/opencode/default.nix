@@ -184,9 +184,28 @@ let
     small_model = "hhdev-glm5-fp8/zai-org/GLM-5.1-FP8";
 
     permission = {
-      edit = "ask";
-      bash = "ask";
-      webfetch = "ask";
+      edit = "allow";
+      bash = {
+        "*" = "allow";
+        "chmod *" = "ask";
+        "chown *" = "ask";
+        "dd *" = "deny";
+        "env" = "deny";
+        "env *" = "deny";
+        "export -p" = "deny";
+        "git push *" = "ask";
+        "git rebase *" = "ask";
+        "git reset *" = "ask";
+        "mkfs *" = "deny";
+        "nixos-rebuild *" = "ask";
+        "printenv" = "deny";
+        "printenv *" = "deny";
+        "rm *" = "ask";
+        "rm -rf /*" = "deny";
+        "set" = "deny";
+        "sudo *" = "ask";
+      };
+      webfetch = "allow";
       external_directory = "ask";
     };
 

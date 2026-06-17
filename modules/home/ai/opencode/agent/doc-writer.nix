@@ -15,10 +15,10 @@
   };
 
   permission = {
-    edit = "ask";
+    edit = "allow";
     webfetch = "deny";
     bash = {
-      "*" = "ask";
+      "*" = "allow";
       "git status" = "allow";
       "git diff *" = "allow";
       "git log *" = "allow";

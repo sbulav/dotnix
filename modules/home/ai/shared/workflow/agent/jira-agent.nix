@@ -16,7 +16,7 @@
     edit = "deny";
     webfetch = "deny";
     bash = {
-      "*" = "ask";
+      "*" = "allow";
       "jira *" = "allow";
     };
   };

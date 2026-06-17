@@ -19,7 +19,7 @@ in
     edit = "deny";
     webfetch = "deny";
     bash = {
-      "*" = "ask";
+      "*" = "allow";
       "git status" = "allow";
       "git branch --show-current" = "allow";
       "tea issues *" = "allow";

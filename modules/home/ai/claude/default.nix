@@ -279,6 +279,7 @@ let
 
   settings = {
     permissions = {
+      defaultMode = "auto";
       allow = [
         "Glob"
         "Grep"
@@ -333,13 +334,6 @@ let
         "Bash(curl *)"
         "Bash(sudo *)"
         "Bash(nixos-rebuild *)"
-        # Content readers — bypass file-tool hooks, so require approval
-        "Bash(cat *)"
-        "Bash(head *)"
-        "Bash(tail *)"
-        "Bash(find *)"
-        "Bash(grep *)"
-        "Bash(rg *)"
       ];
       deny = [
         "Bash(rm -rf /*)"
@@ -355,6 +349,8 @@ let
         "Bash(export -p)"
       ];
     };
+    skipAutoPermissionPrompt = true;
+    skipDangerousModePermissionPrompt = true;
     vim = true;
     statusLine = {
       type = "command";
@@ -374,7 +370,10 @@ let
   # Proxy wrapper - programs.claude-code will wrap this again for --mcp-config
   claudeWithProxy = pkgs.symlinkJoin {
     name = "claude-code";
-    paths = [ pkgs.unstable.claude-code pkgs.sox ];
+    paths = [
+      pkgs.unstable.claude-code
+      pkgs.sox
+    ];
     nativeBuildInputs = [ pkgs.makeWrapper ];
     postBuild = ''
       wrapProgram $out/bin/claude \
