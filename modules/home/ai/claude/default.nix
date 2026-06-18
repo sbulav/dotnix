@@ -64,6 +64,19 @@ let
 
   langfusePython = pkgs.python3.withPackages (ps: [ ps.langfuse ]);
 
+  # Cross-platform desktop notification: notify-send on Linux, osascript on
+  # macOS. Hooks call `${notifyBin}/bin/claude-notify "message"`.
+  notifyBin = pkgs.writeShellScriptBin "claude-notify" (
+    if pkgs.stdenv.isDarwin then
+      ''
+        /usr/bin/osascript -e "display notification \"$1\" with title \"Claude Code\""
+      ''
+    else
+      ''
+        ${pkgs.libnotify}/bin/notify-send -a 'Claude Code' 'Claude Code' "$1"
+      ''
+  );
+
   # Only the hooks worth having - security, notifications, pre-compact, subagent summary
   hooks = {
     Notification = [
@@ -72,7 +85,7 @@ let
         hooks = [
           {
             type = "command";
-            command = "notify-send -a 'Claude Code' 'Claude Code' 'Awaiting your input'";
+            command = "${notifyBin}/bin/claude-notify 'Awaiting your input'";
           }
         ];
       }
@@ -257,7 +270,7 @@ let
                 notify_msg="Subagent completed"
               fi
 
-              notify-send -a "Claude Code" "Claude Code" "$notify_msg"
+              ${notifyBin}/bin/claude-notify "$notify_msg"
             '';
           }
         ];
