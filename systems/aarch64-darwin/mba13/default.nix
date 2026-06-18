@@ -5,6 +5,7 @@
   custom.user.enable = true;
   custom.tools.homebrew.enable = true;
   custom.apps.obsidian.enable = true;
+  custom.desktop.aerospace.enable = true;
   system.fonts.enable = true;
   system.input.enable = true;
   system.interface.enable = true;
