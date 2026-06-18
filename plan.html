@@ -58,7 +58,9 @@
 <body>
 
 <h1>mba13 Darwin Configuration — Implementation Plan</h1>
-<div class="subtitle">Branch: feat-darwin-mba &nbsp;|&nbsp; Last updated: 2026-06-18 &nbsp;|&nbsp; Commits: 897b15e → 1b6d9c7</div>
+<div class="subtitle">Branch: feat-darwin-mba &nbsp;|&nbsp; Last updated: 2026-06-18 &nbsp;|&nbsp; 12 commits ahead of main &nbsp;|&nbsp; <span class="done">build: green</span></div>
+
+<div class="ok"><strong>Validation status:</strong> <code>nix build .#darwinConfigurations.mba13...toplevel</code> succeeds. Working tree clean. AI parity with <code>nz</code> confirmed (opencode + claude + mcp-k8s-go). One Darwin breakage found and fixed (notify-send → osascript). Two blocking items remain (SOPS, YubiKey) plus minor follow-ups below.</div>
 
 <h2>✅ Completed</h2>
 <div class="phase">
@@ -81,15 +83,35 @@
     <tr><td>Opencode: direct Anthropic provider + correct default model</td><td><code>1b6d9c7</code></td><td><code>anthropic/claude-sonnet-4-6</code></td></tr>
     <tr><td>Opencode: all 10 skills including shared workflow skills</td><td><code>1b6d9c7</code></td><td>was missing brainstorm, complete, plan-to-issues, ship, workon</td></tr>
     <tr><td>WezTerm k8s status bar</td><td>—</td><td>already worked; kubectl found via path_helper</td></tr>
+    <tr><td>Darwin common suite (<code>suites.common.enable</code>)</td><td><code>531ccc2</code></td><td>wraps fonts/input/interface/nix/security/homebrew</td></tr>
+    <tr><td><code>nixt</code>/<code>nixup</code>/<code>nixclean</code> Fish aliases</td><td><code>1873e6a</code> <code>2a9…</code></td><td><code>nixup</code> = <code>sudo darwin-rebuild switch</code> (activation needs root)</td></tr>
+    <tr><td>VLC dropped — IINA only</td><td><code>1873e6a</code></td><td>single media player, Nix-managed</td></tr>
+    <tr><td>AeroSpace <code>start-at-login</code></td><td><code>0264860</code></td><td>auto-starts on boot via its own launchd agent</td></tr>
+    <tr><td>Cross-platform Claude notifications</td><td><code>(latest)</code></td><td>osascript on Darwin, libnotify on Linux</td></tr>
   </table>
 </div>
 
-<h2>⚠️ Requires One Manual Step</h2>
+<h2>🔍 Validation Findings</h2>
 <div class="phase">
-  <div class="phase-header"><span class="badge badge-action">ACTION NEEDED</span><span>Fish as default login shell</span></div>
-  <p>Fish is now in <code>/etc/shells</code> but macOS won't let nix-darwin <code>chsh</code> an existing user automatically. Run once:</p>
-  <pre>chsh -s /run/current-system/sw/bin/fish</pre>
-  <p>Then open a new terminal — <code>echo $SHELL</code> should show <code>/run/current-system/sw/bin/fish</code>.</p>
+  <table>
+    <tr><th>Check</th><th>Result</th></tr>
+    <tr><td>Darwin toplevel build</td><td class="done">✅ green</td></tr>
+    <tr><td>AI parity with <code>nz</code> (opencode, claude, mcp-k8s-go)</td><td class="done">✅ matches + direct anthropic provider</td></tr>
+    <tr><td>Skills (10) present for both claude &amp; opencode</td><td class="done">✅</td></tr>
+    <tr><td>MCP servers in <code>settings.json</code></td><td class="done">✅ 4 servers</td></tr>
+    <tr><td><code>codex</code> requested earlier</td><td class="skip">no codex module exists in repo (not on nz either) — nothing to port; opencode covers it</td></tr>
+    <tr><td>Claude hooks used Linux-only <code>notify-send</code></td><td class="done">✅ FIXED — now osascript on Darwin</td></tr>
+    <tr><td>Langfuse <code>Stop</code> hook runs on every turn</td><td class="todo">harmless on mba13 (logs to file if unconfigured); leave as-is</td></tr>
+    <tr><td>VPN Darwin gateway IP <code>192.168.89.1</code> hardcoded</td><td class="todo">unverified on mba13's actual network — confirm on first <code>myvpn up</code></td></tr>
+  </table>
+</div>
+
+<h2>⚠️ Bootstrap This Rebuild Once</h2>
+<div class="phase">
+  <div class="phase-header"><span class="badge badge-action">ACTION NEEDED</span><span>Apply the new <code>nixup</code> alias</span></div>
+  <p>The <code>nixup</code> alias now includes <code>sudo</code>, but the updated alias isn't active until you rebuild. Run the raw command once:</p>
+  <pre>sudo darwin-rebuild switch --flake ~/dotnix</pre>
+  <p>After that, <code>nixup</code> / <code>nixt</code> / <code>nixclean</code> work as aliases. <span class="done">(Fish default shell already switched ✅)</span></p>
 </div>
 
 <h2>Next: SOPS Secrets</h2>
@@ -147,10 +169,14 @@ sops secrets/mba13/default.yaml</pre>
   </ul>
 </div>
 
-<h2>Later: Darwin Common Suite</h2>
+<h2>Minor Follow-ups (non-blocking)</h2>
 <div class="phase">
-  <div class="phase-header"><span class="badge badge-later">LATER</span><span>Cleanup — reduce boilerplate in system profile</span></div>
-  <p>Create <code>modules/darwin/suites/common/default.nix</code> to wrap the 6 individual <code>system.*</code> toggles + homebrew into a single <code>custom.suites.common = enabled</code>. Low priority — purely cosmetic.</p>
+  <ul>
+    <li><strong>VPN gateway IP</strong> — confirm <code>192.168.89.1</code> is correct on mba13's network the first time you run <code>myvpn up</code>; adjust the Darwin <code>route add</code> line in <code>modules/home/security/openconnect</code> if routing fails.</li>
+    <li><strong>VPN <code>status</code>/<code>up</code> DNS readout</strong> — greps <code>/etc/resolv.conf</code>, which is legacy on macOS. Cosmetic; the real split-DNS lives in <code>/etc/resolver/</code>.</li>
+    <li><strong>Langfuse Stop hook</strong> — runs python on every turn; harmless but noisy if langfuse env is unset on mba13. Could gate behind an option later.</li>
+    <li><strong>colemak-dh cask</strong> — removed earlier by Homebrew <code>cleanup = "uninstall"</code>. Re-add to <code>homebrew.casks</code> if still used.</li>
+  </ul>
 </div>
 
 <h2>Branch Status</h2>
