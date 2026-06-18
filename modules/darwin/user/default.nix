@@ -20,7 +20,14 @@ in
   config = mkIf cfg.enable {
     system.primaryUser = cfg.name;
 
-    programs.fish.enable = true;
+    programs.fish = {
+      enable = true;
+      shellAliases = {
+        nixup = "darwin-rebuild switch --flake ~/dotnix";
+        nixt = "darwin-rebuild build --flake ~/dotnix";
+        nixclean = "nix-collect-garbage -d && nix-store --gc && nix-store --optimise -vvv";
+      };
+    };
 
     # nix-darwin does not auto-chsh existing users; after rebuild run once:
     #   chsh -s /run/current-system/sw/bin/fish

@@ -27,7 +27,6 @@ in
 
       casks = [
         "raycast"
-        "vlc"
         "xnviewmp"
       ];
     };
