@@ -20,6 +20,8 @@ in
       sqlite
     ];
 
-    home.file.".local/lib/libsqlite3.so".source = "${pkgs.sqlite.out}/lib/libsqlite3.so";
+    home.file = lib.optionalAttrs pkgs.stdenv.isLinux {
+      ".local/lib/libsqlite3.so".source = "${pkgs.sqlite.out}/lib/libsqlite3.so";
+    };
   };
 }

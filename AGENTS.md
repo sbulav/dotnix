@@ -13,17 +13,17 @@ This guide provides comprehensive instructions for AI agents and developers work
   - `modules/shared/` - Shared modules across systems
 - **Systems**: Defined in `systems/{arch}/{hostname}/default.nix`
 - **Homes**: Defined in `homes/{arch}/{user}@{hostname}/default.nix`
-- **Channel**: `nixpkgs` is pinned to `nixos-25.11` (stable). `nixos-unstable` is exposed via overlay as `pkgs.unstable`.
-- **Darwin status**: currently disabled in `flake.nix` via `systems.exclude = [ "darwin" ]` / `homes.exclude = [ "darwin" ]`. Historical configs are preserved under `modules/_darwin-disabled/`, `systems/_aarch64-darwin-disabled/`, and `homes/_aarch64-darwin-disabled/` but are not built. Skip Darwin-specific guidance unless re-enabling.
+- **Channel**: `nixpkgs` is pinned to `nixos-26.05` (stable). `nixos-unstable` is exposed via overlay as `pkgs.unstable`.
+- **Darwin status**: active for the Apple Silicon host `mba13`. Historical Darwin modules remain under `modules/_darwin-disabled/`; historical host and home profiles remain under `.disabled/` and are not built.
 
 ## Build/Test Commands
 
 ### System Operations
 - **Build NixOS system**: `nix build .#nixosConfigurations.{hostname}.config.system.build.toplevel`
   - Available hosts: `nz`, `zanoza`, `mz`, `beez`
-- **Build Darwin system** *(disabled)*: `nix build .#darwinConfigurations.mbp16.config.system.build.toplevel`
+- **Build Darwin system**: `nix build .#darwinConfigurations.mba13.config.system.build.toplevel`
 - **Rebuild NixOS locally**: `sudo nixos-rebuild switch --flake .#{hostname}`
-- **Rebuild Darwin locally** *(disabled)*: `darwin-rebuild switch --flake .#mbp16`
+- **Rebuild Darwin locally**: `darwin-rebuild switch --flake .#mba13`
 - **Deploy to remote**: `nix run .#deploy.{hostname}` (zanoza, nz, mz, beez — deploy-rs auto-derives from `nixosConfigurations`)
 
 ### Workflow Wrapper (`sys`)
@@ -82,8 +82,8 @@ Caveat: as of writing, the script hardcodes `--flake ~/dotfiles/nix#`. If the ch
 │   └── renovate.json          # Automated dep updates
 └── (disabled)             # Preserved-but-inactive Darwin trees:
     modules/_darwin-disabled/
-    systems/_aarch64-darwin-disabled/
-    homes/_aarch64-darwin-disabled/
+    .disabled/systems-aarch64-darwin/
+    .disabled/homes-aarch64-darwin/
 ```
 
 ## Module Development Guidelines
@@ -399,17 +399,17 @@ Defined in `flake.nix`:
 
 | Input | Purpose |
 |---|---|
-| `nixpkgs` | `nixos-25.11` (stable channel) |
+| `nixpkgs` | `nixos-26.05` (stable channel) |
 | `unstable` | `nixos-unstable`; exposed as `pkgs.unstable` via overlay in `flake.nix` |
 | `determinate` | Determinate Nix; `determinate.nixosModules.default` is auto-imported into every NixOS system |
 | `snowfall-lib` | Flake structure (`lib.mkFlake`, file discovery, namespace) |
-| `home-manager` | `release-25.11` |
+| `home-manager` | `release-26.05` |
 | `sops-nix` | Secrets; `nixosModules.sops` auto-imported into systems, `homeManagerModules.sops` into homes |
 | `deploy-rs` | Remote deploys (driven by `lib.mkDeploy`) |
 | `wallpapers-nix` | `sbulav/wallpapers-nix`; consumed by desktop wallpaper addons |
 | `whisper-dictation` | Speech-to-text helper |
 
-Darwin inputs (`darwin`, `nix-homebrew`, `homebrew-core`, `homebrew-cask`, `sops-nix-darwin`) are commented out and do not need to be touched unless re-enabling Darwin.
+The `darwin` input tracks the matching `nix-darwin-26.05` release branch. Determinate and SOPS provide their current Darwin modules directly; Homebrew is managed through nix-darwin's built-in Homebrew module.
 
 ## System Configuration Pattern
 
@@ -598,7 +598,7 @@ nix-instantiate --eval -E '(import ./modules/nixos/{path}/default.nix)'
 7. **Never commit secrets** - use SOPS for sensitive data
 8. **Respect `stateVersion`** - never change it after initial installation
 9. **Use suites** for related module groups
-10. **Don't assume Darwin is live** — `flake.nix` excludes it. Skip Darwin-specific work unless re-enabling.
+10. **Darwin is live for `mba13`** — keep Darwin-specific modules isolated under `modules/darwin/` and portable user configuration under `modules/home/`.
 11. **Match the surrounding `with lib;` style** — the repo uses `with lib; with lib.custom;` together; the absolute "avoid `with lib;`" rule was aspirational and not enforced.
 12. **Reach for `sys` first** for daily rebuild/test/update/clean (see Workflow Wrapper section).
 
