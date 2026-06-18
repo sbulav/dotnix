@@ -22,9 +22,12 @@ in
 
     programs.fish.enable = true;
 
+    # nix-darwin does not auto-chsh existing users; after rebuild run once:
+    #   chsh -s /run/current-system/sw/bin/fish
+    environment.shells = [ pkgs.fish ];
+
     users.users.${cfg.name} = {
       home = "/Users/${cfg.name}";
-      shell = pkgs.fish;
     };
   };
 }
