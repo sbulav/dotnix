@@ -23,7 +23,7 @@ in
     programs.fish = {
       enable = true;
       shellAliases = {
-        nixup = "darwin-rebuild switch --flake ~/dotnix";
+        nixup = "sudo darwin-rebuild switch --flake ~/dotnix";
         nixt = "darwin-rebuild build --flake ~/dotnix";
         nixclean = "nix-collect-garbage -d && nix-store --gc && nix-store --optimise -vvv";
       };
