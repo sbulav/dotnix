@@ -15,12 +15,34 @@ in
   config = mkIf cfg.enable {
     system.defaults = {
       NSGlobalDomain = {
+        # Appearance
+        AppleInterfaceStyle = "Dark";
+        AppleShowScrollBars = "WhenScrolling";
+
         AppleShowAllExtensions = true;
         NSAutomaticCapitalizationEnabled = false;
         NSAutomaticDashSubstitutionEnabled = false;
         NSAutomaticPeriodSubstitutionEnabled = false;
         NSAutomaticQuoteSubstitutionEnabled = false;
         NSAutomaticSpellingCorrectionEnabled = false;
+
+        # Expand save / print dialogs by default
+        NSNavPanelExpandedStateForSaveMode = true;
+        NSNavPanelExpandedStateForSaveMode2 = true;
+        PMPrintingExpandedStateForPrint = true;
+        PMPrintingExpandedStateForPrint2 = true;
+
+        # Save to disk, not iCloud, by default
+        NSDocumentSaveNewDocumentsToCloud = false;
+
+        # Snappier window resize animations
+        NSWindowResizeTime = 0.001;
+
+        # Locale: 24-hour time, metric units
+        AppleICUForce24HourTime = true;
+        AppleMeasurementUnits = "Centimeters";
+        AppleMetricUnits = 1;
+        AppleTemperatureUnit = "Celsius";
       };
 
       dock = {
@@ -57,7 +79,12 @@ in
         FXEnableExtensionChangeWarning = false;
         FXPreferredViewStyle = "Nlsv";
         FXRemoveOldTrashItems = true;
+        NewWindowTarget = "Home";
         QuitMenuItem = true;
+        ShowExternalHardDrivesOnDesktop = true;
+        ShowHardDrivesOnDesktop = false;
+        ShowMountedServersOnDesktop = true;
+        ShowRemovableMediaOnDesktop = true;
         ShowPathbar = true;
         ShowStatusBar = true;
         _FXShowPosixPathInTitle = true;
@@ -73,6 +100,18 @@ in
       };
 
       spaces.spans-displays = false;
+
+      # Show battery percentage in the menu bar
+      controlcenter.BatteryShowPercentage = true;
+
+      # Stage Manager off; don't hide windows when clicking the wallpaper
+      WindowManager = {
+        GloballyEnabled = false;
+        EnableStandardClickToShowDesktop = false;
+      };
+
+      # Don't nag with "are you sure you want to open this app?" for every download
+      LaunchServices.LSQuarantine = false;
     };
   };
 }
