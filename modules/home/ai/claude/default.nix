@@ -363,11 +363,37 @@ let
       CLAUDE_CODE_AUTO_COMPACT_WINDOW = "200000";
     };
     inherit hooks;
+
+    mcpServers = {
+      kubernetes = {
+        command = "mcp-k8s-go";
+        args = [ "--readonly" ];
+      };
+      nixos = {
+        command = "nix";
+        args = [
+          "run"
+          "github:utensils/mcp-nixos"
+          "--"
+        ];
+      };
+      context7 = {
+        type = "http";
+        url = "https://mcp.context7.com/mcp";
+      };
+      sequential-thinking = {
+        command = "npx";
+        args = [
+          "-y"
+          "@modelcontextprotocol/server-sequential-thinking"
+        ];
+      };
+    };
   };
 
   settingsFile = pkgs.writeText "claude-settings.json" (builtins.toJSON settings);
 
-  # Proxy wrapper - programs.claude-code will wrap this again for --mcp-config
+  # On Linux wrap claude with the corporate proxy; on Darwin omit it.
   claudeWithProxy = pkgs.symlinkJoin {
     name = "claude-code";
     paths = [
@@ -375,12 +401,16 @@ let
       pkgs.sox
     ];
     nativeBuildInputs = [ pkgs.makeWrapper ];
-    postBuild = ''
-      wrapProgram $out/bin/claude \
-        --set HTTPS_PROXY "http://fwdproxy.pyn.ru:4443" \
-        --set HTTP_PROXY  "http://fwdproxy.pyn.ru:4443" \
-        --set NO_PROXY    "localhost,127.0.0.1"
-    '';
+    postBuild =
+      if pkgs.stdenv.isLinux then
+        ''
+          wrapProgram $out/bin/claude \
+            --set HTTPS_PROXY "http://fwdproxy.pyn.ru:4443" \
+            --set HTTP_PROXY  "http://fwdproxy.pyn.ru:4443" \
+            --set NO_PROXY    "localhost,127.0.0.1"
+        ''
+      else
+        "";
   };
 in
 {

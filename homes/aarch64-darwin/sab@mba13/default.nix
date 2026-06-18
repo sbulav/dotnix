@@ -14,9 +14,32 @@ with lib.custom;
 
     ai = {
       claude = enabled;
-      opencode = enabled;
       mcp-k8s-go = enabled;
       # mcp-grafana deferred until SOPS is configured (needs grafana_api_key)
+
+      opencode = {
+        enable = true;
+        # Use direct Anthropic API on mba13 (no corporate gateway)
+        settings = {
+          model = "anthropic/claude-sonnet-4-6";
+          small_model = "anthropic/claude-haiku-4-5-20251001";
+          # Add direct Anthropic provider alongside hhdev-* providers
+          provider = {
+            anthropic = {
+              npm = "@ai-sdk/anthropic";
+              name = "Anthropic";
+              options = {
+                apiKey = "{env:ANTHROPIC_API_KEY}";
+              };
+              models = {
+                "claude-sonnet-4-6" = { name = "Claude Sonnet 4.6"; };
+                "claude-opus-4-8"   = { name = "Claude Opus 4.8"; };
+                "claude-haiku-4-5-20251001" = { name = "Claude Haiku 4.5"; };
+              };
+            };
+          };
+        };
+      };
     };
 
     cli-apps = {
