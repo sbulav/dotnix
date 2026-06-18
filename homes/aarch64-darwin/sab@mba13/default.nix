@@ -12,6 +12,13 @@ with lib.custom;
       name = config.snowfallorg.user.name;
     };
 
+    ai = {
+      claude = enabled;
+      opencode = enabled;
+      mcp-k8s-go = enabled;
+      # mcp-grafana deferred until SOPS is configured (needs grafana_api_key)
+    };
+
     cli-apps = {
       argocd = enabled;
       atuin = enabled;
@@ -25,6 +32,7 @@ with lib.custom;
 
     tools = {
       cli = enabled;
+      direnv = enabled;
       gh = enabled;
       git = {
         enable = true;
@@ -35,12 +43,19 @@ with lib.custom;
       tea = enabled;
     };
 
-    security.vault = enabled;
+    security = {
+      gpg = enabled;
+      openconnect = enabled;
+      vault = enabled;
+    };
   };
 
   home = {
     file."Pictures/screenshots/.keep".text = "";
-    packages = [ pkgs.neovim ];
+    packages = with pkgs; [
+      iina
+      neovim
+    ];
     sessionPath = [ "$HOME/bin" ];
   };
 

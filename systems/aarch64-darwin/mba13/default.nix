@@ -3,6 +3,8 @@
   networking.hostName = "mba13";
 
   custom.user.enable = true;
+  custom.tools.homebrew.enable = true;
+  custom.apps.obsidian.enable = true;
   system.fonts.enable = true;
   system.input.enable = true;
   system.interface.enable = true;

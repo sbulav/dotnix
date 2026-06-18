@@ -9,14 +9,54 @@ with lib;
 with lib.custom;
 let
   cfg = config.${namespace}.security.openconnect;
+
+  # Internal nameservers and the domains that must resolve through them while
+  # the VPN is up. Shared between the Linux (systemd-resolved) and Darwin
+  # (/etc/resolver) split-DNS implementations.
+  splitDnsServers = [
+    "94.124.205.83"
+    "94.124.204.83"
+  ];
+  splitDnsDomains = [
+    "pyn.ru"
+    "hh.ru"
+    "hhdev.ru"
+  ];
+
+  # Linux: configure split DNS on the tun0 interface via systemd-resolved.
   configureResolvedSplitDns = ''
     if sudo ${pkgs.systemd}/bin/systemctl -q is-active systemd-resolved.service && ${pkgs.iproute2}/bin/ip link show tun0 >/dev/null 2>&1; then
-      sudo ${pkgs.systemd}/bin/resolvectl dns tun0 94.124.205.83 94.124.204.83 || true
-      sudo ${pkgs.systemd}/bin/resolvectl domain tun0 '~pyn.ru' '~hh.ru' '~hhdev.ru' || true
+      sudo ${pkgs.systemd}/bin/resolvectl dns tun0 ${toString splitDnsServers} || true
+      sudo ${pkgs.systemd}/bin/resolvectl domain tun0 ${
+        concatMapStringsSep " " (d: "'~${d}'") splitDnsDomains
+      } || true
       sudo ${pkgs.systemd}/bin/resolvectl default-route tun0 no || true
       sudo ${pkgs.systemd}/bin/resolvectl flush-caches || true
     fi
   '';
+
+  # Darwin: macOS resolves per-domain via /etc/resolver/<domain> files. Point
+  # the internal domains at the VPN nameservers, then flush the resolver cache.
+  darwinSetupSplitDns = ''
+    for domain in ${toString splitDnsDomains}; do
+      sudo mkdir -p /etc/resolver
+      : | sudo tee /etc/resolver/$domain >/dev/null
+      ${concatMapStringsSep "\n      " (
+        s: "echo 'nameserver ${s}' | sudo tee -a /etc/resolver/$domain >/dev/null"
+      ) splitDnsServers}
+    done
+    sudo dscacheutil -flushcache
+    sudo killall -HUP mDNSResponder
+  '';
+
+  darwinTeardownSplitDns = ''
+    for domain in ${toString splitDnsDomains}; do
+      sudo rm -f /etc/resolver/$domain
+    done
+    sudo dscacheutil -flushcache
+    sudo killall -HUP mDNSResponder
+  '';
+
   route_delete_command =
     if pkgs.stdenv.isLinux then
       ''
@@ -28,9 +68,12 @@ let
       ''
         sudo route delete -net 192.168.0.0/16
         sudo route add -net 10.8.0.1/32 192.168.89.1 #openconnect
+        ${darwinSetupSplitDns}
       ''
     else
       "";
+
+  dns_teardown_command = if pkgs.stdenv.isDarwin then darwinTeardownSplitDns else "";
 
   vpnScript = pkgs.writeScriptBin "myvpn" ''
     #! ${pkgs.bash}/bin/sh
@@ -88,6 +131,7 @@ let
             echo "******************************************************"
             echo "Stopping the VPN and removing all routes"
             sudo kill -2 `pgrep openconnect`
+            ${dns_teardown_command}
             echo "VPN stopped!"
           ;;
           status)
