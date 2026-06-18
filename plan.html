@@ -6,442 +6,158 @@
   <title>mba13 Darwin Configuration — Implementation Plan</title>
   <style>
     :root {
-      --bg: #1e1e2e;
-      --surface: #181825;
-      --overlay: #313244;
-      --muted: #6c7086;
-      --text: #cdd6f4;
-      --subtext: #a6adc8;
-      --blue: #89b4fa;
-      --green: #a6e3a1;
-      --yellow: #f9e2af;
-      --red: #f38ba8;
-      --peach: #fab387;
-      --mauve: #cba6f7;
-      --teal: #94e2d5;
-      --sky: #89dceb;
+      --bg: #1e1e2e; --surface: #181825; --overlay: #313244; --muted: #6c7086;
+      --text: #cdd6f4; --subtext: #a6adc8; --blue: #89b4fa; --green: #a6e3a1;
+      --yellow: #f9e2af; --red: #f38ba8; --peach: #fab387; --mauve: #cba6f7; --teal: #94e2d5;
     }
     * { box-sizing: border-box; margin: 0; padding: 0; }
-    body {
-      background: var(--bg);
-      color: var(--text);
-      font-family: 'JetBrains Mono', 'Fira Code', monospace;
-      font-size: 14px;
-      line-height: 1.6;
-      padding: 2rem;
-      max-width: 1100px;
-      margin: 0 auto;
-    }
-    h1 { font-size: 1.6rem; color: var(--blue); margin-bottom: 0.4rem; border-bottom: 1px solid var(--overlay); padding-bottom: 0.5rem; }
+    body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace;
+           font-size: 14px; line-height: 1.6; padding: 2rem; max-width: 1100px; margin: 0 auto; }
+    h1 { font-size: 1.6rem; color: var(--blue); margin-bottom: 0.4rem;
+         border-bottom: 1px solid var(--overlay); padding-bottom: 0.5rem; }
     .subtitle { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
-    h2 { font-size: 1.1rem; color: var(--mauve); margin: 2rem 0 0.8rem; letter-spacing: 0.04em; text-transform: uppercase; }
+    h2 { font-size: 1.1rem; color: var(--mauve); margin: 2rem 0 0.8rem;
+         letter-spacing: 0.04em; text-transform: uppercase; }
     h3 { font-size: 0.95rem; color: var(--peach); margin: 1.2rem 0 0.4rem; }
-    .phase { background: var(--surface); border: 1px solid var(--overlay); border-radius: 8px; padding: 1.2rem 1.4rem; margin-bottom: 1.2rem; }
+    .phase { background: var(--surface); border: 1px solid var(--overlay);
+             border-radius: 8px; padding: 1.2rem 1.4rem; margin-bottom: 1.2rem; }
     .phase-header { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.8rem; }
-    .badge { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 4px; font-size: 0.75rem; font-weight: bold; letter-spacing: 0.05em; }
-    .badge-now   { background: var(--green);  color: var(--bg); }
-    .badge-next  { background: var(--blue);   color: var(--bg); }
-    .badge-later { background: var(--yellow); color: var(--bg); }
-    .badge-done  { background: var(--muted);  color: var(--bg); }
-    .badge-fix   { background: var(--red);    color: var(--bg); }
+    .badge { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 4px;
+             font-size: 0.75rem; font-weight: bold; letter-spacing: 0.05em; }
+    .badge-done   { background: var(--muted);   color: var(--bg); }
+    .badge-action { background: var(--yellow);  color: var(--bg); }
+    .badge-next   { background: var(--blue);    color: var(--bg); }
+    .badge-later  { background: var(--green);   color: var(--bg); }
     table { width: 100%; border-collapse: collapse; margin: 0.6rem 0 1rem; }
-    th { background: var(--overlay); color: var(--subtext); font-size: 0.75rem; text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0.7rem; text-align: left; }
+    th { background: var(--overlay); color: var(--subtext); font-size: 0.75rem;
+         text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0.7rem; text-align: left; }
     td { padding: 0.4rem 0.7rem; border-bottom: 1px solid var(--overlay); vertical-align: top; }
     tr:last-child td { border-bottom: none; }
     tr:hover td { background: var(--overlay); }
-    code { background: var(--overlay); color: var(--teal); padding: 0.1rem 0.35rem; border-radius: 3px; font-size: 0.85em; }
-    pre { background: var(--overlay); color: var(--teal); padding: 0.8rem 1rem; border-radius: 6px; overflow-x: auto; font-size: 0.82rem; margin: 0.6rem 0; }
+    code { background: var(--overlay); color: var(--teal); padding: 0.1rem 0.35rem;
+           border-radius: 3px; font-size: 0.85em; }
+    pre { background: var(--overlay); color: var(--teal); padding: 0.8rem 1rem;
+          border-radius: 6px; overflow-x: auto; font-size: 0.82rem; margin: 0.6rem 0; }
     ul { padding-left: 1.2rem; }
     li { margin: 0.25rem 0; color: var(--subtext); }
     li strong { color: var(--text); }
-    .note { background: var(--overlay); border-left: 3px solid var(--yellow); padding: 0.5rem 0.8rem; margin: 0.6rem 0; border-radius: 0 4px 4px 0; font-size: 0.88rem; color: var(--subtext); }
-    .warn { background: var(--overlay); border-left: 3px solid var(--red); padding: 0.5rem 0.8rem; margin: 0.6rem 0; border-radius: 0 4px 4px 0; font-size: 0.88rem; color: var(--subtext); }
-    .ok   { background: var(--overlay); border-left: 3px solid var(--green); padding: 0.5rem 0.8rem; margin: 0.6rem 0; border-radius: 0 4px 4px 0; font-size: 0.88rem; color: var(--subtext); }
-    .status-done { color: var(--green); }
-    .status-todo { color: var(--yellow); }
-    .status-skip { color: var(--muted); }
-    .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin: 0.8rem 0; }
-    @media (max-width: 700px) { .grid { grid-template-columns: 1fr; } }
+    .note { background: var(--overlay); border-left: 3px solid var(--yellow);
+            padding: 0.5rem 0.8rem; margin: 0.6rem 0; border-radius: 0 4px 4px 0;
+            font-size: 0.88rem; color: var(--subtext); }
+    .warn { background: var(--overlay); border-left: 3px solid var(--red);
+            padding: 0.5rem 0.8rem; margin: 0.6rem 0; border-radius: 0 4px 4px 0;
+            font-size: 0.88rem; color: var(--subtext); }
+    .ok { background: var(--overlay); border-left: 3px solid var(--green);
+          padding: 0.5rem 0.8rem; margin: 0.6rem 0; border-radius: 0 4px 4px 0;
+          font-size: 0.88rem; color: var(--subtext); }
+    .done { color: var(--green); }
+    .todo { color: var(--yellow); }
+    .skip { color: var(--muted); }
   </style>
 </head>
 <body>
 
 <h1>mba13 Darwin Configuration — Implementation Plan</h1>
-<div class="subtitle">Branch: feat-darwin-mba &nbsp;|&nbsp; Target: aarch64-darwin / sab@mba13 &nbsp;|&nbsp; Updated: 2026-06-18</div>
+<div class="subtitle">Branch: feat-darwin-mba &nbsp;|&nbsp; Last updated: 2026-06-18 &nbsp;|&nbsp; Commits: 897b15e → 1b6d9c7</div>
 
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<h2>Current State (staged, not yet activated)</h2>
+<h2>✅ Completed</h2>
 <div class="phase">
   <table>
-    <tr><th>Area</th><th>Status</th><th>Detail</th></tr>
-    <tr><td>Darwin user module</td><td class="status-done">✓ staged</td><td><code>modules/darwin/user/default.nix</code></td></tr>
-    <tr><td>Fish as default shell</td><td class="status-done">✓ staged</td><td><code>users.users.sab.shell = pkgs.fish</code> already in user module — nothing more to do</td></tr>
-    <tr><td>Keyboard &amp; trackpad</td><td class="status-done">✓ staged</td><td><code>modules/darwin/system/input/default.nix</code></td></tr>
-    <tr><td>Finder, Dock, hot corners</td><td class="status-done">✓ staged</td><td><code>modules/darwin/system/interface/default.nix</code></td></tr>
-    <tr><td>Nix settings</td><td class="status-done">✓ staged</td><td><code>modules/darwin/system/nix/default.nix</code></td></tr>
-    <tr><td>Firewall + Touch ID sudo + passwordless rebuild</td><td class="status-done">✓ staged</td><td><code>modules/darwin/system/security/default.nix</code></td></tr>
-    <tr><td>Nerd Fonts</td><td class="status-done">✓ staged</td><td><code>modules/darwin/system/fonts/default.nix</code></td></tr>
-    <tr><td>WezTerm</td><td class="status-done">✓ staged</td><td><code>custom.desktop.addons.wezterm = enabled</code> — k8s status enabled by default</td></tr>
-    <tr><td>Fish + Neovim from ~/dotfiles</td><td class="status-done">✓ staged</td><td>XDG symlinks in home profile</td></tr>
-    <tr><td>Atuin, Bottom, Fastfetch, Yazi, gh, k9s, Tea, ArgoCD</td><td class="status-done">✓ staged</td><td>all enabled in home profile</td></tr>
-    <tr><td>Portable CLI toolkit (fzf, rg, fd, kubectl, LSPs…)</td><td class="status-done">✓ staged</td><td><code>modules/home/tools/cli/default.nix</code></td></tr>
-    <tr><td>Jira/SQLite, Vault</td><td class="status-done">✓ staged</td><td>sqlite-jira Darwin fix applied</td></tr>
-    <tr><td>OpenTofu, Yandex Cloud CLI</td><td class="status-skip">– disabled</td><td>intentionally left off</td></tr>
+    <tr><th>Item</th><th>Commit</th><th>Notes</th></tr>
+    <tr><td>Darwin system modules (user, fonts, input, interface, nix, security)</td><td><code>897b15e</code></td><td></td></tr>
+    <tr><td>Home profile: WezTerm, Fish/Neovim symlinks, Atuin, CLI toolkit, ArgoCD, Bottom, Fastfetch, Yazi, gh, k9s, Tea, sqlite-jira, Vault</td><td><code>897b15e</code></td><td></td></tr>
+    <tr><td>sqlite-jira Darwin fix</td><td><code>897b15e</code></td><td></td></tr>
+    <tr><td>GPG: pinentry-mac on Darwin, gpg in PATH, GPG_TTY in Fish init</td><td><code>d82495f</code></td><td>enable via <code>custom.security.gpg</code></td></tr>
+    <tr><td>Homebrew module (Raycast, VLC, XnViewMP)</td><td><code>d82495f</code></td><td><code>modules/darwin/tools/homebrew</code></td></tr>
+    <tr><td>Obsidian via Homebrew cask</td><td><code>d82495f</code></td><td><code>modules/darwin/apps/obsidian</code></td></tr>
+    <tr><td>IINA via <code>pkgs.iina</code></td><td><code>d82495f</code></td><td>Nix-managed, no Homebrew needed</td></tr>
+    <tr><td>myvpn (openconnect) enabled</td><td><code>d82495f</code></td><td></td></tr>
+    <tr><td>DNS split brain — /etc/resolver/ files on Darwin up/down</td><td><code>d82495f</code></td><td>dscacheutil + mDNSResponder flush</td></tr>
+    <tr><td>AI tools: claude, opencode, mcp-k8s-go, direnv</td><td><code>d82495f</code></td><td>mcp-grafana deferred (needs SOPS)</td></tr>
+    <tr><td>Fish added to /etc/shells via <code>environment.shells</code></td><td><code>9f69374</code></td><td>one-time <code>chsh</code> still needed — see below</td></tr>
+    <tr><td>AeroSpace tiling WM</td><td><code>e6e52db</code></td><td><code>modules/darwin/desktop/aerospace</code>; Accessibility prompt on first launch</td></tr>
+    <tr><td>Claude MCP servers written to settings.json</td><td><code>1b6d9c7</code></td><td>kubernetes, nixos, context7, sequential-thinking</td></tr>
+    <tr><td>Claude proxy skipped on Darwin</td><td><code>1b6d9c7</code></td><td>fwdproxy.pyn.ru is Linux/VPN-only</td></tr>
+    <tr><td>Opencode: direct Anthropic provider + correct default model</td><td><code>1b6d9c7</code></td><td><code>anthropic/claude-sonnet-4-6</code></td></tr>
+    <tr><td>Opencode: all 10 skills including shared workflow skills</td><td><code>1b6d9c7</code></td><td>was missing brainstorm, complete, plan-to-issues, ship, workon</td></tr>
+    <tr><td>WezTerm k8s status bar</td><td>—</td><td>already worked; kubectl found via path_helper</td></tr>
   </table>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<h2>Phase 0 — Finish Build &amp; First Activation</h2>
+<h2>⚠️ Requires One Manual Step</h2>
 <div class="phase">
-  <div class="phase-header"><span class="badge badge-now">NOW</span><span>Unblock the branch — nothing else can merge until this passes</span></div>
-
-  <h3>0.1 Re-run / verify the Darwin build</h3>
-  <p>The previous session left Vault still compiling. Re-running is safe.</p>
-  <pre>nix build .#darwinConfigurations.mba13.system --no-link --show-trace 2>&amp;1 | tail -40</pre>
-
-  <h3>0.2 Activate (confirm first)</h3>
-  <div class="warn">Always confirm before switching. This modifies the running system.</div>
-  <pre>sudo darwin-rebuild switch --flake ~/dotnix#mba13</pre>
-
-  <h3>0.3 Smoke-test in a fresh Fish shell</h3>
-  <pre>echo $SHELL          # should be .../fish
-type -a zoxide fzf rg fd atuin kubectl helm gh yazi
-zoxide query ~
-atuin status
-fastfetch</pre>
-
-  <h3>0.4 Commit staged work</h3>
-  <pre>git add -p   # review
-git commit -m "feat(darwin): initial mba13 system and home configuration"</pre>
+  <div class="phase-header"><span class="badge badge-action">ACTION NEEDED</span><span>Fish as default login shell</span></div>
+  <p>Fish is now in <code>/etc/shells</code> but macOS won't let nix-darwin <code>chsh</code> an existing user automatically. Run once:</p>
+  <pre>chsh -s /run/current-system/sw/bin/fish</pre>
+  <p>Then open a new terminal — <code>echo $SHELL</code> should show <code>/run/current-system/sw/bin/fish</code>.</p>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<h2>Phase 1 — Fix GnuPG on Darwin</h2>
+<h2>Next: SOPS Secrets</h2>
 <div class="phase">
-  <div class="phase-header"><span class="badge badge-fix">FIX</span><span>Darwin needs pinentry-mac; the existing module only covers bash/zsh/fish init</span></div>
+  <div class="phase-header"><span class="badge badge-next">NEXT</span><span>Encrypted secrets — blocks myvpn credentials and mcp-grafana</span></div>
 
-  <h3>What's already there</h3>
-  <p><code>modules/home/security/gpg/default.nix</code> (option <code>custom.security.gpg</code>) handles Fish <code>interactiveShellInit</code>, sets <code>GPG_TTY</code> and <code>SSH_AUTH_SOCK</code>, and writes <code>~/.gnupg/gpg{,-agent}.conf</code>.</p>
-  <p>Problem: it doesn't set <code>pinentry-program</code> in <code>gpg-agent.conf</code>. On Darwin, <code>pinentry-curses</code> works in terminal but <code>pinentry-mac</code> is needed for GUI prompts and YubiKey touch. Without it, agent silently fails or falls back to nothing.</p>
-
-  <h3>1.1 Update the GPG home module</h3>
-  <p>Edit <code>modules/home/security/gpg/default.nix</code> — add a Darwin branch to <code>gpgAgentConf</code>:</p>
-  <pre>let
-  pinentryBin = if pkgs.stdenv.isDarwin
-    then "${pkgs.pinentry_mac}/Applications/pinentry-mac.app/Contents/MacOS/pinentry-mac"
-    else "${pkgs.pinentry-curses}/bin/pinentry-curses";
-
-  gpgAgentConf = ''
-    enable-ssh-support
-    default-cache-ttl 28800
-    max-cache-ttl 28800
-    pinentry-program ${pinentryBin}
-  '';</pre>
-
-  <h3>1.2 Enable in home profile</h3>
-  <pre>custom.security.gpg.enable = true;</pre>
-
-  <h3>1.3 Verify</h3>
-  <pre>gpg --card-status           # if YubiKey present
-echo "test" | gpg --clearsign   # triggers pinentry-mac dialog</pre>
-  <div class="note">After initial YubiKey enrolment, set <code>tools.git.enableSigning = true</code> in the home profile.</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<h2>Phase 2 — Homebrew &amp; Darwin-only Apps</h2>
-<div class="phase">
-  <div class="phase-header"><span class="badge badge-next">NEXT</span><span>Casks that have no Nix Darwin equivalent</span></div>
-
-  <h3>2.1 Homebrew management module</h3>
-  <p>Port <code>modules/_darwin-disabled/tools/homebrew/default.nix</code> → <code>modules/darwin/tools/homebrew/default.nix</code>.</p>
-  <ul>
-    <li>Option namespace: <code>custom.tools.homebrew</code></li>
-    <li><code>onActivation.cleanup = "uninstall"</code> — removes stale casks on every rebuild</li>
-    <li>Enable in system profile: <code>custom.tools.homebrew.enable = true</code></li>
-  </ul>
-
-  <h3>2.2 Cask list</h3>
-  <table>
-    <tr><th>Cask / Package</th><th>Source</th><th>Purpose</th></tr>
-    <tr><td><code>raycast</code></td><td>Homebrew cask</td><td>Launcher / Spotlight replacement</td></tr>
-    <tr><td><code>vlc</code></td><td>Homebrew cask</td><td>Media player — nixpkgs VLC is Linux-only</td></tr>
-    <tr><td><code>obsidian</code></td><td>Homebrew cask</td><td>Note-taking (has a module stub in <code>_darwin-disabled/apps/obsidian/</code>)</td></tr>
-    <tr><td><code>xnviewmp</code></td><td>Homebrew cask</td><td>Image viewer / DAM</td></tr>
-    <tr><td><code>iina</code></td><td><strong>Nix</strong> — <code>pkgs.iina</code></td><td>Modern macOS media player (aarch64-darwin supported)</td></tr>
-  </table>
-  <div class="ok">IINA is in nixpkgs with Darwin support — add to <code>home.packages</code> rather than Homebrew.</div>
-
-  <h3>2.3 Obsidian module</h3>
-  <p>Port <code>modules/_darwin-disabled/apps/obsidian/default.nix</code> → <code>modules/darwin/apps/obsidian/default.nix</code>.
-  Enable in home profile: <code>custom.apps.obsidian.enable = true</code>.</p>
-
-  <h3>2.4 IINA in home profile</h3>
-  <p>Add directly to <code>homes/…/sab@mba13/default.nix</code>:</p>
-  <pre>home.packages = with pkgs; [ iina ];</pre>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<h2>Phase 3 — AeroSpace Window Manager</h2>
-<div class="phase">
-  <div class="phase-header"><span class="badge badge-next">NEXT</span><span>Tiling WM — disabled module just needs porting</span></div>
-
-  <h3>3.1 Port the module</h3>
-  <p><code>modules/_darwin-disabled/desktop/aerospace/default.nix</code> → <code>modules/darwin/desktop/aerospace/default.nix</code></p>
-  <ul>
-    <li>Installs via Homebrew cask <code>nikitabobko/tap/aerospace</code></li>
-    <li>Links <code>aerospace.toml</code> via XDG config</li>
-    <li>Option namespace: <code>custom.desktop.aerospace</code></li>
-  </ul>
-
-  <h3>3.2 aerospace.toml</h3>
-  <p>Prefer a symlink from <code>~/dotfiles</code> for consistency with fish/nvim:</p>
-  <pre>xdg.configFile."aerospace/aerospace.toml" = {
-  source = config.lib.file.mkOutOfStoreSymlink
-    "${config.home.homeDirectory}/dotfiles/aerospace/aerospace.toml";
-  force = true;
-};</pre>
-  <p>If not yet in dotfiles, embed a minimal static config in the module directory (<code>aerospace.toml</code> next to <code>default.nix</code>).</p>
-
-  <h3>3.3 Enable</h3>
-  <pre>custom.desktop.aerospace.enable = true;  # in system profile</pre>
-  <div class="note">AeroSpace requires Accessibility permission on first launch — macOS will prompt. Cannot be automated without MDM.</div>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<h2>Phase 4 — myvpn (openconnect)</h2>
-<div class="phase">
-  <div class="phase-header"><span class="badge badge-next">NEXT</span><span>Module already exists — enable + wire up env vars</span></div>
-
-  <h3>What's already there</h3>
-  <div class="ok"><code>modules/home/security/openconnect/default.nix</code> already builds a <code>myvpn</code> shell script that wraps openconnect with <code>up/down/status</code> subcommands. Darwin route handling (<code>route delete/add</code>) is already present.</div>
-
-  <h3>4.1 Enable in home profile</h3>
-  <pre>custom.security.openconnect.enable = true;</pre>
-
-  <h3>4.2 Required environment variables</h3>
-  <p>The script expects three env vars at runtime:</p>
-  <table>
-    <tr><th>Variable</th><th>Purpose</th><th>Where to set</th></tr>
-    <tr><td><code>OPENCONNECT_USER</code></td><td>VPN username</td><td>Fish config or SOPS secret (Phase 6)</td></tr>
-    <tr><td><code>OPENCONNECT_PW</code></td><td>VPN password</td><td>SOPS secret (Phase 6)</td></tr>
-    <tr><td><code>OPENCONNECT_SERVER</code></td><td>VPN gateway hostname</td><td>Fish config or SOPS secret</td></tr>
-  </table>
-  <div class="note">Until SOPS is ready, these can be set in <code>~/dotfiles/fish/conf.d/vpn.fish</code> (not committed).</div>
-
-  <h3>4.3 sudoers for openconnect</h3>
-  <p>The <code>system.security</code> module already includes passwordless sudo for <code>openconnect</code>, <code>/sbin/route</code>, <code>dscacheutil</code>, <code>killall</code>, and <code>pkill</code>. No changes needed here.</p>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<h2>Phase 5 — DNS Split Brain for VPN</h2>
-<div class="phase">
-  <div class="phase-header"><span class="badge badge-fix">FIX</span><span>Darwin has no systemd-resolved — use /etc/resolver/ files instead</span></div>
-
-  <h3>Problem</h3>
-  <p>The existing openconnect module has a <code>configureResolvedSplitDns</code> block that calls <code>resolvectl</code> — this is Linux/systemd-only and is already guarded behind <code>pkgs.stdenv.isLinux</code>. The Darwin branch only handles routes, not DNS. After VPN connect, internal domains (<code>pyn.ru</code>, <code>hh.ru</code>, <code>hhdev.ru</code>) don't resolve.</p>
-
-  <h3>Solution: /etc/resolver/ files</h3>
-  <p>macOS reads per-domain DNS config from <code>/etc/resolver/&lt;domain&gt;</code> files. The <code>myvpn up</code> script needs to create these files, and <code>myvpn down</code> needs to remove them.</p>
-
-  <h3>5.1 Update the Darwin section in openconnect module</h3>
-  <p>Edit <code>modules/home/security/openconnect/default.nix</code> — extend the Darwin <code>route_delete_command</code>:</p>
-  <pre>else if pkgs.stdenv.isDarwin then
-  ''
-    sudo route delete -net 192.168.0.0/16
-    sudo route add -net 10.8.0.1/32 192.168.89.1
-    # Split DNS: route internal domains to VPN nameservers
-    for domain in pyn.ru hh.ru hhdev.ru; do
-      sudo mkdir -p /etc/resolver
-      printf 'nameserver 94.124.205.83\nnameserver 94.124.204.83\n' \
-        | sudo tee /etc/resolver/$domain > /dev/null
-    done
-    sudo dscacheutil -flushcache
-    sudo killall -HUP mDNSResponder
-  ''</pre>
-
-  <h3>5.2 Teardown on myvpn down</h3>
-  <p>In the <code>down</code> case of the script, remove the resolver files:</p>
-  <pre>sudo kill -2 $(pgrep openconnect)
-# Remove split DNS entries
-for domain in pyn.ru hh.ru hhdev.ru; do
-  sudo rm -f /etc/resolver/$domain
-done
-sudo dscacheutil -flushcache
-sudo killall -HUP mDNSResponder</pre>
-
-  <h3>5.3 sudoers additions needed</h3>
-  <p>Add <code>mkdir</code>, <code>tee</code>, <code>rm</code> on <code>/etc/resolver/</code> to the passwordless sudo list in <code>modules/darwin/system/security/default.nix</code>:</p>
-  <pre>/bin/mkdir -p /etc/resolver
-/usr/bin/tee /etc/resolver/*
-/bin/rm -f /etc/resolver/*
-/usr/bin/dscacheutil -flushcache
-/usr/bin/killall -HUP mDNSResponder</pre>
-
-  <h3>5.4 Verify</h3>
-  <pre>myvpn up
-scutil --dns | grep -A3 "pyn.ru"   # should show VPN nameserver
-dig internal-host.hh.ru            # should resolve
-myvpn down
-dig internal-host.hh.ru            # should fail or use public DNS</pre>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<h2>Phase 6 — SOPS Secrets</h2>
-<div class="phase">
-  <div class="phase-header"><span class="badge badge-later">LATER</span><span>Encrypted secrets — needs age key generation first (manual step)</span></div>
-
-  <h3>6.1 Prerequisites (manual)</h3>
-  <pre># Generate age key
-mkdir -p ~/.config/sops/age
+  <h3>Step 1 — Generate age key (manual, one-time)</h3>
+  <pre>mkdir -p ~/.config/sops/age
 age-keygen -o ~/.config/sops/age/keys.txt
-# Print public key — add to .sops.yaml
-cat ~/.config/sops/age/keys.txt | grep "public key"</pre>
+grep "public key" ~/.config/sops/age/keys.txt   # copy this</pre>
 
-  <h3>6.2 Update .sops.yaml</h3>
-  <p>Add the new MBA public key to <code>.sops.yaml</code> under a <code>mba13</code> creation rule.</p>
+  <h3>Step 2 — Add public key to .sops.yaml</h3>
+  <p>Add a creation rule for <code>secrets/mba13/*.yaml</code> using the new age public key.</p>
 
-  <h3>6.3 Create secrets file</h3>
+  <h3>Step 3 — Create secrets file</h3>
   <pre>mkdir -p secrets/mba13
 sops secrets/mba13/default.yaml</pre>
-  <p>Initial secrets to add:</p>
   <table>
     <tr><th>Key</th><th>Consumer</th></tr>
-    <tr><td><code>ANTHROPIC_API_KEY</code></td><td>claude / opencode modules</td></tr>
-    <tr><td><code>OPENAI_API_KEY</code></td><td>opencode providers</td></tr>
+    <tr><td><code>ANTHROPIC_API_KEY</code></td><td>claude, opencode</td></tr>
     <tr><td><code>OPENCONNECT_USER</code></td><td>myvpn script</td></tr>
     <tr><td><code>OPENCONNECT_PW</code></td><td>myvpn script</td></tr>
     <tr><td><code>OPENCONNECT_SERVER</code></td><td>myvpn script</td></tr>
+    <tr><td><code>grafana_api_key</code></td><td>mcp-grafana</td></tr>
   </table>
 
-  <h3>6.4 Enable sops-nix in home profile</h3>
+  <h3>Step 4 — Enable in home profile</h3>
   <pre>sops = {
   age.keyFile = "${config.home.homeDirectory}/.config/sops/age/keys.txt";
   defaultSopsFile = lib.snowfall.fs.get-file "secrets/mba13/default.yaml";
   secrets = {
-    anthropic_api_key  = {};
-    openconnect_user   = {};
-    openconnect_pw     = {};
-    openconnect_server = {};
+    ANTHROPIC_API_KEY  = {};
+    OPENCONNECT_USER   = {};
+    OPENCONNECT_PW     = {};
+    OPENCONNECT_SERVER = {};
+    grafana_api_key    = {};
   };
 };</pre>
 
-  <h3>6.5 Wire openconnect secrets</h3>
-  <p>Uncomment the sops block in <code>modules/home/security/openconnect/default.nix</code> and source secrets as env vars in the vpnScript. Or set via Fish <code>conf.d/vpn.fish</code> sourcing the SOPS-decrypted paths.</p>
+  <h3>Step 5 — Wire myvpn to SOPS secrets</h3>
+  <p>Set env vars from SOPS paths in Fish config, or uncomment the SOPS block in the openconnect module. Until then, export them manually in a Fish config file.</p>
+
+  <h3>Step 6 — Enable mcp-grafana</h3>
+  <pre>custom.ai.mcp-grafana = enabled;  # in home profile, after SOPS is set up</pre>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<h2>Phase 7 — AI Tools</h2>
+<h2>Later: YubiKey + GPG Signing</h2>
 <div class="phase">
-  <div class="phase-header"><span class="badge badge-next">NEXT</span><span>Modules exist — just enable in home profile</span></div>
-
-  <h3>7.1 Enable in home profile</h3>
-  <pre>custom.ai = {
-  claude      = enabled;
-  opencode    = enabled;
-  mcp-grafana = enabled;
-  mcp-k8s-go  = enabled;
-};</pre>
-  <div class="ok">All four modules exist under <code>modules/home/ai/</code>. The claude module sets up <code>~/.claude/settings.json</code>, skills, and a statusline script. The opencode module writes a full config with providers, MCP servers, agents, and skills.</div>
-
-  <h3>7.2 API keys</h3>
-  <p>Set via SOPS secrets (Phase 6) or temporarily in Fish config until then.</p>
-
-  <h3>7.3 direnv</h3>
-  <pre>custom.tools.direnv.enable = true;  # in home profile</pre>
+  <div class="phase-header"><span class="badge badge-later">LATER</span><span>Needs physical YubiKey present</span></div>
+  <ul>
+    <li>GPG module is already enabled and installs <code>pinentry-mac</code> — just enrol the key: <code>gpg --card-status</code></li>
+    <li>Flip <code>tools.git.enableSigning = true</code> in home profile</li>
+    <li>SSH auth via GPG agent: already configured (<code>enable-ssh-support</code> + <code>SSH_AUTH_SOCK</code>)</li>
+    <li>See <code>docs/yubikey-gpg.md</code> for manual steps</li>
+  </ul>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<h2>Phase 8 — WezTerm Kubernetes Status</h2>
+<h2>Later: Darwin Common Suite</h2>
 <div class="phase">
-  <div class="phase-header"><span class="badge badge-next">NEXT</span><span>Already wired — verify it works, fix kubectl path if needed</span></div>
-
-  <h3>What's already there</h3>
-  <div class="ok">The wezterm module has <code>status.kubernetes.enable = true</code> by default. <code>status.lua</code> already probes kubectl at:
-    <code>/etc/profiles/per-user/sab/bin/kubectl</code> (home-manager profile path on Darwin) — which is exactly where the CLI module installs it.
-  </div>
-
-  <h3>8.1 After activation</h3>
-  <p>Open WezTerm and confirm the status bar shows <code>ctx | ns</code> in the right-hand side. If kubectl shows <code>"-"</code>:</p>
-  <pre># Verify kubectl is visible to WezTerm's sh -c lookup
-/bin/sh -c "command -v kubectl"
-# Should return /etc/profiles/per-user/sab/bin/kubectl
-
-# Verify kubeconfig exists
-ls ~/.kube/config</pre>
-
-  <h3>8.2 If kubeconfig is missing</h3>
-  <p>Copy it from the Linux workstation or generate from the cluster. The status bar will show <code>ctx: - | ns: -</code> until a valid kubeconfig is present — that's intentional behaviour, not a bug.</p>
-
-  <h3>8.3 Optional: refresh interval tuning</h3>
-  <pre>custom.desktop.addons.wezterm.status.kubernetes.refreshSeconds = 30; # default 15</pre>
+  <div class="phase-header"><span class="badge badge-later">LATER</span><span>Cleanup — reduce boilerplate in system profile</span></div>
+  <p>Create <code>modules/darwin/suites/common/default.nix</code> to wrap the 6 individual <code>system.*</code> toggles + homebrew into a single <code>custom.suites.common = enabled</code>. Low priority — purely cosmetic.</p>
 </div>
 
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<h2>Phase 9 — Darwin Common Suite</h2>
+<h2>Branch Status</h2>
 <div class="phase">
-  <div class="phase-header"><span class="badge badge-later">LATER</span><span>Reduce per-host boilerplate into a single toggle</span></div>
-
-  <h3>9.1 Create modules/darwin/suites/common/default.nix</h3>
-  <p>Port the disabled <code>suites/common</code> module. This wraps all the system toggles:</p>
-  <pre>config = mkIf cfg.enable {
-  programs.fish.enable = true;
-  custom = {
-    system   = { fonts = enabled; input = enabled;
-                 interface = enabled; nix = enabled; security = enabled; };
-    tools.homebrew = enabled;
-  };
-};</pre>
-  <p>Then replace the 6 individual lines in <code>systems/aarch64-darwin/mba13/default.nix</code> with <code>custom.suites.common.enable = true</code>.</p>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<h2>Phase 10 — YubiKey &amp; GPG Signing</h2>
-<div class="phase">
-  <div class="phase-header"><span class="badge badge-later">LATER</span><span>Needs physical key present</span></div>
-
-  <h3>10.1 Import GPG key from YubiKey</h3>
-  <pre>gpg --card-status
-gpg --edit-card  # fetch public key</pre>
-
-  <h3>10.2 Enable git commit signing</h3>
-  <pre>tools.git = {
-  enable = true;
-  enableSigning = true;   # flip from false
-};</pre>
-
-  <h3>10.3 SSH via GPG agent</h3>
-  <p>Already handled by <code>custom.security.gpg.enable = true</code> (Phase 1) — it sets <code>enable-ssh-support</code> in <code>gpg-agent.conf</code> and exports <code>SSH_AUTH_SOCK</code>.</p>
-  <p>Refer to <code>docs/yubikey-gpg.md</code> for the manual setup steps.</p>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<h2>Execution Order</h2>
-<div class="phase">
-  <table>
-    <tr><th>#</th><th>Phase</th><th>Effort</th><th>Depends on</th><th>New files</th></tr>
-    <tr><td>0</td><td>Build + first activation</td><td>30 min</td><td><strong>blocks all</strong></td><td>none (staged)</td></tr>
-    <tr><td>1</td><td>Fix GnuPG (Darwin pinentry)</td><td>20 min</td><td>Phase 0</td><td>edit existing GPG module</td></tr>
-    <tr><td>2</td><td>Homebrew + casks + IINA</td><td>1 h</td><td>Phase 0</td><td><code>modules/darwin/tools/homebrew/</code>, <code>modules/darwin/apps/obsidian/</code></td></tr>
-    <tr><td>3</td><td>AeroSpace</td><td>45 min</td><td>Phase 2 (Homebrew)</td><td><code>modules/darwin/desktop/aerospace/</code></td></tr>
-    <tr><td>4</td><td>myvpn (openconnect)</td><td>20 min</td><td>Phase 0</td><td>enable existing module in home profile</td></tr>
-    <tr><td>5</td><td>DNS split brain fix</td><td>30 min</td><td>Phase 4</td><td>edit openconnect + security modules</td></tr>
-    <tr><td>6</td><td>SOPS secrets</td><td>1–2 h</td><td>age key (manual)</td><td><code>secrets/mba13/default.yaml</code></td></tr>
-    <tr><td>7</td><td>AI tools (claude/opencode)</td><td>20 min</td><td>Phase 0</td><td>home profile edits only</td></tr>
-    <tr><td>8</td><td>WezTerm k8s status</td><td>10 min</td><td>Phase 0 + kubeconfig</td><td>none — verify only</td></tr>
-    <tr><td>9</td><td>Darwin common suite</td><td>30 min</td><td>any time</td><td><code>modules/darwin/suites/common/</code></td></tr>
-    <tr><td>10</td><td>YubiKey + GPG signing</td><td>1–2 h</td><td>Phase 1 + physical key</td><td>home profile edits</td></tr>
-  </table>
-</div>
-
-<!-- ═══════════════════════════════════════════════════════════════ -->
-<h2>Validation (after every phase)</h2>
-<div class="phase">
-  <pre>nix fmt                                              # format changed files
-nix build .#darwinConfigurations.mba13.system \
-  --no-link --show-trace                             # evaluate + build
-# only after build succeeds:
-sudo darwin-rebuild switch --flake ~/dotnix#mba13    # activate</pre>
-  <div class="warn">Never activate without a clean build. Never skip nix fmt.</div>
+  <pre>git log --oneline feat-darwin-mba ^main</pre>
+  <p>Ready to open a PR once SOPS is set up (or sooner if VPN credentials are temporarily set via Fish config).</p>
+  <div class="warn">All commits use <code>git -c commit.gpgsign=false</code> until YubiKey is enrolled. Remove that flag afterwards.</div>
 </div>
 
 </body>
