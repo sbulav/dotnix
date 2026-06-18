@@ -59,7 +59,11 @@ with lib.custom;
       gh = enabled;
       git = {
         enable = true;
-        enableSigning = false;
+        enableSigning = true;
+        # Sign with the YubiKey key; gpg-smart-sign swaps in the local fallback
+        # key automatically when the YubiKey is not plugged in.
+        signingKey = "15DB4B4A58D027CB73D0E911D06334BAEC6DC034";
+        gpgProgram = "${pkgs.custom.gpg-smart-sign}/bin/gpg-smart-sign";
       };
       k9s = enabled;
       sqlite-jira = enabled;
@@ -67,7 +71,10 @@ with lib.custom;
     };
 
     security = {
-      gpg = enabled;
+      gpg = {
+        enable = true;
+        yubikeyKeyId = "15DB4B4A58D027CB73D0E911D06334BAEC6DC034";
+      };
       openconnect = enabled;
       vault = enabled;
     };
