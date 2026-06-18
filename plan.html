@@ -88,6 +88,10 @@
     <tr><td>VLC dropped — IINA only</td><td><code>1873e6a</code></td><td>single media player, Nix-managed</td></tr>
     <tr><td>AeroSpace <code>start-at-login</code></td><td><code>0264860</code></td><td>auto-starts on boot via its own launchd agent</td></tr>
     <tr><td>Cross-platform Claude notifications</td><td><code>(latest)</code></td><td>osascript on Darwin, libnotify on Linux</td></tr>
+    <tr><td>macOS interface tuning (dark mode, panels, units, Stage Manager off, menu-bar battery, Finder volumes)</td><td><code>(latest)</code></td><td>extends <code>system.interface</code></td></tr>
+    <tr><td>Dark green WezTerm theme on macOS</td><td><code>4c800ba</code></td><td>nz stays cyberdream</td></tr>
+    <tr><td>GPG commit signing via <code>gpg-smart-sign</code></td><td><code>f38186e</code></td><td>YubiKey when present, fallback key 7C43… otherwise</td></tr>
+    <tr><td>Stray <code>~/.gitconfig</code> removed (→ <code>.bak</code>)</td><td>—</td><td>was overriding signingkey + defeating the YubiKey swap</td></tr>
   </table>
 </div>
 
@@ -158,14 +162,14 @@ sops secrets/mba13/default.yaml</pre>
   <pre>custom.ai.mcp-grafana = enabled;  # in home profile, after SOPS is set up</pre>
 </div>
 
-<h2>Later: YubiKey + GPG Signing</h2>
+<h2>GPG Signing — wired ✅ (YubiKey enrolment optional)</h2>
 <div class="phase">
-  <div class="phase-header"><span class="badge badge-later">LATER</span><span>Needs physical YubiKey present</span></div>
+  <div class="ok">Signing is enabled on mba13 via <code>gpg-smart-sign</code>. The fallback path (local key <code>7C43…</code>, passphrase via pinentry-mac) works today and is validated. Takes effect on the next <code>darwin-rebuild switch</code>.</div>
   <ul>
-    <li>GPG module is already enabled and installs <code>pinentry-mac</code> — just enrol the key: <code>gpg --card-status</code></li>
-    <li>Flip <code>tools.git.enableSigning = true</code> in home profile</li>
-    <li>SSH auth via GPG agent: already configured (<code>enable-ssh-support</code> + <code>SSH_AUTH_SOCK</code>)</li>
-    <li>See <code>docs/yubikey-gpg.md</code> for manual steps</li>
+    <li><strong>Fallback signing</strong> — works now; <code>git commit</code> signs with <code>7C43…</code> via pinentry-mac.</li>
+    <li><strong>YubiKey path</strong> — when the key is plugged in, <code>gpg-smart-sign</code> detects the card (<code>gpg --card-status</code>) and signs with the on-card key <code>15DB…</code> instead. No config change needed; just plug it in.</li>
+    <li>SSH auth via GPG agent already configured (<code>enable-ssh-support</code> + <code>SSH_AUTH_SOCK</code>).</li>
+    <li>Note: <code>gpg-smart-sign</code> hardcodes both key ids in <code>packages/gpg-smart-sign</code>; they match the current keys. Update there if keys rotate.</li>
   </ul>
 </div>
 
