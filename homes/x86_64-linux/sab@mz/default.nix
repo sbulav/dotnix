@@ -97,7 +97,10 @@ in
     };
 
     apps = {
-      obsidian = enabled;
+      obsidian = {
+        enable = true;
+        useWebdavSyncFork = true;
+      };
       ktalk = {
         enable = true;
         package = pkgs.custom.ktalk-nvidia;
