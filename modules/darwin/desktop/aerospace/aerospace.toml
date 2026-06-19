@@ -92,6 +92,7 @@ outer.right =      6
 alt-b = 'exec-and-forget open -a Firefox'
 alt-x = 'exec-and-forget open -a WezTerm'
 alt-r = 'exec-and-forget open -a Raycast'
+alt-q = 'close'
 alt-slash = 'layout tiles horizontal vertical'
 alt-comma = 'layout accordion horizontal vertical'
 
