@@ -87,6 +87,24 @@ let
       echo "Usage: myvpn <up|down|status>"
     }
 
+    function require_env ()
+    {
+      missing=0
+      if [ -z "$OPENCONNECT_USER" ]; then
+        echo "ERROR: OPENCONNECT_USER is not set. Start a new shell after SOPS activation."
+        missing=1
+      fi
+      if [ -z "$OPENCONNECT_PW" ]; then
+        echo "ERROR: OPENCONNECT_PW is not set. Start a new shell after SOPS activation."
+        missing=1
+      fi
+      if [ -z "$OPENCONNECT_SERVER" ]; then
+        echo "ERROR: OPENCONNECT_SERVER is not set. Start a new shell after SOPS activation."
+        missing=1
+      fi
+      [ "$missing" -eq 0 ]
+    }
+
     if [ "$#" != "1" ]
     then
       openconnecthelp
@@ -109,9 +127,10 @@ let
         # Parse command
         case "$1" in
           up)
-            echo $OPENCONNECT_PW | \
+            require_env || exit 1
+            printf '%s\n' "$OPENCONNECT_PW" | \
               sudo ${pkgs.openconnect}/bin/openconnect --no-dtls --background \
-              --passwd-on-stdin -u $OPENCONNECT_USER $OPENCONNECT_SERVER
+              --passwd-on-stdin -u "$OPENCONNECT_USER" "$OPENCONNECT_SERVER"
             if [[ $? -ne 0 ]]; then
             echo "******************************************************"
               echo "ERROR: Cannot start VPN connection."

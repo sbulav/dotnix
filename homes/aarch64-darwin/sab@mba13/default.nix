@@ -15,7 +15,7 @@ with lib.custom;
     ai = {
       claude = enabled;
       mcp-k8s-go = enabled;
-      # mcp-grafana deferred until SOPS is configured (needs grafana_api_key)
+      # mcp-grafana is intentionally not enabled on mba13.
 
       opencode = {
         enable = true;
@@ -28,13 +28,16 @@ with lib.custom;
             anthropic = {
               npm = "@ai-sdk/anthropic";
               name = "Anthropic";
-              options = {
-                apiKey = "{env:ANTHROPIC_API_KEY}";
-              };
               models = {
-                "claude-sonnet-4-6" = { name = "Claude Sonnet 4.6"; };
-                "claude-opus-4-8"   = { name = "Claude Opus 4.8"; };
-                "claude-haiku-4-5-20251001" = { name = "Claude Haiku 4.5"; };
+                "claude-sonnet-4-6" = {
+                  name = "Claude Sonnet 4.6";
+                };
+                "claude-opus-4-8" = {
+                  name = "Claude Opus 4.8";
+                };
+                "claude-haiku-4-5-20251001" = {
+                  name = "Claude Haiku 4.5";
+                };
               };
             };
           };
@@ -76,6 +79,13 @@ with lib.custom;
         yubikeyKeyId = "15DB4B4A58D027CB73D0E911D06334BAEC6DC034";
       };
       openconnect = enabled;
+      sops = {
+        enable = true;
+        # Decrypt secrets/sab/default.yaml to ~/.ssh/sops-env-credentials;
+        # Fish sources this file for new interactive sessions.
+        commonSecrets.enableCredentials = true;
+        profile = "home";
+      };
       vault = enabled;
     };
   };
