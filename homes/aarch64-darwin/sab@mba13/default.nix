@@ -58,7 +58,7 @@ with lib.custom;
 
     tools = {
       cli = enabled;
-      direnv = enabled;
+      direnv = disabled;
       gh = enabled;
       git = {
         enable = true;
