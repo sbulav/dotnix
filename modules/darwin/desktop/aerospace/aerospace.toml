@@ -15,9 +15,6 @@ after-login-command = []
 # Available commands : https://nikitabobko.github.io/AeroSpace/commands
 after-startup-command = []
 
-# Start AeroSpace at login
-start-at-login = true
-
 # Normalizations. See: https://nikitabobko.github.io/AeroSpace/guide#normalization
 enable-normalization-flatten-containers = true
 enable-normalization-opposite-orientation-for-nested-containers = true
@@ -206,7 +203,7 @@ if.app-id = 'Толк'
 run = ['layout floating', 'move-node-to-workspace 4']
 
 [[on-window-detected]]
-if.app-id = 'org.videolan.vlc'
+if.app-id = 'com.colliderli.iina'
 run = "move-node-to-workspace 5"
 
 [[on-window-detected]]
