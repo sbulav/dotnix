@@ -1,5 +1,5 @@
-# Place a copy of this config to ~/.aerospace.toml
-# After that, you can edit ~/.aerospace.toml to your liking
+# This file is managed by Home Manager as ~/.aerospace.toml.
+# Edit it here and rebuild the Darwin configuration to apply changes.
 
 config-version = 2
 
@@ -89,8 +89,8 @@ outer.right =      6
 # alt-enter = 'exec-and-forget open -n /System/Applications/Utilities/Terminal.app'
 
 # See: https://nikitabobko.github.io/AeroSpace/commands#layout
-alt-b = 'exec-and-forget open -n /Applications/Firefox.app'
-alt-x = 'exec-and-forget open -n /Users/sab/Applications/Home\ Manager\ Apps/WezTerm.app'
+alt-b = 'exec-and-forget open -a Firefox'
+alt-x = 'exec-and-forget open -a WezTerm'
 alt-r = 'exec-and-forget open -a Raycast'
 alt-slash = 'layout tiles horizontal vertical'
 alt-comma = 'layout accordion horizontal vertical'
@@ -195,7 +195,7 @@ alt-shift-l = ['join-with right', 'mode main']
 
 [[on-window-detected]]
 if.app-id = '^(com\.github\.wez\.wezterm|com\.apple\.Terminal|com\.googlecode\.iterm2|net\.kovidgoyal\.kitty|org\.alacritty|com\.mitchellh\.ghostty|dev\.warp\.Warp-Stable|com\.raphamorim\.rio)$'
-run = ['move-node-to-workspace 1', 'fullscreen on']
+run = "move-node-to-workspace 1"
 
 [[on-window-detected]]
 if.app-id = '^(org\.mozilla\.firefox|com\.apple\.Safari|com\.google\.Chrome|com\.brave\.Browser|com\.microsoft\.edgemac|company\.thebrowser\.Browser|com\.kagi\.kagimacOS)$'
@@ -206,7 +206,7 @@ if.app-id = '^(com\.openai\.codex|com\.openai\.chat)$'
 run = "move-node-to-workspace 3"
 
 [[on-window-detected]]
-if.app-id = 'us.zoom.xos'
+if.app-id = '^us\.zoom\.xos$'
 run = ['layout floating', 'move-node-to-workspace 4']
 
 [[on-window-detected]]
@@ -214,27 +214,33 @@ if.app-id = '^(com\.tdesktop\.Telegram|ru\.keepcoder\.Telegram)$'
 run = "move-node-to-workspace 4"
 
 [[on-window-detected]]
-if.app-id = 'com.colliderli.iina'
+if.app-id = '^com\.colliderli\.iina$'
 run = "move-node-to-workspace 5"
 
 [[on-window-detected]]
-if.app-id = 'com.alicevpn.ios'
+if.app-id = '^com\.alicevpn\.ios$'
 run = ['layout floating', 'move-node-to-workspace 5']
 
 [[on-window-detected]]
-if.app-id = 'com.cisco.anyconnect.gui'
+if.app-id = '^com\.cisco\.anyconnect\.gui$'
 run = "move-node-to-workspace 6"
 
 [[on-window-detected]]
-if.app-id = 'com.apple.systempreferences'
+if.app-id = '^com\.apple\.systempreferences$'
 run = ['layout floating', 'move-node-to-workspace 6']
 
 [[on-window-detected]]
-if.app-id = '^(com\.tinyspeck\.slackmacgap|md\.obsidian|kontur\.talk)$'
+if.app-id = '^(com\.tinyspeck\.slackmacgap|md\.obsidian)$'
+run = "move-node-to-workspace 7"
+
+# Толк creates its Electron window before its bundle ID is available to
+# AeroSpace, so classify it by the application name instead.
+[[on-window-detected]]
+if.app-name-regex-substring = '^Толк$'
 run = "move-node-to-workspace 7"
 
 [[on-window-detected]]
-if.app-id = 'com.apple.mail'
+if.app-id = '^com\.apple\.mail$'
 run = "move-node-to-workspace 8"
 
 
