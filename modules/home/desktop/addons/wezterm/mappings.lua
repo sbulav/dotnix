@@ -48,6 +48,14 @@ config.keys = {
   { key = "8", mods = "LEADER", action = wezterm.action { ActivateTab = 7 } },
   { key = "9", mods = "LEADER", action = wezterm.action { ActivateTab = 8 } },
   { key = "d", mods = "LEADER", action = wezterm.action { CloseCurrentPane = { confirm = true } } },
+
+  -- Scrollback (MacBook has no PgUp/PgDn keys)
+  { key = "UpArrow", mods = "CMD", action = act.ScrollByPage(-1) },
+  { key = "DownArrow", mods = "CMD", action = act.ScrollByPage(1) },
+  { key = "k", mods = "CMD", action = act.ScrollByLine(-1) },
+  { key = "j", mods = "CMD", action = act.ScrollByLine(1) },
+  { key = "UpArrow", mods = "CMD|SHIFT", action = act.ScrollToTop },
+  { key = "DownArrow", mods = "CMD|SHIFT", action = act.ScrollToBottom },
 }
 
 config.mouse_bindings = {
