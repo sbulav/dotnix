@@ -112,14 +112,8 @@
       baseURL = "https://llmgtw.hhdev.ru/proxy/xai";
     };
     models = {
-      "grok-4.20-0309-reasoning" = {
-        name = "Grok 4.20 Reasoning";
-      };
-      "grok-4.20-0309-non-reasoning" = {
-        name = "Grok 4.20";
-      };
-      "grok-4.20-multi-agent-0309" = {
-        name = "Grok 4.20 Multi-Agent";
+      "grok-4.3" = {
+        name = "Grok 4.3";
       };
     };
   };
