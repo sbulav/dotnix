@@ -3,6 +3,7 @@
   networking.hostName = "mba13";
 
   suites.common.enable = true;
+  suites.develop.enable = true;
 
   custom.user.enable = true;
   custom.apps.obsidian.enable = true;
