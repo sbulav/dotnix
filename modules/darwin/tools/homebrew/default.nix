@@ -28,6 +28,7 @@ in
       casks = [
         "raycast"
         "xnviewmp"
+        "colemak-dh"
       ];
     };
   };

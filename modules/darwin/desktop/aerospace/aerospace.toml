@@ -1,6 +1,8 @@
 # Place a copy of this config to ~/.aerospace.toml
 # After that, you can edit ~/.aerospace.toml to your liking
 
+config-version = 2
+
 # It's not necessary to copy all keys to your config.
 # If the key is missing in your config, "default-config.toml" will serve as a fallback
 
@@ -31,6 +33,10 @@ default-root-container-layout = 'tiles'
 # 'auto' means: wide monitor (anything wider than high) gets horizontal orientation,
 #               tall monitor (anything higher than wide) gets vertical orientation
 default-root-container-orientation = 'auto'
+
+# Keep the workspace model aligned with Hyprland. AeroSpace workspaces are
+# otherwise created dynamically, and its default config includes A-Z.
+persistent-workspaces = ['1', '2', '3', '4', '5', '6', '7', '8', '9']
 
 # Possible values: (qwerty|dvorak)
 # See https://nikitabobko.github.io/AeroSpace/guide#key-mapping
@@ -85,6 +91,7 @@ outer.right =      6
 # See: https://nikitabobko.github.io/AeroSpace/commands#layout
 alt-b = 'exec-and-forget open -n /Applications/Firefox.app'
 alt-x = 'exec-and-forget open -n /Users/sab/Applications/Home\ Manager\ Apps/WezTerm.app'
+alt-r = 'exec-and-forget open -a Raycast'
 alt-slash = 'layout tiles horizontal vertical'
 alt-comma = 'layout accordion horizontal vertical'
 
@@ -187,48 +194,48 @@ alt-shift-l = ['join-with right', 'mode main']
 9 = 'secondary'
 
 [[on-window-detected]]
-if.app-id = 'com.github.wez.wezterm'
-run = "move-node-to-workspace 1"
+if.app-id = '^(com\.github\.wez\.wezterm|com\.apple\.Terminal|com\.googlecode\.iterm2|net\.kovidgoyal\.kitty|org\.alacritty|com\.mitchellh\.ghostty|dev\.warp\.Warp-Stable|com\.raphamorim\.rio)$'
+run = ['move-node-to-workspace 1', 'fullscreen on']
 
 [[on-window-detected]]
-if.app-id = 'org.mozilla.firefox'
+if.app-id = '^(org\.mozilla\.firefox|com\.apple\.Safari|com\.google\.Chrome|com\.brave\.Browser|com\.microsoft\.edgemac|company\.thebrowser\.Browser|com\.kagi\.kagimacOS)$'
 run = "move-node-to-workspace 2"
+
+[[on-window-detected]]
+if.app-id = '^(com\.openai\.codex|com\.openai\.chat)$'
+run = "move-node-to-workspace 3"
 
 [[on-window-detected]]
 if.app-id = 'us.zoom.xos'
 run = ['layout floating', 'move-node-to-workspace 4']
 
 [[on-window-detected]]
-if.app-id = 'Толк'
-run = ['layout floating', 'move-node-to-workspace 4']
+if.app-id = '^(com\.tdesktop\.Telegram|ru\.keepcoder\.Telegram)$'
+run = "move-node-to-workspace 4"
 
 [[on-window-detected]]
 if.app-id = 'com.colliderli.iina'
 run = "move-node-to-workspace 5"
 
 [[on-window-detected]]
-if.app-id = 'com.apple.mail'
-run = "move-node-to-workspace 8"
-
-[[on-window-detected]]
-if.app-id = 'md.obsidian'
-run = ['move-node-to-workspace 8']
+if.app-id = 'com.alicevpn.ios'
+run = ['layout floating', 'move-node-to-workspace 5']
 
 [[on-window-detected]]
 if.app-id = 'com.cisco.anyconnect.gui'
-run = ['move-node-to-workspace 6']
-
-[[on-window-detected]]
-if.app-id = 'com.tinyspeck.slackmacgap'
-run = "move-node-to-workspace 9"
-
-[[on-window-detected]]
-if.app-id = 'com.tdesktop.Telegram'
-run = "move-node-to-workspace 9"
+run = "move-node-to-workspace 6"
 
 [[on-window-detected]]
 if.app-id = 'com.apple.systempreferences'
 run = ['layout floating', 'move-node-to-workspace 6']
+
+[[on-window-detected]]
+if.app-id = '^(com\.tinyspeck\.slackmacgap|md\.obsidian|kontur\.talk)$'
+run = "move-node-to-workspace 7"
+
+[[on-window-detected]]
+if.app-id = 'com.apple.mail'
+run = "move-node-to-workspace 8"
 
 
 # Colemak-dh

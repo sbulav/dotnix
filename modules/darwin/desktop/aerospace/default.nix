@@ -20,7 +20,7 @@ in
     };
 
     home-manager.users.${config.custom.user.name} = {
-      xdg.configFile."aerospace/aerospace.toml".source = ./aerospace.toml;
+      home.file.".aerospace.toml".source = ./aerospace.toml;
     };
   };
 }
