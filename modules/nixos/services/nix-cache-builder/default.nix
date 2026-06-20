@@ -9,6 +9,12 @@ with lib;
 with lib.custom;
 let
   cfg = config.${namespace}.services.nix-cache-builder;
+
+  # Explicit substituter list for build/archive commands. `--substituters`
+  # REPLACES the resolved list, so this bypasses the Determinate-injected
+  # `install.determinate.systems` / `cache.flakehub.com` caches, which time
+  # out (<1 B/s) and 401 from this network and otherwise poison every build.
+  buildSubstituters = "https://cache.nixos.org";
 in
 {
   options.${namespace}.services.nix-cache-builder = with types; {
@@ -226,7 +232,7 @@ in
 
           echo "Archiving flake inputs for cache clients..."
           ARCHIVE_JSON=$(${pkgs.coreutils}/bin/mktemp)
-          if ${pkgs.coreutils}/bin/timeout 15m ${pkgs.nix}/bin/nix flake archive --json "$FLAKE" > "$ARCHIVE_JSON"; then
+          if ${pkgs.coreutils}/bin/timeout 15m ${pkgs.nix}/bin/nix flake archive --json --substituters "${buildSubstituters}" "$FLAKE" > "$ARCHIVE_JSON"; then
             INPUT_PATHS=$(${pkgs.jq}/bin/jq -r '.. | objects | .path? // empty' "$ARCHIVE_JSON" | ${pkgs.coreutils}/bin/sort -u)
 
             if [ -n "$INPUT_PATHS" ]; then
@@ -258,6 +264,7 @@ in
                         if ${pkgs.nix}/bin/nix build \
                           --out-link "$CACHE_DIR/${host}-result" \
                           "$FLAKE#nixosConfigurations.${host}.config.system.build.toplevel" \
+                          --substituters "${buildSubstituters}" \
                           --print-build-logs \
                           --keep-going; then
 
@@ -464,8 +471,9 @@ in
           Environment = "PATH=${pkgs.git}/bin:${pkgs.nix}/bin:${pkgs.coreutils}/bin:/run/current-system/sw/bin";
           WorkingDirectory = cfg.flakePath;
 
-          # Limit resources
-          CPUQuota = "80%";
+          # Limit resources. 250% = 2.5 of 4 cores: leaves headroom and caps
+          # heat while still letting the rare from-source build finish in time.
+          CPUQuota = "250%";
           MemoryMax = "8G";
 
           # Increase timeout for long builds
