@@ -21,7 +21,10 @@ let
   # Everything else keeps its cached, CPU-only binary.
   ct2cppCuda = pkgs.unstable.ctranslate2.override { withCUDA = true; };
 
-  python = pkgs.unstable.python312;
+  # Use the default Python (3.13). Hydra only builds/caches the default
+  # interpreter's package set, so pinning python312 forced torch and the
+  # whole env to compile from source. Tracking the default keeps torch cached.
+  python = pkgs.unstable.python3;
   pythonEnv = python.withPackages (
     ps: with ps; [
       (faster-whisper.override {
@@ -116,15 +119,21 @@ in
 
     language = mkOpt types.str "auto" "Language code (auto, en, ru, it, ...).";
 
-    model = mkOpt types.str "large-v3-turbo" "faster-whisper model name (tiny, base, small, medium, large-v3, large-v3-turbo, distil-large-v3).";
+    model =
+      mkOpt types.str "large-v3-turbo"
+        "faster-whisper model name (tiny, base, small, medium, large-v3, large-v3-turbo, distil-large-v3).";
 
     device = mkOpt types.str "cuda" "Compute device: cuda | cpu | auto.";
 
-    computeType = mkOpt types.str "float16" "CTranslate2 compute type (float16 | int8_float16 | int8 | float32).";
+    computeType =
+      mkOpt types.str "float16"
+        "CTranslate2 compute type (float16 | int8_float16 | int8 | float32).";
 
     beamSize = mkOpt types.int 5 "Beam size for decoding. Higher = better, slower.";
 
-    initialPrompt = mkOpt types.str "" "Initial prompt to bias vocabulary (names, jargon). Empty to disable.";
+    initialPrompt =
+      mkOpt types.str ""
+        "Initial prompt to bias vocabulary (names, jargon). Empty to disable.";
 
     vad = {
       enable = mkBoolOpt true "Use Silero VAD to skip silence before decoding.";
