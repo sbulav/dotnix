@@ -117,6 +117,7 @@ in
       yazi = enabled;
     };
     tools = {
+      nix = enabled; # override Determinate's flaky install.determinate.systems cache
       direnv = disabled;
       gh = enabled;
       git = {

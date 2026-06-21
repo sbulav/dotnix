@@ -22,6 +22,7 @@ with lib.custom;
       yazi = enabled;
     };
     tools = {
+      nix = enabled; # override Determinate's flaky install.determinate.systems cache
       gh = disabled;
       git = enabled;
       direnv = disabled;

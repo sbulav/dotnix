@@ -111,6 +111,10 @@ with lib.custom;
     };
   };
 
+  # Override Determinate's flaky install.determinate.systems substituter and
+  # flakehub-weekly nix-path. See modules/home/tools/nix.
+  custom.tools.nix = enabled;
+
   # ======================== DO NOT CHANGE THIS ========================
   home.stateVersion = "26.05";
   # ======================== DO NOT CHANGE THIS ========================

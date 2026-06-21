@@ -21,6 +21,10 @@ in
   config = mkIf cfg.enable {
     determinateNix.customSettings = {
       builders-use-substitutes = true;
+      extra-substituters = [ "https://dotnix.cachix.org?priority=10" ];
+      extra-trusted-public-keys = [
+        "dotnix.cachix.org-1:/T5Rhb8DkIIAU5wwL2YnMqMsNUkIcOxCIaHUKSaLAVs="
+      ];
       trusted-users = cfg.trustedUsers;
       warn-dirty = false;
     };
