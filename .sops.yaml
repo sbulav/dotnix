@@ -3,6 +3,7 @@ keys:
   - &sab_mba13 age1ggtc2y8xmwftkdrasxvk4kschd5r7xsjv3kzhvx2k60l6mtan95q0gw0yy
   - &sab_beez age1r7es34nulexklu4qjywqy3hqycn3qfjmhlj7usurx7ehruvaddysqsc8gm
   - &sab_zanoza age1n3q6hj36mkzxntdl7zmws7l7zna8z8f930h2tj00vwc2lucszyxsdd4pzl
+  - &sab_mz age18rax0jv4pj2yuegt7e5ea2wzu486mz9nl3vhsa09y45lzw8cj58stfdd6d
   - &host_nz age1ranl5gsq43t0z22s28zdhvfzrvqqpmwqcjc3h6latfa4rrruxpps34vgqj
   - &host_beez age1t69sgcam6f6h6xl06qf3zt8hc6zhx5vfy32e3ggvu4hylldgv4nq0w40rt
   - &host_zanoza age1xz35v23vpnudp2u7el44cv32fdzc0sc42x0yzs2kl58dcfdpdy3qt9j4y2
@@ -13,6 +14,7 @@ creation_rules:
           - *sab_nz
           - *sab_mba13
           - *sab_beez
+          - *sab_mz
 
   - path_regex: secrets/nz@sab/[^/]+\.(yaml|json|env|ini)$
     key_groups:
