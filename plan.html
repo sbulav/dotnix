@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>mba13 Darwin Configuration — Implementation Plan</title>
+  <style>
+    :root {
+      --bg: #1e1e2e; --surface: #181825; --overlay: #313244; --muted: #6c7086;
+      --text: #cdd6f4; --subtext: #a6adc8; --blue: #89b4fa; --green: #a6e3a1;
+      --yellow: #f9e2af; --red: #f38ba8; --peach: #fab387; --mauve: #cba6f7; --teal: #94e2d5;
+    }
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+    body { background: var(--bg); color: var(--text); font-family: 'JetBrains Mono', monospace;
+           font-size: 14px; line-height: 1.6; padding: 2rem; max-width: 1100px; margin: 0 auto; }
+    h1 { font-size: 1.6rem; color: var(--blue); margin-bottom: 0.4rem;
+         border-bottom: 1px solid var(--overlay); padding-bottom: 0.5rem; }
+    .subtitle { color: var(--muted); font-size: 0.85rem; margin-bottom: 2rem; }
+    h2 { font-size: 1.1rem; color: var(--mauve); margin: 2rem 0 0.8rem;
+         letter-spacing: 0.04em; text-transform: uppercase; }
+    h3 { font-size: 0.95rem; color: var(--peach); margin: 1.2rem 0 0.4rem; }
+    .phase { background: var(--surface); border: 1px solid var(--overlay);
+             border-radius: 8px; padding: 1.2rem 1.4rem; margin-bottom: 1.2rem; }
+    .phase-header { display: flex; align-items: center; gap: 0.8rem; margin-bottom: 0.8rem; }
+    .badge { display: inline-block; padding: 0.15rem 0.55rem; border-radius: 4px;
+             font-size: 0.75rem; font-weight: bold; letter-spacing: 0.05em; }
+    .badge-done   { background: var(--muted);   color: var(--bg); }
+    .badge-action { background: var(--yellow);  color: var(--bg); }
+    .badge-next   { background: var(--blue);    color: var(--bg); }
+    .badge-later  { background: var(--green);   color: var(--bg); }
+    table { width: 100%; border-collapse: collapse; margin: 0.6rem 0 1rem; }
+    th { background: var(--overlay); color: var(--subtext); font-size: 0.75rem;
+         text-transform: uppercase; letter-spacing: 0.06em; padding: 0.4rem 0.7rem; text-align: left; }
+    td { padding: 0.4rem 0.7rem; border-bottom: 1px solid var(--overlay); vertical-align: top; }
+    tr:last-child td { border-bottom: none; }
+    tr:hover td { background: var(--overlay); }
+    code { background: var(--overlay); color: var(--teal); padding: 0.1rem 0.35rem;
+           border-radius: 3px; font-size: 0.85em; }
+    pre { background: var(--overlay); color: var(--teal); padding: 0.8rem 1rem;
+          border-radius: 6px; overflow-x: auto; font-size: 0.82rem; margin: 0.6rem 0; }
+    ul { padding-left: 1.2rem; }
+    li { margin: 0.25rem 0; color: var(--subtext); }
+    li strong { color: var(--text); }
+    .note { background: var(--overlay); border-left: 3px solid var(--yellow);
+            padding: 0.5rem 0.8rem; margin: 0.6rem 0; border-radius: 0 4px 4px 0;
+            font-size: 0.88rem; color: var(--subtext); }
+    .warn { background: var(--overlay); border-left: 3px solid var(--red);
+            padding: 0.5rem 0.8rem; margin: 0.6rem 0; border-radius: 0 4px 4px 0;
+            font-size: 0.88rem; color: var(--subtext); }
+    .ok { background: var(--overlay); border-left: 3px solid var(--green);
+          padding: 0.5rem 0.8rem; margin: 0.6rem 0; border-radius: 0 4px 4px 0;
+          font-size: 0.88rem; color: var(--subtext); }
+    .done { color: var(--green); }
+    .todo { color: var(--yellow); }
+    .skip { color: var(--muted); }
+  </style>
+</head>
+<body>
+
+<h1>mba13 Darwin Configuration — Implementation Plan</h1>
+<div class="subtitle">Branch: feat-darwin-mba &nbsp;|&nbsp; Last updated: 2026-06-19 &nbsp;|&nbsp; 19 commits ahead of main &nbsp;|&nbsp; <span class="done">build: green</span></div>
+
+<div class="ok"><strong>Validation status:</strong> <code>nix build .#darwinConfigurations.mba13...toplevel</code> succeeds. Working tree clean. AI parity with <code>nz</code> confirmed (opencode + claude + mcp-k8s-go). AeroSpace uses the managed numeric workspace configuration and has been live-tested. SOPS and minor follow-ups remain below; YubiKey enrolment is optional.</div>
+
+<h2>✅ Completed</h2>
+<div class="phase">
+  <table>
+    <tr><th>Item</th><th>Commit</th><th>Notes</th></tr>
+    <tr><td>Darwin system modules (user, fonts, input, interface, nix, security)</td><td><code>e9ef91c</code></td><td></td></tr>
+    <tr><td>Home profile: WezTerm, Fish/Neovim symlinks, Atuin, CLI toolkit, ArgoCD, Bottom, Fastfetch, Yazi, gh, k9s, Tea, sqlite-jira, Vault</td><td><code>e9ef91c</code></td><td></td></tr>
+    <tr><td>sqlite-jira Darwin fix</td><td><code>e9ef91c</code></td><td></td></tr>
+    <tr><td>GPG: pinentry-mac on Darwin, gpg in PATH, GPG_TTY in Fish init</td><td><code>fd2c18f</code></td><td>enable via <code>custom.security.gpg</code></td></tr>
+    <tr><td>Homebrew module (Raycast, XnViewMP, Colemak-DH)</td><td><code>fd2c18f</code> + this commit</td><td><code>modules/darwin/tools/homebrew</code></td></tr>
+    <tr><td>Obsidian via Homebrew cask</td><td><code>fd2c18f</code></td><td><code>modules/darwin/apps/obsidian</code></td></tr>
+    <tr><td>IINA via <code>pkgs.iina</code></td><td><code>fd2c18f</code></td><td>Nix-managed, no Homebrew needed</td></tr>
+    <tr><td>myvpn (openconnect) enabled</td><td><code>fd2c18f</code></td><td></td></tr>
+    <tr><td>DNS split brain — /etc/resolver/ files on Darwin up/down</td><td><code>fd2c18f</code></td><td>dscacheutil + mDNSResponder flush</td></tr>
+    <tr><td>AI tools: claude, opencode, mcp-k8s-go, direnv</td><td><code>fd2c18f</code></td><td>mcp-grafana deferred (needs SOPS)</td></tr>
+    <tr><td>Fish added to /etc/shells via <code>environment.shells</code></td><td><code>1796397</code></td><td>one-time <code>chsh</code> still needed — see below</td></tr>
+    <tr><td>AeroSpace tiling WM</td><td><code>5231df3</code></td><td><code>modules/darwin/desktop/aerospace</code>; Accessibility prompt on first launch</td></tr>
+    <tr><td>Claude MCP servers written to settings.json</td><td><code>1a568b3</code></td><td>kubernetes, nixos, context7, sequential-thinking</td></tr>
+    <tr><td>Claude proxy skipped on Darwin</td><td><code>1a568b3</code></td><td>fwdproxy.pyn.ru is Linux/VPN-only</td></tr>
+    <tr><td>Opencode: direct Anthropic provider + correct default model</td><td><code>1a568b3</code></td><td><code>anthropic/claude-sonnet-4-6</code></td></tr>
+    <tr><td>Opencode: all 10 skills including shared workflow skills</td><td><code>1a568b3</code></td><td>was missing brainstorm, complete, plan-to-issues, ship, workon</td></tr>
+    <tr><td>WezTerm k8s status bar</td><td>—</td><td>already worked; kubectl found via path_helper</td></tr>
+    <tr><td>Darwin common suite (<code>suites.common.enable</code>)</td><td><code>92d5602</code></td><td>wraps fonts/input/interface/nix/security/homebrew</td></tr>
+    <tr><td><code>nixt</code>/<code>nixup</code>/<code>nixclean</code> Fish aliases</td><td><code>385d139</code> <code>2a9…</code></td><td><code>nixup</code> = <code>sudo darwin-rebuild switch</code> (activation needs root)</td></tr>
+    <tr><td>VLC dropped — IINA only</td><td><code>385d139</code></td><td>single media player, Nix-managed</td></tr>
+    <tr><td>AeroSpace <code>start-at-login</code></td><td><code>e637d08</code></td><td>auto-starts on boot via its own launchd agent</td></tr>
+    <tr><td>Cross-platform Claude notifications</td><td><code>58051a3</code></td><td>osascript on Darwin, libnotify on Linux</td></tr>
+    <tr><td>macOS interface tuning (dark mode, panels, units, Stage Manager off, menu-bar battery, Finder volumes)</td><td><code>4095f7b</code></td><td>extends <code>system.interface</code></td></tr>
+    <tr><td>Dark green WezTerm theme on macOS</td><td><code>1cc645a</code></td><td>nz stays cyberdream</td></tr>
+    <tr><td>GPG commit signing via <code>gpg-smart-sign</code></td><td><code>e89814b</code></td><td>YubiKey when present, fallback key 7C43… otherwise</td></tr>
+    <tr><td>Stray <code>~/.gitconfig</code> removed (→ <code>.bak</code>)</td><td>—</td><td>was overriding signingkey + defeating the YubiKey swap</td></tr>
+    <tr><td>AeroSpace config fixed — duplicate <code>start-at-login</code> removed</td><td><code>8e5007b</code></td><td>file failed to parse; <strong>all</strong> bindings were dead until this</td></tr>
+    <tr><td>AeroSpace managed config path + numeric workspace model</td><td>this commit</td><td><code>~/.aerospace.toml</code>; persistent workspaces 1–9 only</td></tr>
+    <tr><td>AeroSpace app placement aligned with Hyprland</td><td>this commit</td><td>terminals → 1 fullscreen; browsers → 2; Codex/ChatGPT → 3; Zoom/Telegram → 4; media/Alice → 5; system/VPN → 6; work apps → 7; Mail → 8</td></tr>
+    <tr><td>AeroSpace <code>alt-r</code> → Raycast launcher</td><td>this commit</td><td>mirrors Hyprland <code>mod+R</code>; joins <code>alt-x</code> WezTerm, <code>alt-b</code> Firefox</td></tr>
+    <tr><td><code>colemak-dh</code> cask re-added to Homebrew</td><td>this commit</td><td>protected from <code>cleanup = "uninstall"</code> by declaring it in <code>modules/darwin/tools/homebrew</code></td></tr>
+  </table>
+</div>
+
+<h2>🔍 Validation Findings</h2>
+<div class="phase">
+  <table>
+    <tr><th>Check</th><th>Result</th></tr>
+    <tr><td>Darwin toplevel build</td><td class="done">✅ green</td></tr>
+    <tr><td>AeroSpace live config</td><td class="done">✅ <code>~/.aerospace.toml</code>, workspaces 1–9, app placement and launcher bindings verified</td></tr>
+    <tr><td>AI parity with <code>nz</code> (opencode, claude, mcp-k8s-go)</td><td class="done">✅ matches + direct anthropic provider</td></tr>
+    <tr><td>Skills (10) present for both claude &amp; opencode</td><td class="done">✅</td></tr>
+    <tr><td>MCP servers in <code>settings.json</code></td><td class="done">✅ 4 servers</td></tr>
+    <tr><td><code>codex</code> requested earlier</td><td class="skip">no codex module exists in repo (not on nz either) — nothing to port; opencode covers it</td></tr>
+    <tr><td>Claude hooks used Linux-only <code>notify-send</code></td><td class="done">✅ FIXED — now osascript on Darwin</td></tr>
+    <tr><td>Langfuse <code>Stop</code> hook runs on every turn</td><td class="todo">harmless on mba13 (logs to file if unconfigured); leave as-is</td></tr>
+    <tr><td>VPN Darwin gateway IP <code>192.168.89.1</code> hardcoded</td><td class="todo">unverified on mba13's actual network — confirm on first <code>myvpn up</code></td></tr>
+  </table>
+</div>
+
+<h2>⚠️ Bootstrap This Rebuild Once</h2>
+<div class="phase">
+  <div class="phase-header"><span class="badge badge-action">ACTION NEEDED</span><span>Apply the new <code>nixup</code> alias</span></div>
+  <p>The <code>nixup</code> alias now includes <code>sudo</code>, but the updated alias isn't active until you rebuild. Run the raw command once:</p>
+  <pre>sudo darwin-rebuild switch --flake ~/dotnix</pre>
+  <p>After that, <code>nixup</code> / <code>nixt</code> / <code>nixclean</code> work as aliases. <span class="done">(Fish default shell already switched ✅)</span></p>
+</div>
+
+<h2>Next: SOPS Secrets</h2>
+<div class="phase">
+  <div class="phase-header"><span class="badge badge-next">NEXT</span><span>Encrypted secrets — blocks myvpn credentials and mcp-grafana</span></div>
+
+  <h3>Step 1 — Generate age key (manual, one-time)</h3>
+  <pre>mkdir -p ~/.config/sops/age
+age-keygen -o ~/.config/sops/age/keys.txt
+grep "public key" ~/.config/sops/age/keys.txt   # copy this</pre>
+
+  <h3>Step 2 — Add public key to .sops.yaml</h3>
+  <p>Add a creation rule for <code>secrets/mba13/*.yaml</code> using the new age public key.</p>
+
+  <h3>Step 3 — Create secrets file</h3>
+  <pre>mkdir -p secrets/mba13
+sops secrets/mba13/default.yaml</pre>
+  <table>
+    <tr><th>Key</th><th>Consumer</th></tr>
+    <tr><td><code>ANTHROPIC_API_KEY</code></td><td>claude, opencode</td></tr>
+    <tr><td><code>OPENCONNECT_USER</code></td><td>myvpn script</td></tr>
+    <tr><td><code>OPENCONNECT_PW</code></td><td>myvpn script</td></tr>
+    <tr><td><code>OPENCONNECT_SERVER</code></td><td>myvpn script</td></tr>
+    <tr><td><code>grafana_api_key</code></td><td>mcp-grafana</td></tr>
+  </table>
+
+  <h3>Step 4 — Enable in home profile</h3>
+  <pre>sops = {
+  age.keyFile = "${config.home.homeDirectory}/.config/sops/age/keys.txt";
+  defaultSopsFile = lib.snowfall.fs.get-file "secrets/mba13/default.yaml";
+  secrets = {
+    ANTHROPIC_API_KEY  = {};
+    OPENCONNECT_USER   = {};
+    OPENCONNECT_PW     = {};
+    OPENCONNECT_SERVER = {};
+    grafana_api_key    = {};
+  };
+};</pre>
+
+  <h3>Step 5 — Wire myvpn to SOPS secrets</h3>
+  <p>Set env vars from SOPS paths in Fish config, or uncomment the SOPS block in the openconnect module. Until then, export them manually in a Fish config file.</p>
+
+  <h3>Step 6 — Enable mcp-grafana</h3>
+  <pre>custom.ai.mcp-grafana = enabled;  # in home profile, after SOPS is set up</pre>
+</div>
+
+<h2>GPG Signing — wired ✅ (YubiKey enrolment optional)</h2>
+<div class="phase">
+  <div class="ok">Signing is enabled on mba13 via <code>gpg-smart-sign</code>. The fallback path (local key <code>7C43…</code>, passphrase via pinentry-mac) works today and is validated. Takes effect on the next <code>darwin-rebuild switch</code>.</div>
+  <ul>
+    <li><strong>Fallback signing</strong> — works now; <code>git commit</code> signs with <code>7C43…</code> via pinentry-mac.</li>
+    <li><strong>YubiKey path</strong> — when the key is plugged in, <code>gpg-smart-sign</code> detects the card (<code>gpg --card-status</code>) and signs with the on-card key <code>15DB…</code> instead. No config change needed; just plug it in.</li>
+    <li>SSH auth via GPG agent already configured (<code>enable-ssh-support</code> + <code>SSH_AUTH_SOCK</code>).</li>
+    <li>Note: <code>gpg-smart-sign</code> hardcodes both key ids in <code>packages/gpg-smart-sign</code>; they match the current keys. Update there if keys rotate.</li>
+  </ul>
+</div>
+
+<h2>Minor Follow-ups (non-blocking)</h2>
+<div class="phase">
+  <ul>
+    <li><strong>VPN gateway IP</strong> — confirm <code>192.168.89.1</code> is correct on mba13's network the first time you run <code>myvpn up</code>; adjust the Darwin <code>route add</code> line in <code>modules/home/security/openconnect</code> if routing fails.</li>
+    <li><strong>VPN <code>status</code>/<code>up</code> DNS readout</strong> — greps <code>/etc/resolv.conf</code>, which is legacy on macOS. Cosmetic; the real split-DNS lives in <code>/etc/resolver/</code>.</li>
+    <li><strong>Langfuse Stop hook</strong> — runs python on every turn; harmless but noisy if langfuse env is unset on mba13. Could gate behind an option later.</li>
+  </ul>
+</div>
+
+<h2>Branch Status</h2>
+<div class="phase">
+  <pre>git log --oneline feat-darwin-mba ^main</pre>
+  <p>Ready to open a PR once SOPS is set up (or sooner if VPN credentials are temporarily set via Fish config).</p>
+  <div class="warn">All commits use <code>git -c commit.gpgsign=false</code> until YubiKey is enrolled. Remove that flag afterwards.</div>
+</div>
+
+</body>
+</html>

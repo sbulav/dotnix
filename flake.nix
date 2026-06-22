@@ -22,22 +22,11 @@
       url = "github:snowfallorg/lib";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-    # Darwin inputs (disabled - no Darwin systems in use)
-    # darwin = {
-    #   url = "github:nix-darwin/nix-darwin";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    # };
-    # nix-homebrew = {
-    #   url = "github:zhaofengli-wip/nix-homebrew";
-    # };
-    # homebrew-core = {
-    #   url = "github:homebrew/homebrew-core";
-    #   flake = false;
-    # };
-    # homebrew-cask = {
-    #   url = "github:homebrew/homebrew-cask";
-    #   flake = false;
-    # };
+
+    darwin = {
+      url = "github:nix-darwin/nix-darwin/nix-darwin-26.05";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     # Home manager
     home-manager = {
@@ -65,12 +54,6 @@
       url = "github:Mic92/sops-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
-
-    # sops-nix-darwin = {
-    #   url = "github:Mic92/sops-nix/nix-darwin";
-    #   # url = "github:khaneliman/sops-nix/nix-darwin";
-    #   inputs.nixpkgs.follows = "nixpkgs";
-    # };
 
     # System Deployment
     deploy-rs = {
@@ -109,6 +92,10 @@
         # allowBroken = true;
       };
 
+      outputs-builder = channels: {
+        formatter = channels.nixpkgs.nixfmt;
+      };
+
       overlays = with inputs; [
         # Expose unstable packages via pkgs.unstable
         (final: prev: {
@@ -125,7 +112,10 @@
       ];
       systems = {
         modules = {
-          # darwin = with inputs; [ sops-nix-darwin.darwinModules.sops ]; # Disabled - no Darwin systems
+          darwin = with inputs; [
+            determinate.darwinModules.default
+            sops-nix.darwinModules.default
+          ];
           nixos = with inputs; [
             sops-nix.nixosModules.sops
             determinate.nixosModules.default

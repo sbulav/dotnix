@@ -21,6 +21,7 @@ let
   agentDir = ./agent;
   commandDir = ./command;
   skillDir = ./skill;
+  workflowSkillDir = ../shared/workflow/skill;
   pluginDir = ./plugin;
   utilsDir = ./utils;
   providersPath = ./providers.nix;
@@ -59,7 +60,7 @@ let
   # Import configurations from directories
   agents = processConfigDir agentDir;
   commands = processConfigDir commandDir;
-  skills = processConfigDir skillDir;
+  skills = (processConfigDir skillDir) // (processConfigDir workflowSkillDir);
   plugins = processConfigDir pluginDir;
 
   # Process physical utility scripts from utils directory

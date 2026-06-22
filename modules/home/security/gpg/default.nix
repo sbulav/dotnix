@@ -5,8 +5,15 @@
   ...
 }:
 with lib;
-with lib.custom; let
+with lib.custom;
+let
   cfg = config.custom.security.gpg;
+
+  pinentryBin =
+    if pkgs.stdenv.isDarwin then
+      "${pkgs.pinentry_mac}/Applications/pinentry-mac.app/Contents/MacOS/pinentry-mac"
+    else
+      "${pkgs.pinentry-curses}/bin/pinentry-curses";
 
   gpgConf = ''
     use-agent
@@ -16,8 +23,14 @@ with lib.custom; let
     enable-ssh-support
     default-cache-ttl 28800
     max-cache-ttl 28800
+    pinentry-program ${pinentryBin}
   '';
-in {
+
+  launchAgent = ''
+    ${pkgs.coreutils}/bin/timeout ${builtins.toString cfg.agentTimeout} ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
+  '';
+in
+{
   options.custom.security.gpg = with types; {
     enable = mkBoolOpt false "Whether to enable GPG configuration";
     agentTimeout = mkOpt int 5 "The amount of time to wait before continuing with shell init";
@@ -26,46 +39,32 @@ in {
   };
 
   config = mkIf cfg.enable {
+    home.packages = [ pkgs.gnupg ];
+
     home.file = {
       ".gnupg/.keep".text = "";
       ".gnupg/gpg.conf".text = gpgConf;
       ".gnupg/gpg-agent.conf".text = gpgAgentConf;
     };
 
-    home.sessionVariables = {
-      GPG_TTY = "$(tty)";
-      SSH_AUTH_SOCK = "$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)";
-    };
-
-    # Ensure GPG agent is launched on shell init
+    # SSH_AUTH_SOCK is evaluated at shell startup via gpgconf; set in each
+    # shell's init rather than sessionVariables to ensure the agent is running.
     programs.bash.initExtra = mkIf config.programs.bash.enable ''
-      ${pkgs.coreutils}/bin/timeout ${builtins.toString cfg.agentTimeout} ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
-      gpg_agent_timeout_status=$?
-
-      if [ "$gpg_agent_timeout_status" = 124 ]; then
-        echo "GPG Agent timed out..."
-        echo 'Run "gpgconf --launch gpg-agent" to try and launch it again.'
-      fi
+      ${launchAgent}
+      export GPG_TTY="$(tty)"
+      export SSH_AUTH_SOCK="$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)"
     '';
 
     programs.zsh.initExtra = mkIf config.programs.zsh.enable ''
-      ${pkgs.coreutils}/bin/timeout ${builtins.toString cfg.agentTimeout} ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
-      gpg_agent_timeout_status=$?
-
-      if [ "$gpg_agent_timeout_status" = 124 ]; then
-        echo "GPG Agent timed out..."
-        echo 'Run "gpgconf --launch gpg-agent" to try and launch it again.'
-      fi
+      ${launchAgent}
+      export GPG_TTY="$(tty)"
+      export SSH_AUTH_SOCK="$(${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)"
     '';
 
     programs.fish.interactiveShellInit = mkIf config.programs.fish.enable ''
-      ${pkgs.coreutils}/bin/timeout ${builtins.toString cfg.agentTimeout} ${pkgs.gnupg}/bin/gpgconf --launch gpg-agent
-      set gpg_agent_timeout_status $status
-
-      if test $gpg_agent_timeout_status -eq 124
-        echo "GPG Agent timed out..."
-        echo 'Run "gpgconf --launch gpg-agent" to try and launch it again.'
-      end
+      ${launchAgent}
+      set -gx GPG_TTY (tty)
+      set -gx SSH_AUTH_SOCK (${pkgs.gnupg}/bin/gpgconf --list-dirs agent-ssh-socket)
     '';
   };
 }
