@@ -4,7 +4,7 @@ in
 {
   description = workflow.description;
   mode = "subagent";
-  model = "hhdev-anthropic/claude-opus-4-8";
+  model = "hhdev-glm5-fp8/zai-org/GLM-5.2-FP8";
   temperature = 0.1;
 
   tools = {
