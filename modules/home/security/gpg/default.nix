@@ -13,7 +13,7 @@ let
     if pkgs.stdenv.isDarwin then
       "${pkgs.pinentry_mac}/Applications/pinentry-mac.app/Contents/MacOS/pinentry-mac"
     else
-      "${pkgs.pinentry-curses}/bin/pinentry-curses";
+      "${pkgs.pinentry-gnome3}/bin/pinentry-gnome3";
 
   gpgConf = ''
     use-agent
