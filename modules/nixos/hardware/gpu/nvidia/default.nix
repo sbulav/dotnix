@@ -77,8 +77,9 @@ in
       };
 
       graphics = {
+        # nvidia-vaapi-driver has no 32-bit support upstream, so it is only
+        # useful for the 64-bit VAAPI path (browser HW video decode via NVDEC).
         extraPackages = with pkgs; [ nvidia-vaapi-driver ];
-        extraPackages32 = with pkgs.pkgsi686Linux; [ nvidia-vaapi-driver ];
       };
     };
 
