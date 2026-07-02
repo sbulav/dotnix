@@ -47,6 +47,9 @@
       "claude-opus-4-8" = {
         name = "Claude Opus 4.8";
       };
+      "claude-fable-5" = {
+        name = "Claude Fable 5";
+      };
       "claude-haiku-4-5-20251001" = {
         name = "Claude Haiku 4.5 (2025-10-01)";
         options = {
