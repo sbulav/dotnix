@@ -271,7 +271,7 @@ in
                           options.path = pkgs.fetchurl {
                             name = "logs-dashboard2.json";
                             url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/monitoring/Logs-promtail.json";
-                            hash = "sha256-rBgTrpMWOphSOVXPHc7kayzuTy0PylPOzk50VSnRrRs=";
+                            hash = "sha256-Lw8Wop27JWhHNvGGP4fpPD6g0N8IDN1iTISNlCBFb7w=";
                           };
                           orgId = 1;
                         }
@@ -301,7 +301,7 @@ in
                           options.path = pkgs.fetchurl {
                             name = "traefik-via-loki-dashboard2.json";
                             url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/traefik/traefik-via-loki.json";
-                            hash = "sha256-jKXBG3PGYHwJVAkN44U7BmQ+KsHWE4KVAGllb3kt7g4=";
+                            hash = "sha256-KsYXA/rZC7AHy2YnUu5VDaQb2gnl4obkCoHLYp8b+Rg=";
                           };
                           orgId = 1;
                         }
@@ -316,7 +316,7 @@ in
                           options.path = pkgs.fetchurl {
                             name = "prometheus-nut-exporter2.json";
                             url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/ups/prometheus-nut-exporter.json";
-                            hash = "sha256-quC1L5wv2iCcX5aorSFSDdp1napV69+FcPW+aQyqBtc=";
+                            hash = "sha256-+ru9ZrrFBk22seI0uDuXIP7NkRLqfSJ48NLHDCpfG/I=";
                           };
                           orgId = 1;
                         }
