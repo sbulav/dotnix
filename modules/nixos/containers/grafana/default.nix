@@ -271,7 +271,7 @@ in
                           options.path = pkgs.fetchurl {
                             name = "logs-dashboard2.json";
                             url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/monitoring/Logs-promtail.json";
-                            hash = "sha256-Lw8Wop27JWhHNvGGP4fpPD6g0N8IDN1iTISNlCBFb7w=";
+                            hash = "sha256-GuwnN2VkEbqa3HNApYmu7482pgRDmC2EJx2DJpl7ZJo=";
                           };
                           orgId = 1;
                         }
