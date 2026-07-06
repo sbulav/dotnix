@@ -93,6 +93,27 @@ in
 
     services.alloy.enable = true;
 
+    # Alloy runs as a DynamicUser and cannot read the container-owned service
+    # logs under /tank (they are group/owner-only). Give it a shared read group
+    # and grant that group read access via POSIX ACLs, mirroring how traefik's
+    # logs are already exposed. `SupplementaryGroups` is appended so the
+    # module's existing `systemd-journal` membership is preserved.
+    users.groups.logreaders = { };
+    systemd.services.alloy.serviceConfig.SupplementaryGroups = lib.mkAfter [ "logreaders" ];
+
+    systemd.tmpfiles.rules = [
+      # authelia: dir already traversable, files are group-only (660).
+      "A+ /tank/authelia/logs - - - - group:logreaders:rX,default:group:logreaders:rX"
+      # grafana: log dir is 0750, parents are traversable.
+      "A+ /tank/grafana/data/log - - - - group:logreaders:rX,default:group:logreaders:rX"
+      # jellyfin: both the service root and log dir are 0700 -> also grant
+      # traverse (x) on the parent so the log dir is reachable.
+      "a+ /tank/jellyfin - - - - group:logreaders:x"
+      "A+ /tank/jellyfin/log - - - - group:logreaders:rX,default:group:logreaders:rX"
+      # v2raya: dir is traversable, active v2raya.log is group/owner-only.
+      "A+ /tank/v2raya/logs - - - - group:logreaders:rX,default:group:logreaders:rX"
+    ];
+
     environment.etc."alloy/config.alloy".text = ''
       loki.write "local" {
         endpoint {
