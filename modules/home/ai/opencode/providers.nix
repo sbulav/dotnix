@@ -7,9 +7,6 @@
       apiKey = "{env:OPENAI_API_KEY}";
     };
     models = {
-      "gpt-5.5-pro" = {
-        name = "ChatGPT 5.5 Pro";
-      };
       "gpt-5.5" = {
         name = "ChatGPT 5.5";
       };
