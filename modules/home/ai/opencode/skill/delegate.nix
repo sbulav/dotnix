@@ -57,7 +57,7 @@
     | `openai/gpt-5.5` | 9 | 9 | 6 | 3 | personal sub; needs proxy; strong at medium effort |
     | `hhdev-anthropic/claude-sonnet-4-6` | 8 | 9 | 7 | 6 | work tokens |
     | `hhdev-google/gemini-3.1-pro-preview` | 9 | 8 | 6 | 7 | work tokens; huge context window |
-    | `hhdev-grok/grok-4.3` | 8 | 7 | 7 | 7 | work tokens; research/current events |
+    | `hhdev-grok/grok-4.5` | 8 | 7 | 7 | 7 | work tokens; research/current events |
     | `hhdev-openai/gpt-5.5` | 9 | 9 | 6 | 7 | work tokens; ONLY when fwdproxy is down (prefer `openai/gpt-5.5`) |
     | `hhdev-anthropic/claude-fable-5` | 10 | 10 | 6 | 8 | work tokens; orchestrator-equivalent — use ONLY for parallel heavyweight work |
     | `hhdev-anthropic/claude-opus-4-8` | 10 | 10 | 4 | 9 | work tokens; deep-debug delegate |
@@ -80,7 +80,7 @@
     | Complex implementation / refactoring | `openai/gpt-5.5` | `hhdev-anthropic/claude-sonnet-4-6` | medium, high if truly hard |
     | Deep debugging / root-cause analysis | orchestrator itself; delegate to `hhdev-anthropic/claude-opus-4-8` only for parallel lenses | `hhdev-anthropic/claude-fable-5` | high |
     | Large-context analysis (huge logs, many files) | `hhdev-google/gemini-3.1-pro-preview` | `openai/gpt-5.5` | medium |
-    | Web research / current events | `hhdev-grok/grok-4.3` | `hhdev-google/gemini-3.1-pro-preview` | medium |
+    | Web research / current events | `hhdev-grok/grok-4.5` | `hhdev-google/gemini-3.1-pro-preview` | medium |
     | Cross-model code review (2nd opinion) | different family than the author: `openai/gpt-5.5` or `hhdev-google/gemini-3.1-pro-preview` | — | high |
     | Docs / prose writing | `openai/gpt-5.4` | `hhdev-anthropic/claude-sonnet-4-6` | medium |
     | Parallel investigation lenses (3-agent root-cause) | mix families: opus-4-8 / gemini-3.1-pro / gpt-5.5 | — | high |
