@@ -1,6 +1,6 @@
 {
   name = "delegate";
-  version = "1.0.0";
+  version = "1.1.0";
   description = "Split a task or a batch of issues into subtasks and route each to the cheapest-capable model via opencode run. Use for multi-model orchestration, delegating grunt work to cheap models, issue-batch swarms with git worktrees, parallel investigations, and cross-model reviews.";
   "argument-hint" = "[task, issue number(s), or repo issue list]";
   "user-invocable" = true;
@@ -49,12 +49,12 @@
     | Model | Reason | Code | Speed | Cost | Notes |
     |---|---|---|---|---|---|
     | `hhdev-glm5-fp8/zai-org/GLM-5.2-FP8` | 6 | 7 | 7 | **0** | self-hosted, free; grunt-work default |
-    | `openai/gpt-5.4-mini-fast` | 5 | 5 | 10 | 1 | personal sub; needs proxy |
-    | `openai/gpt-5.4-mini` | 6 | 6 | 8 | 1 | personal sub; needs proxy |
-    | `openai/gpt-5.4-fast` | 7 | 7 | 9 | 2 | personal sub; needs proxy |
-    | `openai/gpt-5.4` | 7 | 8 | 7 | 2 | personal sub; needs proxy; implementation workhorse |
-    | `openai/gpt-5.5-fast` | 9 | 9 | 8 | 3 | personal sub; needs proxy |
-    | `openai/gpt-5.5` | 9 | 9 | 6 | 3 | personal sub; needs proxy; strong at medium effort |
+    | `openai/gpt-5.4-mini-fast` | 5 | 5 | 10 | 1 | personal sub |
+    | `openai/gpt-5.4-mini` | 6 | 6 | 8 | 1 | personal sub |
+    | `openai/gpt-5.4-fast` | 7 | 7 | 9 | 2 | personal sub |
+    | `openai/gpt-5.4` | 7 | 8 | 7 | 2 | personal sub; implementation workhorse |
+    | `openai/gpt-5.5-fast` | 9 | 9 | 8 | 3 | personal sub |
+    | `openai/gpt-5.5` | 9 | 9 | 6 | 3 | personal sub; strong at medium effort |
     | `hhdev-anthropic/claude-sonnet-4-6` | 8 | 9 | 7 | 6 | work tokens |
     | `hhdev-google/gemini-3.1-pro-preview` | 9 | 8 | 6 | 7 | work tokens; huge context window |
     | `hhdev-grok/grok-4.5` | 8 | 7 | 7 | 7 | work tokens; research/current events |
@@ -85,6 +85,9 @@
     | Docs / prose writing | `openai/gpt-5.4` | `hhdev-anthropic/claude-sonnet-4-6` | medium |
     | Parallel investigation lenses (3-agent root-cause) | mix families: opus-4-8 / gemini-3.1-pro / gpt-5.5 | — | high |
 
+    Debugging-class dispatches: tell the worker to load the `diagnosing-bugs` skill so it
+    builds a red feedback loop before theorising.
+
     ## Reasoning effort rule
 
     - **NEVER use `xhigh`.**
@@ -96,9 +99,13 @@
 
     ## Dispatch mechanics
 
-    Standard dispatch:
+    Network routing is baked into the opencode wrapper — dispatch plainly, with no proxy
+    env vars: `openai/*` API traffic goes through fwdproxy automatically, the LLM gateways
+    are reached directly, and every worker's shell commands (kubectl, nix, tea, git) run
+    proxy-free. If a worker's shell command genuinely needs the forward proxy, it can set
+    `HTTPS_PROXY=http://fwdproxy.pyn.ru:4443` inline on that one command.
 
-    Run with NO_PROXY env all models on llmgtw.hhdev.ru
+    Standard dispatch:
 
     ```bash
     opencode run -m <provider/model> --variant <effort> --title "<subtask>" "<prompt>"
@@ -113,28 +120,14 @@
     opencode run --session <session-id> "<review findings / fix instructions>"
     ```
 
-    ### Proxy rules for `openai/*` models (personal subscription)
-
-    The API is only reachable through the forward proxy. Set it for the worker process,
-    and tell the worker its own shell commands must bypass the proxy:
-
-    ```bash
-    HTTPS_PROXY=http://fwdproxy.pyn.ru:4443 opencode run -m openai/gpt-5.4 --variant medium "<prompt>"
-    ```
-
-    Every prompt sent to an `openai/*` worker MUST include this constraint:
-
-    > Your API traffic goes through a proxy, but shell commands must not. Prefix every
-    > shell command you run with `NO_PROXY='*'` (e.g. `NO_PROXY='*' curl ...`,
-    > `NO_PROXY='*' git push`).
-
     ### Worker prompt template
 
     Every dispatch prompt must contain:
 
     1. **Context**: repo, directory, relevant files, what the parent task is.
     2. **Scoped task**: exactly what to do and what NOT to touch.
-    3. **Constraints**: NO_PROXY rule (openai/* only), repo conventions, tools to prefer.
+    3. **Constraints**: repo conventions, tools to prefer, skills to load
+       (`workon` for issue work, `diagnosing-bugs` for debugging).
     4. **Expected output**: format of the report back (changed files, commands run,
        test results).
     5. **Evidence requirement**: "include the actual command output proving your claims —
@@ -146,11 +139,13 @@
     Fully automated: stop only when every PR is ready for review and merge. Do not pause
     for approval between phases.
 
-    1. **Triage**: list open issues (`tea issues ls` or forgejo tooling). For each issue,
-       classify complexity (-> routing weight) and conflict domain (which files it will
-       touch). Build parallel groups: issues touching disjoint files run in parallel;
-       overlapping or dependent issues run sequentially.
-    2. **Dispatch**: one git worktree per issue to isolate parallel workers:
+    1. **Triage**: list open issues (`tea issues ls`). Prefer issues carrying the
+       `ready-for-agent` label. Read each issue's `**Blocked by:**` line: an issue is
+       dispatchable when that line is `none` or references only closed issues. For each
+       dispatchable issue, classify complexity (-> routing weight) and conflict domain
+       (which files it will touch). Issues touching disjoint files run in parallel;
+       overlapping issues run sequentially.
+    2. **Dispatch in waves**: one git worktree per issue to isolate parallel workers:
 
        ```bash
        git worktree add ../<repo>-issue-<N> -b issue-<N>
@@ -160,10 +155,16 @@
           commit. Report changed files, commands run, and test evidence."
        ```
 
-       Capture each worker's session id for iteration.
-    3. **Review**: for each finished worker, read the diff yourself AND dispatch a
-       cross-model review (different family than the author, `--variant high`) on the
-       diff. Reconcile findings into a P0/P1/P2 list.
+       Capture each worker's session id for iteration. When a wave finishes and its
+       issues close, re-run the `**Blocked by:**` check — newly unblocked issues form
+       the next wave. Repeat until every dispatchable issue is done.
+    3. **Review on two axes**: for each finished worker, read the diff yourself AND
+       dispatch a cross-model review (different family than the author, `--variant high`)
+       covering both axes:
+       - **Spec compliance**: does the diff satisfy the issue's acceptance criteria —
+         nothing missing, nothing beyond scope?
+       - **Repo standards**: correctness, tests, and conventions of the surrounding code.
+       Reconcile findings into a P0/P1/P2 list.
     4. **Iterate**: send P0/P1 findings back to the same worker session
        (`opencode run --session <id> --dir <worktree> "..."`) until the review is clean.
        After two failed iterations, escalate the issue one tier or take it over yourself.

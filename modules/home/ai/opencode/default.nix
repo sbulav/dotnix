@@ -28,6 +28,39 @@ let
   mcpServersPath = ./mcp-servers.nix;
   configSchema = "https://opencode.ai/config.json";
 
+  proxy = import ../shared/proxy.nix;
+
+  # On Linux bake the proxy topology into the binary (same as the Claude
+  # wrapper): openai/* API traffic goes via fwdproxy, the LLM gateways
+  # (llmgtw.hhdev.ru, llm-gateway.pyn.ru) match NO_PROXY and go direct. --set
+  # overrides whatever env a parent process (e.g. a Claude session dispatching
+  # `opencode run` workers) passes down, so subagents always route correctly.
+  opencodeWrapped =
+    if pkgs.stdenv.isLinux then
+      pkgs.symlinkJoin {
+        name = "opencode";
+        paths = [ pkgs.unstable.opencode ];
+        nativeBuildInputs = [ pkgs.makeWrapper ];
+        postBuild = ''
+          wrapProgram $out/bin/opencode \
+            --set HTTPS_PROXY "${proxy.httpProxy}" \
+            --set HTTP_PROXY  "${proxy.httpProxy}" \
+            --set NO_PROXY    "${proxy.noProxy}"
+        '';
+      }
+    else
+      pkgs.unstable.opencode;
+
+  # Shell used by the bash tool (and TUI terminal). The proxy env above is for
+  # the opencode process's API traffic only — shell commands (kubectl, nix,
+  # tea, git) must run direct, so strip the vars before handing over to the
+  # user's shell. A command can still opt back in with an inline
+  # `HTTPS_PROXY=... cmd` since the unset happens at shell startup.
+  proxyFreeShell = pkgs.writeShellScript "opencode-shell" ''
+    unset HTTP_PROXY HTTPS_PROXY http_proxy https_proxy ALL_PROXY all_proxy NO_PROXY no_proxy
+    exec "''${SHELL:-${pkgs.bash}/bin/bash}" "$@"
+  '';
+
   # Import separate configuration files
   providers = import providersPath;
   mcpServers = import mcpServersPath;
@@ -220,6 +253,9 @@ let
     mcp = mcpServers;
 
     "$schema" = configSchema;
+  }
+  // lib.optionalAttrs pkgs.stdenv.isLinux {
+    shell = "${proxyFreeShell}";
   };
 
   # Final settings with user overrides
@@ -249,8 +285,8 @@ in
   };
 
   config = mkIf cfg.enable {
-    home.packages = with pkgs; [
-      unstable.opencode
+    home.packages = [
+      opencodeWrapped
     ];
 
     xdg.configFile = {
