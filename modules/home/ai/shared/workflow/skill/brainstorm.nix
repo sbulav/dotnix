@@ -1,7 +1,10 @@
+let
+  tea = (import ../templates.nix).teaConventions;
+in
 {
   name = "brainstorm";
-  version = "2.0.0";
-  description = "Start a Forgejo-first workflow for new work. Two-phase process: grill the idea with questions, then plan the issue.";
+  version = "2.1.0";
+  description = "Start a Forgejo-first workflow for new work. Two-phase process: grill the idea with questions, then plan the issue — or map the fog with investigation issues.";
   "argument-hint" = "[initial idea]";
   "disable-model-invocation" = true;
   allowed-tools = [
@@ -15,19 +18,17 @@
   content = ''
     Start with the current repo only. Do not scan other repositories.
 
-    Goal: refine the user's idea into one Forgejo issue in this repo through two explicit phases — Grill (question everything) and Plan (draft the issue).
+    Goal: refine the user's idea into one Forgejo issue in this repo through two explicit phases — Grill (question everything) and Plan (draft the issue). When the territory is too foggy to plan, emit investigation issues instead of faking certainty.
 
      Hard rules:
      - Do not propose an issue body or architecture until the user confirms the shared understanding summary.
      - When scope is large, note proposed vertical slices in the issue body.
-     - Never start implementation directly — suggest `/workon` instead.
-     - Do not write code or change files during brainstorming.
+     - Suggest `/workon` for implementation — brainstorming itself writes no code and changes no files.
      - Ask before creating or updating the issue.
      - Ask before switching branches.
-     - When listing issues, only query the current repo via `tea` from the current working tree.
-     - Use `tea comment -R <forgejo-remote> <issue-number> $'...'` for handoff comments.
-     - Never use `tea issue comment`, `tea api`, or `python3` for normal Forgejo workflow.
      - If a Jira key appears, enrich with a narrow query only. Never run a broad Jira search.
+
+    ${tea}
 
     ═══════════════════════════════════════
     PHASE 1 — GRILL (interview & challenge)
@@ -51,8 +52,10 @@
     6. Ask minimum 5-8 questions before proposing anything. One focused question at a time.
     7. End Phase 1 with a "shared understanding" summary:
        - State the problem, the proposed approach, key decisions made, and what's explicitly out of scope.
-       - Ask: "Does this shared understanding capture what we want? Confirm to proceed to planning."
-    8. Do NOT proceed to Phase 2 until the user explicitly confirms the shared understanding.
+    8. Fog check — before asking for confirmation, name any material unknowns that questioning could not burn down: unmapped code areas, unverified external behaviour, missing measurements, assumptions nobody can confirm.
+       - Clear enough → ask: "Does this shared understanding capture what we want? Confirm to proceed to planning."
+       - Foggy → say plainly that planning now would fake certainty, and offer investigation issues instead: one issue per unknown, each stating the question to answer and a "done when we know X" criterion. On approval create them via `tea`, post no plan, and stop — suggest `/workon` on an investigation issue to burn down the fog first.
+    9. Do NOT proceed to Phase 2 until the user explicitly confirms the shared understanding.
 
     ═══════════════════════════════════════
     PHASE 2 — PLAN (draft the issue)
@@ -60,9 +63,9 @@
 
     Only enter after user confirms Phase 1 shared understanding.
 
-    9. Search only this repo's open issues for likely duplicates.
-    10. If a likely duplicate exists, show it and ask whether to reuse it.
-    11. Draft the issue with these sections filled from the grill phase:
+    10. Search only this repo's open issues for likely duplicates.
+    11. If a likely duplicate exists, show it and ask whether to reuse it.
+    12. Draft the issue with these sections filled from the grill phase:
         - goal
         - why
         - in scope
@@ -70,22 +73,22 @@
         - acceptance criteria (specific, testable, one per line)
         - implementation notes
         - milestone
-    12. If scope is large, add a "Proposed vertical slices" section in the issue body noting how work could be split for `/plan-to-issues`.
-    13. Propose:
+    13. If scope is large, add a "Proposed vertical slices" section in the issue body noting how work could be split for `/plan-to-issues`.
+    14. Propose:
         - issue title
         - issue body
         - milestone
         - branch name
         - PR title format
-    14. Ask whether to create or update the issue.
-    15. After the issue exists, ask whether to switch to the issue branch.
+    15. Ask whether to create or update the issue.
+    16. After the issue exists, ask whether to switch to the issue branch.
         - If the working tree is dirty, recommend a worktree instead of switching.
 
     ═══════════════════════════════════════
     IMPLEMENTATION GATE
     ═══════════════════════════════════════
 
-    16. After the issue exists, present exactly three options:
+    17. After the issue exists, present exactly three options:
         a) "Start implementation" → suggest running `/workon <issue-number>`
         b) "Post plan and stop" → post `AI-HANDOFF` with status `planned`, stop
         c) "Keep refining" → go back to Phase 1 grill
@@ -107,13 +110,8 @@
      Handoff policy:
      - Post `AI-HANDOFF` only when stopping, blocked, before commit approval, or before PR approval.
      - Use append-only comments; latest handoff wins.
-     - If you need to post a handoff here, do it with `tea comment` only.
      - Prefer delegating comment creation to the handoff helper when available; otherwise use `tea comment` directly.
-     - Include both the hidden `<!-- AI-HANDOFF -->` marker and a visible `**AI-HANDOFF**` heading.
-     - If runtime mode or permissions block writes, do not investigate tokens or API auth; return the exact handoff body for manual posting.
-     - Do not treat planning mode as a reason to avoid `tea comment` unless the runtime explicitly blocks that command.
-     - For `tea comment`, prefer a single safely quoted argument such as `$'...'`; avoid heredocs, command substitution, or backgrounded comment commands.
-     - Never include system reminders, tool diagnostics, or internal policy text inside the handoff body.
+     - Planning mode alone is no reason to avoid `tea comment` — skip it only when the runtime explicitly blocks that command.
      - Include a **Decision log** in handoffs summarizing key decisions and their rationale from the grill phase.
 
      If the user supplied initial context, treat it as the starting idea:
