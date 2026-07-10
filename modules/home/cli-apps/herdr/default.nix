@@ -29,21 +29,39 @@ in
       inputs.herdr.packages.${pkgs.stdenv.hostPlatform.system}.herdr
     ];
 
-    xdg.configFile."herdr/config.toml".text = ''
-      [keys]
-      prefix = "${cfg.prefix}"
+    # force: herdr's onboarding/settings UI writes to config.toml itself;
+    # without force the pre-existing file blocks home-manager activation.
+    # The config is Nix-managed — settings changed in herdr's UI won't persist.
+    xdg.configFile."herdr/config.toml" = {
+      force = true;
+      text = ''
+        # Managed by Nix (custom.cli-apps.herdr) — edits here won't survive rebuilds.
+        onboarding = false
 
-      [[keys.command]]
-      key = "prefix+o"
-      type = "pane"
-      command = "opencode"
-      description = "launch opencode"
+        [keys]
+        prefix = "${cfg.prefix}"
 
-      [[keys.command]]
-      key = "prefix+shift+c"
-      type = "pane"
-      command = "codex"
-      description = "launch codex"
-    '';
+        [[keys.command]]
+        key = "prefix+o"
+        type = "pane"
+        command = "opencode"
+        description = "launch opencode"
+
+        [[keys.command]]
+        key = "prefix+shift+c"
+        type = "pane"
+        command = "codex"
+        description = "launch codex"
+
+        [ui]
+        agent_panel_sort = "spaces"
+
+        [ui.toast]
+        delivery = "system"
+
+        [experimental]
+        pane_history = true
+      '';
+    };
   };
 }
