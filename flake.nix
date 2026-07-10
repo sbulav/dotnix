@@ -49,6 +49,11 @@
     # nixpkgs-unstable + crane for the raylib/bindgen build.
     woomer.url = "github:sbulav/woomer";
 
+    # Herdr: terminal multiplexer for AI coding agents.
+    # Intentionally NOT following our nixpkgs: herdr needs zig_0_15
+    # (absent from nixos-26.05) so it uses its own nixos-unstable lock.
+    herdr.url = "github:ogulcancelik/herdr/v0.7.3";
+
     # Sops (Secrets)
     sops-nix = {
       url = "github:Mic92/sops-nix";
