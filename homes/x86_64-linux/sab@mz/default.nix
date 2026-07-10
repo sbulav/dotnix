@@ -114,6 +114,7 @@ in
       bottom = enabled;
       fastfetch = enabled;
       herdr = enabled;
+      herdr-remote = enabled;
       home-manager = enabled;
       yazi = enabled;
     };

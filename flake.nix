@@ -54,6 +54,14 @@
     # (absent from nixos-26.05) so it uses its own nixos-unstable lock.
     herdr.url = "github:ogulcancelik/herdr/v0.7.3";
 
+    # Herdr-remote: relay + web app to monitor/control herdr agents
+    # from a phone. Plain source repo (not a flake); packaged in
+    # packages/herdr-relay and served by modules/home/cli-apps/herdr-remote.
+    herdr-remote = {
+      url = "github:dcolinmorgan/herdr-remote/v0.5.0";
+      flake = false;
+    };
+
     # Sops (Secrets)
     sops-nix = {
       url = "github:Mic92/sops-nix";

@@ -310,6 +310,23 @@
         "type": "github"
       }
     },
+    "herdr-remote": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1783585293,
+        "narHash": "sha256-kKV7tvS59/Jx6iXjWDFsKvq2C2y6G9iTPHSXwK85X0k=",
+        "owner": "dcolinmorgan",
+        "repo": "herdr-remote",
+        "rev": "e630c5551767f285e9eae81d1518e827113f3acc",
+        "type": "github"
+      },
+      "original": {
+        "owner": "dcolinmorgan",
+        "ref": "v0.5.0",
+        "repo": "herdr-remote",
+        "type": "github"
+      }
+    },
     "home-manager": {
       "inputs": {
         "nixpkgs": [
@@ -442,6 +459,7 @@
         "deploy-rs": "deploy-rs",
         "determinate": "determinate",
         "herdr": "herdr",
+        "herdr-remote": "herdr-remote",
         "home-manager": "home-manager",
         "nixpkgs": "nixpkgs_2",
         "snowfall-lib": "snowfall-lib",
