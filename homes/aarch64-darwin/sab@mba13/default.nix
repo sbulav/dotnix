@@ -54,7 +54,16 @@ with lib.custom;
       yazi = enabled;
     };
 
-    desktop.addons.wezterm = enabled;
+    desktop.addons.wezterm = {
+      enable = true;
+      mux.sshDomains = [
+        {
+          name = "mz";
+          remoteAddress = "mz";
+          username = "sab";
+        }
+      ];
+    };
 
     tools = {
       cli = enabled;

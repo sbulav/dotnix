@@ -35,7 +35,16 @@ in
         hypr-scale = enabled;
         wlogout = enabled;
         hyprlock = disabled;
-        wezterm = enabled;
+        wezterm = {
+          enable = true;
+          mux.sshDomains = [
+            {
+              name = "mz";
+              remoteAddress = "mz";
+              username = "sab";
+            }
+          ];
+        };
         "wlr-which-key" = enabled;
         screenshot = enabled;
         woomer = enabled;

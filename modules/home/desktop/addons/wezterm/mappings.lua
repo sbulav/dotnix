@@ -29,6 +29,7 @@ config.keys = {
   { key = "s", mods = "LEADER", action = wezterm.action { SplitVertical = { domain = "CurrentPaneDomain" } } },
   { key = "v", mods = "LEADER", action = wezterm.action { SplitHorizontal = { domain = "CurrentPaneDomain" } } },
   { key = "z", mods = "LEADER", action = "TogglePaneZoomState" },
+  { key = "t", mods = "LEADER", action = act.DetachDomain "CurrentPaneDomain" },
   { key = "c", mods = "LEADER", action = wezterm.action { SpawnTab = "CurrentPaneDomain" } },
   { key = "h", mods = "LEADER", action = wezterm.action { ActivatePaneDirection = "Left" } },
   { key = "j", mods = "LEADER", action = wezterm.action { ActivatePaneDirection = "Down" } },

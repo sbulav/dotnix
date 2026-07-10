@@ -78,7 +78,10 @@ in
         };
         wlogout = enabled;
         hyprlock = disabled;
-        wezterm = enabled;
+        wezterm = {
+          enable = true;
+          mux.local.enable = true;
+        };
         "wlr-which-key" = enabled;
         screenshot = enabled;
         wallpaper = "${wallpapers}/share/wallpapers/unorganized/vu_meter_code_neon.png";
