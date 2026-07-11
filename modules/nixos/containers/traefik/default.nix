@@ -77,8 +77,11 @@ in
 
           dynamicConfigOptions = {
             http = {
+              # Dual-router pattern (same as the app containers): LAN clients hit
+              # the ClientIP router directly (longer rule wins on priority);
+              # everyone else falls through to the authelia-protected router.
               routers.traefik-dashboard = {
-                rule = "Host(`traefik.${cfg.domain}`)";
+                rule = "Host(`traefik.${cfg.domain}`) && (ClientIP(`127.0.0.1/32`) || ClientIP(`172.16.64.0/24`) || ClientIP(`192.168.80.0/20`))";
                 service = "api@internal";
                 middlewares = [
                   "secure-headers"
@@ -92,6 +95,15 @@ in
                       sans = "*.${cfg.domain}";
                     };
                   };
+                };
+              };
+
+              routers.traefik-dashboard-auth = {
+                rule = "Host(`traefik.${cfg.domain}`)";
+                service = "api@internal";
+                middlewares = [ "auth-chain" ];
+                tls = {
+                  certResolver = "production";
                 };
               };
 
