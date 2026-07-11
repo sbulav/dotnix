@@ -158,6 +158,12 @@ in
       hostAddress = "172.16.64.10";
       localAddress = "172.16.64.105";
     };
+    # Route-only: proxies to herdr-remote services running on mz
+    herdr-remote = {
+      enable = true;
+      host = "herdr.sbulav.ru";
+      relayHost = "herdr-relay.sbulav.ru";
+    };
     nextcloud = {
       enable = false;
       host = "nextcloud.sbulav.ru";
