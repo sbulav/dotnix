@@ -114,13 +114,6 @@ in
       bottom = enabled;
       fastfetch = enabled;
       herdr = enabled;
-      herdr-remote = {
-        enable = true;
-        # Authelia on the Traefik route (zanoza) is the auth layer;
-        # LAN-direct access to :8375/:8080 is accepted as open.
-        enableTokenAuth = false;
-        autoStart = true;
-      };
       home-manager = enabled;
       yazi = enabled;
     };

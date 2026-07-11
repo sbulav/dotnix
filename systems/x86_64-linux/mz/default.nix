@@ -211,10 +211,6 @@ in
     SUBSYSTEM=="usb", ATTR{idVendor}=="0416", ATTR{idProduct}=="7395", MODE="0666", GROUP="users"
   '';
 
-  # Keep sab's user services (herdr-remote relay/web) running without an
-  # active login session, so the phone can reach them any time.
-  users.users.sab.linger = true;
-
   # ======================== DO NOT CHANGE THIS ========================
   system.stateVersion = "25.11";
   # ======================== DO NOT CHANGE THIS ========================

@@ -1,15 +1,15 @@
-# Route-only module (no container): exposes the herdr-remote web app and
-# relay running on mz through Traefik at herdr.sbulav.ru / herdr-relay.sbulav.ru.
+# Route-only module (no container): exposes the herdr-remote web app and relay
+# running on zanoza through Traefik at herdr.sbulav.ru / herdr-relay.sbulav.ru.
 #
 # Auth: Authelia only (auth-chain middleware). The relay's own token auth is
-# disabled on mz — Authelia's session cookie is scoped to the whole
+# disabled on zanoza — Authelia's session cookie is scoped to the whole
 # sbulav.ru domain, so the browser sends it on the WebSocket handshake to
 # the relay subdomain after logging in on the web app. Consequently the
 # hosted PWA (herdr-remote.pages.dev) can NOT be used (cross-site cookies);
 # use the self-hosted web app.
 #
 # LAN caveat: this protects only the Traefik front door. The origin ports
-# on mz (8080/8375) remain reachable directly on the LAN without auth.
+# on zanoza (8080/8375) remain reachable directly on the LAN without auth.
 {
   config,
   lib,
@@ -23,11 +23,13 @@ let
 in
 {
   options.${namespace}.containers.herdr-remote = with types; {
-    enable = mkBoolOpt false "Enable Traefik routes to herdr-remote on mz;";
+    enable = mkBoolOpt false "Enable Traefik routes to herdr-remote on zanoza.";
     host = mkOpt str "herdr.sbulav.ru" "The host to serve the herdr-remote web app on";
-    relayHost = mkOpt str "herdr-relay.sbulav.ru" "The host to serve the herdr-remote relay (WebSocket) on";
-    webUrl = mkOpt str "http://192.168.89.200:8080" "Backend URL of the herdr-remote web app";
-    relayUrl = mkOpt str "http://192.168.89.200:8375" "Backend URL of the herdr-remote relay";
+    relayHost =
+      mkOpt str "herdr-relay.sbulav.ru"
+        "The host to serve the herdr-remote relay (WebSocket) on";
+    webUrl = mkOpt str "http://127.0.0.1:8080" "Backend URL of the herdr-remote web app";
+    relayUrl = mkOpt str "http://127.0.0.1:8375" "Backend URL of the herdr-remote relay";
   };
 
   imports = [

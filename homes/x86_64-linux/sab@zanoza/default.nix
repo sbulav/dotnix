@@ -18,6 +18,17 @@ with lib.custom;
       atuin = enabled;
       bottom = enabled;
       fastfetch = enabled;
+      herdr = enabled;
+      herdr-remote = {
+        enable = true;
+        # Traefik and Authelia on zanoza provide the public auth layer.
+        enableTokenAuth = false;
+        autoStart = true;
+        remotes = [
+          "mz"
+          "192.168.92.143"
+        ];
+      };
       home-manager = enabled;
       yazi = enabled;
     };

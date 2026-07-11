@@ -13,6 +13,8 @@ python3Packages.buildPythonApplication {
   src = inputs.herdr-remote;
   format = "other";
 
+  patches = [ ./broadcast-empty-agent-list.patch ];
+
   propagatedBuildInputs = with python3Packages; [
     websockets
     zeroconf
