@@ -26,7 +26,7 @@ with lib.custom;
         autoStart = true;
         remotes = [
           "mz"
-          "192.168.92.143"
+          "192.168.92.136"
         ];
       };
       home-manager = enabled;
