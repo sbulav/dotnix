@@ -23,6 +23,8 @@ with lib.custom;
         enable = true;
         # Traefik and Authelia on zanoza provide the public auth layer.
         enableTokenAuth = false;
+        # Dedicated token-authenticated relay for the native Android app.
+        enableMobileRelay = true;
         autoStart = true;
         # Only live SSH targets. Dead remotes block herdr-relay's asyncio loop
         # (synchronous ssh with ConnectTimeout=5) for tens of seconds per poll,

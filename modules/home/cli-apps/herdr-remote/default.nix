@@ -1,9 +1,10 @@
 # herdr-remote: monitor and control herdr agents from a phone browser
 # (https://github.com/dcolinmorgan/herdr-remote).
 #
-# Two systemd user services (manual-start unless autoStart is set):
+# Browser services plus an optional token-authenticated mobile relay:
 #   systemctl --user start herdr-relay   # WebSocket relay on :8375
 #   systemctl --user start herdr-web     # static web app on :8080
+#   systemctl --user start herdr-relay-mobile # native app relay on :8377
 # Phone on LAN: open http://<host>:8080, enter ws://<host>:8375 as relay URL.
 # Remote: served via Traefik on zanoza as herdr.sbulav.ru / herdr-relay.sbulav.ru
 # behind Authelia (see modules/nixos/containers/herdr-remote).
@@ -49,8 +50,12 @@ in
   options.custom.cli-apps.herdr-remote = {
     enable = mkBoolOpt false "Whether to enable the herdr-remote relay and web app services.";
     relayPort = mkOpt types.port 8375 "WebSocket port of the herdr-remote relay.";
+    mobileRelayPort =
+      mkOpt types.port 8377
+        "WebSocket port of the token-authenticated native mobile relay.";
     webPort = mkOpt types.port 8080 "HTTP port serving the herdr-remote web app.";
     enableTokenAuth = mkBoolOpt true "Whether to require a shared token (from sops) for relay connections.";
+    enableMobileRelay = mkBoolOpt false "Whether to run a separate token-authenticated relay for the native Android app.";
     autoStart = mkBoolOpt false "Whether to start the relay and web app services automatically (requires linger to survive logout).";
     remotes = mkOpt (types.listOf types.str) [ ] "SSH hosts to poll for remote herdr instances.";
     herdrBin = mkOpt types.str "herdr" "Herdr command to run locally and on SSH remotes.";
@@ -60,7 +65,7 @@ in
   };
 
   config = mkIf cfg.enable {
-    sops.secrets.herdr_relay_token = mkIf cfg.enableTokenAuth {
+    sops.secrets.herdr_relay_token = mkIf (cfg.enableTokenAuth || cfg.enableMobileRelay) {
       sopsFile = lib.snowfall.fs.get-file "secrets/sab/default.yaml";
     };
 
@@ -74,13 +79,40 @@ in
           # store or in `systemctl show` output.
           ExecStart = pkgs.writeShellScript "herdr-relay-start" ''
             ${optionalString cfg.enableTokenAuth ''
-              export HERDR_RELAY_TOKEN="$(cat ${config.sops.secrets.herdr_relay_token.path})"
+              export HERDR_RELAY_TOKEN="$(${pkgs.coreutils}/bin/cat ${config.sops.secrets.herdr_relay_token.path})"
             ''}
             exec ${getExe pkgs.custom.herdr-relay}
           '';
           Environment = [
             "HERDR_BIN=${cfg.herdrBin}"
             "HERDR_RELAY_PORT=${toString cfg.relayPort}"
+            "HERDR_REMOTES=${concatStringsSep "," cfg.remotes}"
+            "PATH=${
+              makeBinPath [
+                herdrPackage
+                pkgs.openssh
+              ]
+            }"
+          ];
+          Restart = "on-failure";
+        };
+        Install = mkIf cfg.autoStart {
+          WantedBy = [ "default.target" ];
+        };
+      };
+
+      herdr-relay-mobile = mkIf cfg.enableMobileRelay {
+        Unit = {
+          Description = "herdr-remote native mobile relay (token-authenticated WebSocket bridge)";
+        };
+        Service = {
+          ExecStart = pkgs.writeShellScript "herdr-relay-mobile-start" ''
+            export HERDR_RELAY_TOKEN="$(${pkgs.coreutils}/bin/cat ${config.sops.secrets.herdr_relay_token.path})"
+            exec ${getExe pkgs.custom.herdr-relay}
+          '';
+          Environment = [
+            "HERDR_BIN=${cfg.herdrBin}"
+            "HERDR_RELAY_PORT=${toString cfg.mobileRelayPort}"
             "HERDR_REMOTES=${concatStringsSep "," cfg.remotes}"
             "PATH=${
               makeBinPath [

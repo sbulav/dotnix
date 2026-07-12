@@ -30,6 +30,9 @@ in
         "The host to serve the herdr-remote relay (WebSocket) on";
     webUrl = mkOpt str "http://127.0.0.1:8080" "Backend URL of the herdr-remote web app";
     relayUrl = mkOpt str "http://127.0.0.1:8375" "Backend URL of the herdr-remote relay";
+    mobileRelayUrl =
+      mkOpt str "http://127.0.0.1:8377"
+        "Backend URL of the token-authenticated native mobile relay";
   };
 
   imports = [
@@ -37,6 +40,14 @@ in
       app = "herdr-web";
       host = cfg.host;
       url = cfg.webUrl;
+      route_enabled = cfg.enable;
+    })
+    (import ../shared/shared-traefik-bypass-route.nix {
+      app = "herdr-relay-mobile";
+      host = cfg.relayHost;
+      url = cfg.mobileRelayUrl;
+      middleware = [ "secure-headers" ];
+      pathregexp = "^/native/ws$";
       route_enabled = cfg.enable;
     })
     (import ../shared/shared-traefik-route.nix {
