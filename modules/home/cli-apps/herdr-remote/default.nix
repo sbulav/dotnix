@@ -69,9 +69,11 @@ in
         options = {
           id = mkOpt types.str "" "Stable preset identifier exposed to native clients.";
           label = mkOpt types.str "" "Human-readable preset label.";
+          repository = mkOpt types.str "" "Stable repository identifier shown by native clients.";
           agent = mkOpt (types.enum [
             "claude"
             "opencode"
+            "codex"
           ]) "claude" "Agent executable selected by the relay.";
           model = mkOpt types.str "default" "Model passed through the relay's fixed agent template.";
           hosts = mkOpt (types.attrsOf (

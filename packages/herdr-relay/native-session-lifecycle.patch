@@ -17,7 +17,7 @@
  
  # Remote hosts: comma-separated SSH targets
  REMOTES = [r.strip() for r in os.environ.get("HERDR_REMOTES", "").split(",") if r.strip()]
-@@ -33,23 +34,86 @@
+@@ -33,23 +34,89 @@
  last_statuses = {}
  event_queue = asyncio.Queue()
  pane_remote_map = {}
@@ -42,7 +42,9 @@
 +        if not re.fullmatch(r"[a-z0-9][a-z0-9._-]{0,63}", preset_id) or preset_id in seen:
 +            raise ValueError(f"invalid or duplicate preset id: {preset_id}")
 +        seen.add(preset_id)
-+        if preset.get("agent") not in ("claude", "opencode"):
++        if not isinstance(preset.get("repository"), str) or not preset["repository"]:
++            raise ValueError(f"missing repository in preset {preset_id}")
++        if preset.get("agent") not in ("claude", "opencode", "codex"):
 +            raise ValueError(f"unsupported agent in preset {preset_id}")
 +        if not isinstance(preset.get("model"), str) or not preset["model"]:
 +            raise ValueError(f"missing model in preset {preset_id}")
@@ -72,6 +74,7 @@
 +    return [
 +        {
 +            "id": preset["id"], "label": preset["label"],
++            "repository": preset["repository"],
 +            "agent": preset["agent"], "model": preset["model"],
 +            "hosts": {host_id: {"cwd": host["cwd"]} for host_id, host in preset["hosts"].items()},
 +        }
@@ -109,7 +112,7 @@
      try:
          data = json.loads(raw)
          panes = data.get("result", {}).get("panes", [])
-@@ -70,9 +134,14 @@
+@@ -70,9 +137,14 @@
  
  
  def get_all_agents():
@@ -127,7 +130,7 @@
      return agents
  
  
-@@ -107,12 +176,18 @@
+@@ -107,12 +179,18 @@
          agents = get_all_agents()
          current_pane_ids = {a["pane_id"] for a in agents}
          pane_remote_map.clear()
@@ -147,7 +150,7 @@
          for a in agents:
              pid, status = a["pane_id"], a["status"]
              if status == "blocked" and last_statuses.get(pid) != "blocked":
-@@ -232,7 +307,24 @@
+@@ -232,7 +310,24 @@
              except json.JSONDecodeError:
                  continue
              msg_type = msg.get("type")
@@ -173,7 +176,7 @@
                  pane_id = msg["pane_id"]
                  remote = pane_remote_map.get(pane_id)
                  run_herdr("pane", "send-text", pane_id, msg["text"] + "\n", remote=remote)
-@@ -256,8 +348,52 @@
+@@ -256,8 +351,52 @@
                  run_herdr("pane", "send-text", pane_id, text, remote=remote)
      finally:
          clients.discard(ws)
