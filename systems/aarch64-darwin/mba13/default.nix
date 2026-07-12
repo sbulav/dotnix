@@ -9,8 +9,8 @@
   custom.apps.obsidian.enable = true;
   custom.desktop.aerospace.enable = true;
 
-  # Let the central herdr-remote relay on zanoza poll this laptop at its static
-  # DHCP address (192.168.92.136) while it is online.
+  # Let the central herdr-remote relay on zanoza poll this laptop (DHCP may
+  # hand out 192.168.92.136 or the older 192.168.92.143) while it is online.
   services.openssh.enable = true;
 
   # Always resolve the home lab (beez, zanoza, *.sbulav.ru) via AdGuard,

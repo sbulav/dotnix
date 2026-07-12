@@ -27,6 +27,7 @@ with lib.custom;
         remotes = [
           "mz"
           "192.168.92.136"
+          "192.168.92.143"
         ];
       };
       home-manager = enabled;
