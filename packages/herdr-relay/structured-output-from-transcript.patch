@@ -7,16 +7,17 @@ index acf21d5..75ed500 100644
  # ///
  """herdr-remote relay — polls herdr, accepts push events (HTTP POST + WebSocket + UDP), broadcasts to clients."""
 -import asyncio, json, os, re, signal, socket, subprocess, uuid
-+import asyncio, glob, json, os, re, shlex, signal, socket, subprocess, uuid
++import asyncio, glob, json, os, re, shlex, signal, socket, sqlite3, subprocess, uuid
  
  try:
      from websockets.asyncio.server import serve
-@@ -16,6 +16,10 @@ WS_PORT = int(os.environ.get("HERDR_RELAY_PORT", "8375"))
+@@ -16,6 +16,11 @@ WS_PORT = int(os.environ.get("HERDR_RELAY_PORT", "8375"))
  POLL_INTERVAL = 2
  AUTH_TOKEN = os.environ.get("HERDR_RELAY_TOKEN", "")  # Optional: shared secret for relay auth
  PRESETS_FILE = os.environ.get("HERDR_PRESETS_FILE", "")
-+# Root of Claude Code's per-project transcript store (structured JSONL, one dir per cwd).
++# Native structured stores used by supported coding agents.
 +CLAUDE_PROJECTS = os.environ.get("HERDR_CLAUDE_PROJECTS", "~/.claude/projects")
++OPENCODE_DB = os.environ.get("HERDR_OPENCODE_DB", "~/.local/share/opencode/opencode-stable.db")
 +TRANSCRIPT_MAX_BYTES = 262144  # tail window read per poll — bounds ssh transfer
 +TRANSCRIPT_BLOCK_LIMIT = 200   # most recent blocks kept per session
  
@@ -26,24 +27,25 @@ index acf21d5..75ed500 100644
  pane_remote_map = {}
  session_target_map = {}
  request_results = {}
-+pane_cwd_map = {}      # pane_id -> (cwd, agent, remote, ambiguous cwd)
++pane_cwd_map = {}      # pane_id -> (cwd, agent, remote, ambiguous agent/cwd)
 +subscriptions = {}     # ws -> pane_id the client is currently viewing
 +stream_sigs = {}       # (id(ws), pane_id) -> signature of the last blocks pushed
  
  
  def load_presets():
-@@ -163,6 +170,142 @@ def detect_options(text):
+@@ -163,6 +171,249 @@ def detect_options(text):
      return None
  
  
 +# ---------------------------------------------------------------------------
-+# Structured output from Claude Code's native transcript.
++# Structured output from Claude Code and OpenCode native session stores.
 +#
 +# Claude Code persists a fully structured JSONL transcript per project at
 +# ~/.claude/projects/<escaped-cwd>/<session-uuid>.jsonl. Reading it directly
 +# gives us real OutputBlocks (assistant prose, tool calls, thinking, prompts)
 +# with no ANSI/box-drawing/spinner guesswork. The relay already knows each
-+# pane's cwd, so this needs no change to `herdr` itself.
++# OpenCode stores equivalent message parts in SQLite. The relay already knows
++# each pane's cwd, so neither path needs a change to `herdr` itself.
 +# ---------------------------------------------------------------------------
 +
 +def claude_project_dir(cwd):
@@ -101,7 +103,7 @@ index acf21d5..75ed500 100644
 +    """Pick the most descriptive single line from a tool_use input dict."""
 +    if not isinstance(inp, dict):
 +        return ""
-+    for key in ("file_path", "command", "pattern", "path", "url", "query", "description", "prompt"):
++    for key in ("file_path", "filePath", "command", "pattern", "path", "url", "query", "description", "prompt"):
 +        v = inp.get(key)
 +        if isinstance(v, str) and v.strip():
 +            return v.strip().splitlines()[0][:200]
@@ -152,51 +154,157 @@ index acf21d5..75ed500 100644
 +    return blocks[-limit:]
 +
 +
++OPENCODE_PART_QUERY = """
++SELECT json_extract(m.data, '$.role'), p.data
++FROM message m
++JOIN part p ON p.message_id = m.id
++WHERE m.session_id = ?
++ORDER BY m.time_created DESC, p.time_created DESC, p.id DESC
++LIMIT ?
++"""
++
++
++def _read_opencode_local(db_path, cwd):
++    """Return the newest top-level OpenCode session and its recent parts."""
++    db_uri = "file:" + os.path.expanduser(db_path) + "?mode=ro"
++    with sqlite3.connect(db_uri, uri=True, timeout=2) as db:
++        session = db.execute(
++            "SELECT id, time_updated FROM session "
++            "WHERE directory = ? AND parent_id IS NULL "
++            "ORDER BY time_updated DESC LIMIT 1", (cwd,)
++        ).fetchone()
++        if not session:
++            return None
++        session_id, updated = session
++        rows = db.execute(
++            OPENCODE_PART_QUERY, (session_id, TRANSCRIPT_BLOCK_LIMIT * 4)
++        ).fetchall()
++    rows.reverse()
++    return {"session_id": session_id, "updated": updated, "rows": rows}
++
++
++def read_opencode(cwd, remote=None):
++    """Read bounded structured parts for the newest OpenCode session in cwd."""
++    if not cwd:
++        return None
++    if not remote:
++        try:
++            return _read_opencode_local(OPENCODE_DB, cwd)
++        except Exception:
++            return None
++    script = """
++import json, os, sqlite3, sys
++db = sqlite3.connect("file:" + os.path.expanduser(sys.argv[1]) + "?mode=ro", uri=True, timeout=2)
++session = db.execute("SELECT id, time_updated FROM session WHERE directory = ? AND parent_id IS NULL ORDER BY time_updated DESC LIMIT 1", (sys.argv[2],)).fetchone()
++if session:
++    rows = db.execute(sys.argv[3], (session[0], int(sys.argv[4]))).fetchall()
++    rows.reverse()
++    print(json.dumps({"session_id": session[0], "updated": session[1], "rows": rows}))
++"""
++    remote_cmd = " ".join([
++        "python3", "-c", shlex.quote(script), shlex.quote(OPENCODE_DB),
++        shlex.quote(cwd), shlex.quote(OPENCODE_PART_QUERY),
++        str(TRANSCRIPT_BLOCK_LIMIT * 4),
++    ])
++    try:
++        result = subprocess.run(
++            ["ssh", "-o", "ConnectTimeout=5", "-o", "BatchMode=yes", remote, remote_cmd],
++            capture_output=True, text=True, timeout=15,
++        )
++        if result.returncode != 0 or not result.stdout.strip():
++            return None
++        return json.loads(result.stdout)
++    except Exception:
++        return None
++
++
++def opencode_to_blocks(document, limit=TRANSCRIPT_BLOCK_LIMIT):
++    """Map OpenCode message parts into OutputBlock dictionaries."""
++    if not isinstance(document, dict):
++        return []
++    blocks = []
++
++    def add(kind, **kw):
++        kw["id"] = f"o{len(blocks)}"
++        kw["kind"] = kind
++        blocks.append(kw)
++
++    for row in document.get("rows") or []:
++        if not isinstance(row, (list, tuple)) or len(row) != 2:
++            continue
++        role, raw_part = row
++        try:
++            part = json.loads(raw_part) if isinstance(raw_part, str) else raw_part
++        except Exception:
++            continue
++        if not isinstance(part, dict):
++            continue
++        part_type = part.get("type")
++        text = part.get("text")
++        if role == "user" and part_type == "text" and isinstance(text, str) and text.strip():
++            add("status", label="You", text=text.strip()[:2000])
++        elif role == "assistant" and part_type == "text" and isinstance(text, str) and text.strip():
++            add("assistant_text", markdown=text)
++        elif role == "assistant" and part_type == "reasoning" and isinstance(text, str) and text.strip():
++            add("status", label="Thought", text=text.strip().splitlines()[0][:200])
++        elif role == "assistant" and part_type == "tool":
++            state = part.get("state") if isinstance(part.get("state"), dict) else {}
++            summary = summarize_tool(state.get("input")) or str(state.get("title") or "")[:200]
++            add("tool", label=part.get("tool") or "tool", text=summary)
++    return blocks[-limit:]
++
++
 +def pane_blocks(pane_id):
 +    """(blocks, signature) for a Claude pane's transcript, else (None, None)."""
 +    info = pane_cwd_map.get(pane_id)
 +    if not info:
 +        return None, None
 +    cwd, agent, remote, ambiguous = info
-+    # Without a Claude session id/path, cwd is the only correlation available.
-+    # Refuse structured output when multiple live Claude panes share it rather
++    # Without an agent session id/path, cwd is the only correlation available.
++    # Refuse structured output when multiple live same-agent panes share it rather
 +    # than risk showing one conversation in another pane.
-+    if agent != "claude" or not cwd or ambiguous:
++    if agent not in ("claude", "opencode") or not cwd or ambiguous:
 +        return None, None
-+    try:
-+        path, body = read_transcript(cwd, remote)
-+    except Exception:
++    if agent == "claude":
++        try:
++            path, body = read_transcript(cwd, remote)
++        except Exception:
++            return None, None
++        if not body:
++            return None, None
++        return transcript_to_blocks(body), hash((path, body))
++    document = read_opencode(cwd, remote)
++    if not document:
 +        return None, None
-+    if not body:
-+        return None, None
-+    return transcript_to_blocks(body), hash((path, body))
++    blocks = opencode_to_blocks(document)
++    return blocks, hash(json.dumps(document, sort_keys=True))
 +
 +
  async def broadcast(msg):
      data = json.dumps(msg)
      dead = set()
-@@ -180,9 +323,20 @@ async def poll_loop():
+@@ -180,9 +431,20 @@ async def poll_loop():
          current_pane_ids = {a["pane_id"] for a in agents}
          pane_remote_map.clear()
          session_target_map.clear()
 +        pane_cwd_map.clear()
-+        claude_cwd_counts = {}
++        agent_cwd_counts = {}
 +        for a in agents:
-+            if a.get("agent") == "claude" and a.get("cwd"):
-+                cwd_key = (a.get("remote"), a["cwd"])
-+                claude_cwd_counts[cwd_key] = claude_cwd_counts.get(cwd_key, 0) + 1
++            if a.get("agent") in ("claude", "opencode") and a.get("cwd"):
++                cwd_key = (a.get("remote"), a["cwd"], a["agent"])
++                agent_cwd_counts[cwd_key] = agent_cwd_counts.get(cwd_key, 0) + 1
          for a in agents:
              pane_remote_map[a["pane_id"]] = a.get("remote")
              session_target_map[session_id(a["host"], a["pane_id"])] = (a["pane_id"], a.get("remote"))
-+            cwd_key = (a.get("remote"), a.get("cwd", ""))
++            cwd_key = (a.get("remote"), a.get("cwd", ""), a.get("agent", ""))
 +            pane_cwd_map[a["pane_id"]] = (
 +                a.get("cwd", ""), a.get("agent", ""), a.get("remote"),
-+                claude_cwd_counts.get(cwd_key, 0) > 1,
++                agent_cwd_counts.get(cwd_key, 0) > 1,
 +            )
  
          # Always send a complete snapshot. In particular, an empty snapshot
          # removes stale agents after every remote host goes offline.
-@@ -206,6 +360,34 @@ async def poll_loop():
+@@ -206,6 +468,34 @@ async def poll_loop():
              last_statuses[pid] = status
          for pid in set(last_statuses) - current_pane_ids:
              del last_statuses[pid]
@@ -231,7 +339,7 @@ index acf21d5..75ed500 100644
          await asyncio.sleep(POLL_INTERVAL)
  
  
-@@ -338,7 +520,36 @@ async def handle_client(ws):
+@@ -338,7 +628,36 @@ async def handle_client(ws):
                  lines = msg.get("lines", "30")
                  remote = pane_remote_map.get(pane_id)
                  content = run_herdr("pane", "read", pane_id, "--lines", str(lines), "--source", "recent", remote=remote)
@@ -269,7 +377,7 @@ index acf21d5..75ed500 100644
              elif msg_type == "send_keys":
                  pane_id = msg["pane_id"]
                  keys = msg.get("keys", [])
-@@ -351,6 +562,9 @@ async def handle_client(ws):
+@@ -351,6 +670,9 @@ async def handle_client(ws):
                  run_herdr("pane", "send-text", pane_id, text, remote=remote)
      finally:
          clients.discard(ws)

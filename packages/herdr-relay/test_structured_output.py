@@ -14,6 +14,7 @@ import os
 import re
 import glob
 import shlex
+import sqlite3
 import subprocess
 import sys
 
@@ -42,8 +43,9 @@ def load_functions():
         raise SystemExit("could not extract function block from patch")
     ns = {
         "re": re, "json": json, "os": os, "glob": glob, "shlex": shlex,
-        "subprocess": subprocess,
+        "subprocess": subprocess, "sqlite3": sqlite3,
         "CLAUDE_PROJECTS": "~/.claude/projects",
+        "OPENCODE_DB": "~/.local/share/opencode/opencode-stable.db",
         "TRANSCRIPT_MAX_BYTES": 262144,
         "TRANSCRIPT_BLOCK_LIMIT": 200,
         "pane_cwd_map": {},
@@ -57,6 +59,7 @@ claude_project_dir = FN["claude_project_dir"]
 summarize_tool = FN["summarize_tool"]
 transcript_to_blocks = FN["transcript_to_blocks"]
 pane_blocks = FN["pane_blocks"]
+opencode_to_blocks = FN["opencode_to_blocks"]
 
 failures = []
 
@@ -146,6 +149,29 @@ check("blocks_limit_tail", [b["markdown"] for b in limited],
 # --- pane_blocks: never guess between concurrent sessions in one cwd --------
 FN["pane_cwd_map"]["ambiguous"] = ("/work/repo", "claude", None, True)
 check("ambiguous_cwd_skipped", pane_blocks("ambiguous"), (None, None))
+
+# --- opencode_to_blocks: SQLite message/part mapping -------------------------
+OPENCODE_FIXTURE = {
+    "session_id": "ses_test",
+    "updated": 1,
+    "rows": [
+        ["user", json.dumps({"type": "text", "text": "Fix the login bug"})],
+        ["assistant", json.dumps({"type": "step-start"})],
+        ["assistant", json.dumps({"type": "reasoning", "text": "Inspect auth\nthen patch"})],
+        ["assistant", json.dumps({"type": "text", "text": "I'll inspect it."})],
+        ["assistant", json.dumps({"type": "tool", "tool": "read", "state": {
+            "status": "completed", "input": {"filePath": "auth.py"}}})],
+        ["assistant", "not-json"],
+    ],
+}
+opencode_blocks = opencode_to_blocks(OPENCODE_FIXTURE)
+check("opencode_sequence",
+      [(b["kind"], b.get("label")) for b in opencode_blocks],
+      [("status", "You"), ("status", "Thought"),
+       ("assistant_text", None), ("tool", "read")])
+check("opencode_reasoning_first_line", opencode_blocks[1]["text"], "Inspect auth")
+check("opencode_markdown", opencode_blocks[2]["markdown"], "I'll inspect it.")
+check("opencode_tool_summary", opencode_blocks[3]["text"], "auth.py")
 
 
 if failures:
