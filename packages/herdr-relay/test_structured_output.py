@@ -56,6 +56,7 @@ FN = load_functions()
 claude_project_dir = FN["claude_project_dir"]
 summarize_tool = FN["summarize_tool"]
 transcript_to_blocks = FN["transcript_to_blocks"]
+pane_blocks = FN["pane_blocks"]
 
 failures = []
 
@@ -141,6 +142,10 @@ limited = transcript_to_blocks(
     limit=10)
 check("blocks_limit_tail", [b["markdown"] for b in limited],
       [str(i) for i in range(240, 250)])
+
+# --- pane_blocks: never guess between concurrent sessions in one cwd --------
+FN["pane_cwd_map"]["ambiguous"] = ("/work/repo", "claude", None, True)
+check("ambiguous_cwd_skipped", pane_blocks("ambiguous"), (None, None))
 
 
 if failures:
