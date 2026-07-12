@@ -24,10 +24,11 @@ with lib.custom;
         # Traefik and Authelia on zanoza provide the public auth layer.
         enableTokenAuth = false;
         autoStart = true;
+        # Only live SSH targets. Dead remotes block herdr-relay's asyncio loop
+        # (synchronous ssh with ConnectTimeout=5) for tens of seconds per poll,
+        # which freezes WebSocket broadcasts and makes agents "disappear".
         remotes = [
-          "mz"
-          "192.168.92.136"
-          "192.168.92.143"
+          "192.168.92.136" # mba13 (current DHCP)
         ];
       };
       home-manager = enabled;
