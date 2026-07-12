@@ -32,6 +32,18 @@ with lib.custom;
         remotes = [
           "192.168.92.136" # mba13 (current DHCP)
         ];
+        presets = [
+          {
+            id = "dotnix-claude-opus";
+            label = "dotnix · Claude · Opus";
+            agent = "claude";
+            model = "opus";
+            hosts.mba13 = {
+              cwd = "/Users/sab/dotnix";
+              target = "192.168.92.136";
+            };
+          }
+        ];
       };
       home-manager = enabled;
       yazi = enabled;

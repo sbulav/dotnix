@@ -13,7 +13,10 @@ python3Packages.buildPythonApplication {
   src = inputs.herdr-remote;
   format = "other";
 
-  patches = [ ./broadcast-empty-agent-list.patch ];
+  patches = [
+    ./broadcast-empty-agent-list.patch
+    ./native-session-lifecycle.patch
+  ];
 
   propagatedBuildInputs = with python3Packages; [
     websockets

@@ -31,6 +31,12 @@ with lib.custom;
 let
   cfg = config.custom.cli-apps.herdr-remote;
   herdrPackage = inputs.herdr.packages.${pkgs.stdenv.hostPlatform.system}.herdr;
+  mobilePresets = pkgs.writeText "herdr-mobile-presets.json" (
+    builtins.toJSON {
+      schema_version = 1;
+      inherit (cfg) presets;
+    }
+  );
   webRoot = pkgs.runCommand "herdr-remote-web" { } ''
     cp -r ${inputs.herdr-remote}/web $out
     chmod -R u+w $out
@@ -58,6 +64,27 @@ in
     enableMobileRelay = mkBoolOpt false "Whether to run a separate token-authenticated relay for the native Android app.";
     autoStart = mkBoolOpt false "Whether to start the relay and web app services automatically (requires linger to survive logout).";
     remotes = mkOpt (types.listOf types.str) [ ] "SSH hosts to poll for remote herdr instances.";
+    presets = mkOpt (types.listOf (
+      types.submodule {
+        options = {
+          id = mkOpt types.str "" "Stable preset identifier exposed to native clients.";
+          label = mkOpt types.str "" "Human-readable preset label.";
+          agent = mkOpt (types.enum [
+            "claude"
+            "opencode"
+          ]) "claude" "Agent executable selected by the relay.";
+          model = mkOpt types.str "default" "Model passed through the relay's fixed agent template.";
+          hosts = mkOpt (types.attrsOf (
+            types.submodule {
+              options = {
+                cwd = mkOpt types.str "" "Absolute working directory on this host.";
+                target = mkOpt (types.nullOr types.str) null "SSH target, or null for the relay host.";
+              };
+            }
+          )) { } "Allowed launch hosts and their server-owned paths.";
+        };
+      }
+    )) [ ] "Server-owned presets available to native mobile clients.";
     herdrBin = mkOpt types.str "herdr" "Herdr command to run locally and on SSH remotes.";
     defaultRelayUrl =
       mkOpt types.str "wss://herdr-relay.sbulav.ru"
@@ -114,6 +141,7 @@ in
             "HERDR_BIN=${cfg.herdrBin}"
             "HERDR_RELAY_PORT=${toString cfg.mobileRelayPort}"
             "HERDR_REMOTES=${concatStringsSep "," cfg.remotes}"
+            "HERDR_PRESETS_FILE=${mobilePresets}"
             "PATH=${
               makeBinPath [
                 herdrPackage
