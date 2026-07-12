@@ -1,6 +1,6 @@
 {
   name = "delegate";
-  version = "1.1.0";
+  version = "1.2.0";
   description = "Split a task or a batch of issues into subtasks and route each to the cheapest-capable model via opencode run. Use for multi-model orchestration, delegating grunt work to cheap models, issue-batch swarms with git worktrees, parallel investigations, and cross-model reviews.";
   "argument-hint" = "[task, issue number(s), or repo issue list]";
   "user-invocable" = true;
@@ -49,16 +49,12 @@
     | Model | Reason | Code | Speed | Cost | Notes |
     |---|---|---|---|---|---|
     | `hhdev-glm5-fp8/zai-org/GLM-5.2-FP8` | 6 | 7 | 7 | **0** | self-hosted, free; grunt-work default |
-    | `openai/gpt-5.4-mini-fast` | 5 | 5 | 10 | 1 | personal sub |
-    | `openai/gpt-5.4-mini` | 6 | 6 | 8 | 1 | personal sub |
-    | `openai/gpt-5.4-fast` | 7 | 7 | 9 | 2 | personal sub |
-    | `openai/gpt-5.4` | 7 | 8 | 7 | 2 | personal sub; implementation workhorse |
-    | `openai/gpt-5.5-fast` | 9 | 9 | 8 | 3 | personal sub |
-    | `openai/gpt-5.5` | 9 | 9 | 6 | 3 | personal sub; strong at medium effort |
+    | `hhdev-grok/grok-4.5` | 8 | 8 | 8 | **1** | cheap gateway model; generalist, research, and independent review |
+    | `openai/gpt-5.6-sol` | 10 | 9 | 7 | 2 | personal sub; reasoning, planning, spec, and difficult analysis |
+    | `openai/gpt-5.6-terra` | 9 | 10 | 7 | 2 | personal sub; implementation, refactoring, debugging, and code review |
     | `hhdev-anthropic/claude-sonnet-4-6` | 8 | 9 | 7 | 6 | work tokens |
     | `hhdev-google/gemini-3.1-pro-preview` | 9 | 8 | 6 | 7 | work tokens; huge context window |
-    | `hhdev-grok/grok-4.5` | 8 | 7 | 7 | 7 | work tokens; research/current events |
-    | `hhdev-openai/gpt-5.5` | 9 | 9 | 6 | 7 | work tokens; ONLY when fwdproxy is down (prefer `openai/gpt-5.5`) |
+    | `hhdev-openai/gpt-5.5` | 9 | 9 | 6 | 7 | work tokens; legacy fallback only when fwdproxy is down |
     | `hhdev-anthropic/claude-fable-5` | 10 | 10 | 6 | 8 | work tokens; orchestrator-equivalent — use ONLY for parallel heavyweight work |
     | `hhdev-anthropic/claude-opus-4-8` | 10 | 10 | 4 | 9 | work tokens; deep-debug delegate |
     | `hhdev-anthropic/claude-opus-4-7` | 9 | 9 | 4 | 9 | work tokens; prefer opus-4-8 |
@@ -74,16 +70,16 @@
 
     | Task class | Primary | Escalation | Variant |
     |---|---|---|---|
-    | Grunt work: renames, formatting, boilerplate, log parsing, file conversion | GLM-5.2 | `openai/gpt-5.4-mini` | low/medium |
-    | Quick lookups, summarization, doc extraction | `openai/gpt-5.4-mini-fast` | `openai/gpt-5.4` | low/medium |
-    | Well-specified code implementation | `openai/gpt-5.4` | `openai/gpt-5.5` | medium |
-    | Complex implementation / refactoring | `openai/gpt-5.5` | `hhdev-anthropic/claude-sonnet-4-6` | medium, high if truly hard |
-    | Deep debugging / root-cause analysis | orchestrator itself; delegate to `hhdev-anthropic/claude-opus-4-8` only for parallel lenses | `hhdev-anthropic/claude-fable-5` | high |
-    | Large-context analysis (huge logs, many files) | `hhdev-google/gemini-3.1-pro-preview` | `openai/gpt-5.5` | medium |
-    | Web research / current events | `hhdev-grok/grok-4.5` | `hhdev-google/gemini-3.1-pro-preview` | medium |
-    | Cross-model code review (2nd opinion) | different family than the author: `openai/gpt-5.5` or `hhdev-google/gemini-3.1-pro-preview` | — | high |
-    | Docs / prose writing | `openai/gpt-5.4` | `hhdev-anthropic/claude-sonnet-4-6` | medium |
-    | Parallel investigation lenses (3-agent root-cause) | mix families: opus-4-8 / gemini-3.1-pro / gpt-5.5 | — | high |
+    | Grunt work: renames, formatting, boilerplate, log parsing, file conversion | GLM-5.2 | `hhdev-grok/grok-4.5` | low/medium |
+    | Quick lookups, summarization, doc extraction | `hhdev-grok/grok-4.5` | `openai/gpt-5.6-sol` | low/medium |
+    | Well-specified code implementation | `openai/gpt-5.6-terra` | `openai/gpt-5.6-sol` | medium |
+    | Complex implementation / refactoring | `openai/gpt-5.6-terra` | `openai/gpt-5.6-sol` | medium, high if truly hard |
+    | Deep debugging / root-cause analysis | orchestrator itself; delegate a parallel code lens to `openai/gpt-5.6-terra` and a reasoning lens to `openai/gpt-5.6-sol` | `hhdev-anthropic/claude-opus-4-8` | high |
+    | Large-context analysis (huge logs, many files) | `openai/gpt-5.6-sol` | `hhdev-google/gemini-3.1-pro-preview` | medium |
+    | Web research / current events | `hhdev-grok/grok-4.5` | `openai/gpt-5.6-sol` | medium |
+    | Cross-model code review (2nd opinion) | `openai/gpt-5.6-terra`; use cheap `hhdev-grok/grok-4.5` when a different family is required | `openai/gpt-5.6-sol` | high |
+    | Docs / prose writing | `openai/gpt-5.6-sol` | `hhdev-grok/grok-4.5` | medium |
+    | Parallel investigation lenses (3-agent root-cause) | Sol reasoning / Terra code / Grok independent-family challenge | — | high |
 
     Debugging-class dispatches: tell the worker to load the `diagnosing-bugs` skill so it
     builds a red feedback loop before theorising.
@@ -93,8 +89,8 @@
     - **NEVER use `xhigh`.**
     - `--variant high` only for genuinely complex classes: deep debugging, complex
       implementation, cross-model review, parallel investigations.
-    - `--variant medium` is the default for everything else. `openai/gpt-5.5` performs
-      very well at medium — do not bump it to high for generic work.
+    - `--variant medium` is the default for everything else. GPT-5.6 Sol and Terra perform
+      very well at medium — do not bump them to high for generic work.
     - `--variant low`/minimal for grunt work and lookups where supported.
 
     ## Dispatch mechanics
@@ -181,13 +177,15 @@
     ## Fallbacks and failure handling
 
     - **llmgtw.hhdev.ru quota exhausted** (429 / quota errors on `hhdev-*`): reroute
-      remaining subtasks — deep debugging -> orchestrator itself or `openai/gpt-5.5`;
-      large-context -> `openai/gpt-5.5`; research -> ask the user to run the search.
+      remaining subtasks — deep debugging -> orchestrator itself or the appropriate
+      `openai/gpt-5.6-sol` / `openai/gpt-5.6-terra` lane; large-context -> Sol;
+      research -> Sol.
       GLM-5.2 is unaffected (different gateway: llm-gateway.pyn.ru) and stays primary
       for grunt work. Announce the reroute ONCE, then continue; do not report it per
       subtask.
     - **fwdproxy.pyn.ru unreachable** (`openai/*` dispatches fail to connect): reroute
-      `openai/*` traffic to GLM-5.2 + `hhdev-*` equivalents (incl. `hhdev-openai/gpt-5.5`).
+      `openai/*` traffic to cheap Grok / GLM-5.2 first, then `hhdev-*` equivalents
+      (including legacy `hhdev-openai/gpt-5.5`) when their capability clears the bar.
       Announce once.
     - **Worker produces garbage or fails verification**: one retry in the same session
       with concrete feedback; if still failing, re-dispatch once at the escalation tier;

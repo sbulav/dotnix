@@ -1,7 +1,7 @@
 {
   name = "delegate-review";
-  version = "1.2.0";
-  description = "Multi-model PR review orchestrator. Use when reviewing a pull request or a list of PRs: classify PR complexity, route reviewers by allowlisted scorecard weights with family diversity, never use banned models, degrade on API limits, pack a context brief, spawn parallel opencode sessions, reconcile findings, and plan fixes. Triggers: delegate-review, review PR, review pull request, multi-model review, PR review swarm.";
+  version = "1.3.0";
+  description = "Multi-model PR review orchestrator. Use when reviewing a pull request or a list of PRs: classify PR complexity, route reasoning/spec work to GPT-5.6 Sol, code/correctness work to GPT-5.6 Terra, use cheap Grok 4.5 for independent-family passes, degrade on API limits, pack a context brief, spawn parallel opencode sessions, reconcile findings, and plan fixes. Triggers: delegate-review, review PR, review pull request, multi-model review, PR review swarm.";
   "argument-hint" = "[PR number(s), or 'open' for open PRs]";
   "user-invocable" = true;
   allowed-tools = [
@@ -17,7 +17,7 @@
 
     You are the review orchestrator. You gather PR context, **classify** the PR,
     **route reviewers by the same scorecard weights as `delegate`** (cheapest
-    model that clears the bar, with a hard family-diversity constraint), pack a
+    role-suitable model that clears the bar, with profile and lineage diversity), pack a
     shared brief, dispatch parallel `opencode run` sessions, reconcile findings,
     and produce a fix plan.
 
@@ -90,8 +90,6 @@
 
     - `hhdev-glm5-fp8/zai-org/GLM-5.2-FP8` — free; may help *you* list files
       locally, **never** a reviewer session.
-    - `openai/gpt-5.4-mini` / `openai/gpt-5.4-mini-fast` — below every review bar;
-      do not use even for skim.
 
     ## Model scorecard (same weights as `delegate`)
 
@@ -100,27 +98,25 @@
     > Among **allowlisted** models that clear the task-class capability bar and
     > are not banned, pick the **lowest Cost**; tie-break on **Speed** (higher first).
 
-    Review adds one override that can force a more expensive pick:
+    Review adds role affinity before cost ranking:
 
-    > **Family diversity:** at least one reviewer must be a different model
-    > family than (a) the PR author model when known, and (b) every other
-    > concurrent reviewer on the same PR. Families: `openai/*`,
-    > `hhdev-anthropic/*`, `hhdev-google/*`, `hhdev-grok/*`, `hhdev-glm5-fp8/*`,
-    > `hhdev-openai/*` (treat as openai-family for diversity — same lineage).
+    > **Reviewer profiles:** use `openai/gpt-5.6-sol` for reasoning, intent, and
+    > specification lenses; use `openai/gpt-5.6-terra` for code correctness,
+    > tests, debugging, and implementation detail. Use cheap
+    > `hhdev-grok/grok-4.5` for skim/batch reviews and independent-family
+    > challenge passes. Sol and Terra are distinct reviewer profiles but share
+    > OpenAI lineage; security and contested reviews should include Grok or
+    > another non-OpenAI family when one clears the bar.
 
     | Model | Reason | Code | Speed | Cost | Family | Review notes |
     |---|---|---|---|---|---|---|
     | `hhdev-glm5-fp8/zai-org/GLM-5.2-FP8` | 6 | 7 | 7 | **0** | glm | **NOT a review slot** (triage only for orchestrator) |
-    | `openai/gpt-5.4-mini-fast` | 5 | 5 | 10 | 1 | openai | **NOT a review slot** (below bars) |
-    | `openai/gpt-5.4-mini` | 6 | 6 | 8 | 1 | openai | **NOT a review slot** (below bars) |
-    | `openai/gpt-5.4-fast` | 7 | 7 | 9 | 2 | openai | skim-class only |
-    | `openai/gpt-5.4` | 7 | 8 | 7 | 2 | openai | skim / single-slot batch |
-    | `openai/gpt-5.5-fast` | 9 | 9 | 8 | 3 | openai | full review; prefer when latency matters |
-    | `openai/gpt-5.5` | 9 | 9 | 6 | 3 | openai | default personal-sub reviewer |
+    | `hhdev-grok/grok-4.5` | 8 | 8 | 8 | **1** | grok | cheap skim, batch, and independent-family reviewer |
+    | `openai/gpt-5.6-sol` | 10 | 9 | 7 | 2 | openai/sol | spec, intent, architecture, and reasoning reviewer |
+    | `openai/gpt-5.6-terra` | 9 | 10 | 7 | 2 | openai/terra | correctness, tests, debugging, and code reviewer |
     | `hhdev-anthropic/claude-sonnet-4-6` | 8 | 9 | 7 | 6 | anthropic | default work-tokens reviewer |
     | `hhdev-google/gemini-3.1-pro-preview` | 9 | 8 | 6 | 7 | google | large-context / huge-diff lens |
-    | `hhdev-grok/grok-4.5` | 8 | 7 | 7 | 7 | grok | not default for code review |
-    | `hhdev-openai/gpt-5.5` | 9 | 9 | 6 | 7 | openai† | ONLY when fwdproxy is down (prefer `openai/gpt-5.5`) |
+    | `hhdev-openai/gpt-5.5` | 9 | 9 | 6 | 7 | openai† | legacy fallback only when fwdproxy is down |
     | `hhdev-anthropic/claude-fable-5` | 10 | 10 | 6 | 8 | anthropic | parallel heavyweight only |
     | `hhdev-anthropic/claude-opus-4-8` | 10 | 10 | 4 | 9 | anthropic | deep / security / contested |
     | `hhdev-anthropic/claude-opus-4-7` | 9 | 9 | 4 | 9 | anthropic | prefer opus-4-8 |
@@ -133,8 +129,8 @@
     | Review class | Min Reason | Min Code | Default slots | Default variant | When to classify |
     |---|---|---|---|---|---|
     | `skim` | 7 | 7 | 1 | medium | docs-only, typo, lockfile-only, pure renames, trivial config, <~50 LOC non-logic |
-    | `standard` | 8 | 8 | 2 | high | default feature/fix PR with clear AC |
-    | `complex` | 9 | 9 | 2 | high | multi-module refactor, subtle concurrency, large behavioral change, weak/missing tests |
+    | `standard` | 8 | 8 | 2 | high | default feature/fix PR with clear AC; Terra correctness + Sol spec |
+    | `complex` | 9 | 9 | 3 | high | multi-module refactor, subtle concurrency, large behavioral change, weak/missing tests; add an independent-family pass when possible |
     | `large-context` | 8 | 8 | 2–3 | high | huge diff / many files (see thresholds); at least one slot must be gemini-class context |
     | `security` | 9 | 9 | 2 | high | auth, crypto, secrets, permissions, multi-tenant isolation, injection surface |
     | `contested` | 9 | 9 | +1 tie-break | high | first-pass reviewers disagree on any P0/P1 |
@@ -142,9 +138,10 @@
 
     Modifiers (stack on top of the class — they change slot count or force a model, not the bar):
 
-    - **author-family known** (from handoff / commit trailer / user): exclude that
-      family from *all* slots if another family still clears the bar; if not,
-      allow same family on at most one slot and note the risk.
+    - **author profile/lineage known** (from handoff / commit trailer / user):
+      avoid the exact author profile for the matching lens when another profile
+      clears the bar. Include at least one different lineage when available;
+      do not discard both Sol and Terra merely because the author used OpenAI.
     - **CI red on changed paths**: treat as at least `standard`; add explicit
       "does the diff explain the failure?" to every lens.
     - **No linked issue / no AC**: force one slot to lens `spec` and ask the
@@ -161,9 +158,8 @@
     - or hotspots span **≥ 3** weakly related areas.
 
     For `large-context`, **slot rules**:
-    - Slot A: cheapest clearer of the underlying class bar (`standard` or `complex`)
-      with family diversity.
-    - Slot B: different family, same bar.
+    - Slot A: Terra for the code/correctness lens when it clears the underlying bar.
+    - Slot B: Sol for the reasoning/spec lens when it clears the same bar.
     - Slot C (required when ≥ 40 files or patch not inlineable): force
       `hhdev-google/gemini-3.1-pro-preview` if available (even if Cost is higher) —
       context window is the point. If gemini is down, escalate Slot A to the
@@ -172,7 +168,7 @@
     ### Security class forces
 
     - At least one slot must clear Reason ≥ 9 **and** Code ≥ 9 (typically
-      `openai/gpt-5.5` or `hhdev-anthropic/claude-opus-4-8`).
+      `openai/gpt-5.6-sol`, `openai/gpt-5.6-terra`, or `hhdev-anthropic/claude-opus-4-8`).
     - Prefer including `hhdev-anthropic/claude-opus-4-8` as one of the two when
       Cost budget allows after cheaper clearers are considered — **security
       override**: if the cheapest clearer is Cost ≤ 3 and the next anthropic
@@ -188,13 +184,13 @@
     ```
     PR #<N>
     class: <class> [+ modifiers]
-    author-family: <family|unknown>
+    author-profile/lineage: <profile and lineage|unknown>
     slots: <k>
     for each slot i:
       bar: Reason≥x Code≥y
       lens: <lens>
-      candidates: [models clearing bar, not banned, not same family as prior slots / author when avoidable]
-      ranked: sort by Cost ASC, Speed DESC
+      candidates: [models clearing bar, not banned, role-suitable, not the author profile when avoidable]
+      ranked: apply lens affinity, then sort by Cost ASC, Speed DESC
       chosen: <model> @ --variant <v>   # reason if not pure cheapest
     ```
 
@@ -213,16 +209,18 @@
        a. Start from the scorecard allowlist only. Strike HARD BAN / NOT-a-review-slot
           / session **unavailable** set first — before cost ranking.
        b. Keep models that clear the bar (Reason + Code).
-       c. Drop models whose family collides with author-family or an already-chosen
-          slot family, **unless** that would leave the candidate set empty — then
-          allow collision and mark `diversity-compromised`.
-       d. Rank remaining by **Cost ASC**, then **Speed DESC**.
+       c. Drop the exact author profile when another suitable profile clears the
+          bar. For security/contested work, prefer a non-OpenAI lineage for one
+          slot; if unavailable, mark `lineage-diversity-compromised`.
+       d. Apply lens affinity: `correctness` / code-heavy `security` prefers Terra;
+          `spec` / architecture prefers Sol; skim and independent challenge prefer
+          cheap Grok. Then rank suitable models by **Cost ASC**, then **Speed DESC**.
        e. Pick the first. Apply **security override** / **large-context force** if
           this slot is the designated special slot (overrides may only pick another
           allowlisted clearer — never a ban).
        f. Pre-flight: exact `-m` string is allowlisted and not banned. If not, abort
           choice and re-pick.
-       g. Variant: class default, unless the chosen model is `openai/gpt-5.5` on a
+       g. Variant: class default, unless the chosen model is Grok on a
           pure `skim` / `batch-item` (may use `medium` — it is strong at medium).
           **NEVER `xhigh`.**
     5. **Do not ask the user which model to use.** Log the card; dispatch.
@@ -233,28 +231,27 @@
 
     - **Small feature PR, unknown author, ~200 LOC, tests present**  
       class=`standard`, slots=2, bar R≥8 C≥8.  
-      Slot1 correctness → candidates include gpt-5.5 (C3), sonnet-4-6 (C6), … →
-      **openai/gpt-5.5**.  
-      Slot2 spec, different family → **hhdev-anthropic/claude-sonnet-4-6**.  
+      Slot1 correctness → **openai/gpt-5.6-terra**.
+      Slot2 spec → **openai/gpt-5.6-sol**. Their profiles differ, while the
+      routing card records that both share OpenAI lineage.
       variant=high both.
 
     - **Docs-only README**  
-      class=`skim`, 1 slot, bar R≥7 C≥7 → **openai/gpt-5.4** (cheapest clearer;
-      gpt-5.4-fast also clears — pick higher Speed on Cost tie → gpt-5.4-fast if
-      you treat Cost equal). variant=medium.
+      class=`skim`, 1 slot, bar R≥7 C≥7 → **hhdev-grok/grok-4.5** (cheapest
+      clearer). variant=medium.
 
     - **Auth middleware change**  
       class=`security`, 2 slots. Slot1 correctness → cheapest R≥9 C≥9 =
-      **openai/gpt-5.5**. Slot2 security + security-override →
+      **openai/gpt-5.6-terra**. Slot2 security + security-override →
       **hhdev-anthropic/claude-opus-4-8** (not sonnet). variant=high.
 
     - **80-file generated + hand edits**  
-      class=`large-context`, 3 slots. A: gpt-5.5 correctness; B: sonnet-4-6 spec;
+      class=`large-context`, 3 slots. A: Terra correctness; B: Sol spec;
       C: **gemini-3.1-pro-preview** standards/large-surface. Brief carries file
       list + hotspots only; reviewers fetch full diff via git.
 
     - **Author was claude-sonnet (handoff)**  
-      Prefer first slot **openai/gpt-5.5**, second **gemini** or another non-anthropic
+      Prefer first slot **openai/gpt-5.6-terra**, second **openai/gpt-5.6-sol** or another non-anthropic
       clearer before a second anthropic.
 
     ## PR classification (how to decide)
@@ -287,8 +284,8 @@
        git diff origin/<base>...origin/<head>
        ```
        Fallback: `tea pulls <N> --fields diff` when refs missing.
-    5. Infer **author-family** if possible (handoff model field, "Generated with …",
-       user hint). Else `unknown`.
+    5. Infer **author profile and lineage** if possible (handoff model field,
+       "Generated with …", user hint). Else `unknown`.
     6. Hotspots: pick 3–8 paths that matter (core logic, API surface, config,
        migrations, tests). Ignore pure lockfile noise in hotspot list.
 
@@ -305,7 +302,7 @@
     ## PR brief
     - Repo: <slug>  |  PR: #<N>  |  URL: <url>
     - Title: …
-    - Author: … (author-family: <family|unknown>)
+    - Author: … (author-profile/lineage: <profile and lineage|unknown>)
     - Base...Head: <base> ... <head>
     - Labels: …
     - CI: <green|red|pending> — failing: …
@@ -402,10 +399,11 @@
        `dismissed: …` (never silent drop).
     4. **Disagreement on P0/P1:** either decide with your own evidence, or open a
        `contested` tie-break slot:
-       - bar R≥9 C≥9, family different from both prior reviewers if possible
+       - bar R≥9 C≥9, profile different from both prior reviewers and lineage
+         different when possible
        - prompt includes both arguments + the brief
-       - pick cheapest clearer (often gpt-5.5 or opus-4-8 if both anthropic/openai
-         already used → gemini or the free side)
+       - pick the cheapest role-suitable clearer; prefer an unused lineage for
+         a genuine independent tie-break
     5. **Orchestrator synthesis** (you write this — do not delegate):
 
        ```
@@ -432,7 +430,7 @@
        - …
 
        ## Cost note
-       models used; any diversity-compromised / override flags
+       models used; any profile/lineage-diversity-compromised or override flags
        ```
 
     6. **Stop.** Ask: implement here, hand to `delegate` / `workon`, post as PR
@@ -474,30 +472,33 @@
     ### Step B — re-route (still allowlist-only)
 
     Rebuild the candidate list: allowlisted ∩ clears bar ∩ not banned ∩ not in
-    unavailable set ∩ family diversity. Then Cost ASC, Speed DESC as usual.
+    unavailable set ∩ profile/lineage rules. Then apply lens affinity followed
+    by Cost ASC, Speed DESC as usual.
 
     **Concrete degradation ladders** (stop at first that still has a clearer):
 
     1. **`hhdev-quota` (work tokens exhausted)**  
        - Drop all `hhdev-anthropic/*`, `hhdev-google/*`, `hhdev-grok/*`,
          `hhdev-openai/*` from the pool.  
-       - Keep personal-sub `openai/gpt-5.5`, `openai/gpt-5.5-fast`, and for skim
-         only `openai/gpt-5.4` / `gpt-5.4-fast`.  
-       - Slot plan: prefer **2× openai only if diversity is already compromised** —
-         better: **1× `openai/gpt-5.5`** + **orchestrator self-cover** on the
-         second lens (you read the diff and write that lens yourself).  
+       - Keep personal-sub `openai/gpt-5.6-sol` and
+         `openai/gpt-5.6-terra`.
+       - Slot plan: Terra covers correctness and Sol covers spec/reasoning.
+         Record `lineage-diversity-compromised`; self-cover an independent lens
+         when the class requires a genuinely different lineage.
        - Do **not** pull haiku, gpt-4.1, deepseek, or GLM into a review slot to
          "replace" anthropic.
 
     2. **`openai-quota` (personal sub exhausted)**  
        - Drop `openai/*`.  
-       - Use `hhdev-anthropic/claude-sonnet-4-6`, `hhdev-google/gemini-3.1-pro-preview`,
-         `hhdev-anthropic/claude-opus-4-8` (security), still by bar + cost.  
+       - Use cheap `hhdev-grok/grok-4.5` first when it clears the bar, then
+         `hhdev-anthropic/claude-sonnet-4-6`, `hhdev-google/gemini-3.1-pro-preview`,
+         or `hhdev-anthropic/claude-opus-4-8` (security), still by role + bar + cost.
        - If only one hhdev clearer remains: one reviewer + self-cover.
 
     3. **`fwdproxy-down`**  
-       - Map intended `openai/gpt-5.5` → `hhdev-openai/gpt-5.5` (same capability,
-         Cost 7).  
+       - There is no exact Sol/Terra gateway mirror. Map either intended lane to
+         legacy `hhdev-openai/gpt-5.5` only when it clears the bar (Cost 7), and
+         state that profile specialization was lost.
        - Pair with `hhdev-anthropic/claude-sonnet-4-6` or gemini for diversity.  
        - If `hhdev-openai` also fails → treat as `openai-quota` ladder without
          personal openai.
@@ -514,7 +515,8 @@
        - Add only that ID to unavailable; pick next ranked clearer on the same
          slot. Example: opus-4-8 429 → sonnet-4-6 if bar still clears for that
          class; if security bar needs R≥9 C≥9 and sonnet is R8 → use
-         `openai/gpt-5.5` or fable-5 / self-cover — **not** haiku.
+         `openai/gpt-5.6-sol`, `openai/gpt-5.6-terra`, fable-5, or self-cover —
+         **not** haiku.
 
     6. **`garbage` / `hang`**  
        - One retry (same session for garbage; new dispatch for hang) on **same**
