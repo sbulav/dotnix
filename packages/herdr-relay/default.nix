@@ -16,6 +16,7 @@ python3Packages.buildPythonApplication {
   patches = [
     ./broadcast-empty-agent-list.patch
     ./native-session-lifecycle.patch
+    ./structured-output-from-transcript.patch
   ];
 
   propagatedBuildInputs = with python3Packages; [
