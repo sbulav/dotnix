@@ -14,6 +14,10 @@ let
       id = "dotnix";
       label = "dotnix";
       cwd = "/Users/sab/dotnix";
+      extraHosts.mz = {
+        target = "mz";
+        cwd = "/home/sab/dotnix";
+      };
     }
     {
       id = "herdr-mobile";
@@ -103,9 +107,12 @@ with lib.custom;
             label = "${repository.label} · ${harness.label}";
             repository = repository.id;
             inherit (harness) agent model;
-            hosts.mba13 = mobileHost // {
-              inherit (repository) cwd;
-            };
+            hosts = {
+              mba13 = mobileHost // {
+                inherit (repository) cwd;
+              };
+            }
+            // (repository.extraHosts or { });
           }) launchHarnesses
         ) launchRepositories;
       };
