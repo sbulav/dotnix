@@ -92,6 +92,7 @@ with lib.custom;
         # which freezes WebSocket broadcasts and makes agents "disappear".
         remotes = [
           "192.168.92.136" # mba13 (current DHCP)
+          "mz" # resolves to 192.168.89.200 via home-lab split DNS; stable across DHCP
         ];
         # The relay keeps a flat allowlist; the mobile app presents these as
         # independent Repository → Harness → Model → Host selectors.
