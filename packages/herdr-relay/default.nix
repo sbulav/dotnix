@@ -8,16 +8,10 @@
 }:
 python3Packages.buildPythonApplication {
   pname = "herdr-relay";
-  version = "0.5.0";
+  version = "0.5.0-unstable-2026-07-13";
 
   src = inputs.herdr-remote;
   format = "other";
-
-  patches = [
-    ./broadcast-empty-agent-list.patch
-    ./native-session-lifecycle.patch
-    ./structured-output-from-transcript.patch
-  ];
 
   propagatedBuildInputs = with python3Packages; [
     websockets
@@ -34,8 +28,8 @@ python3Packages.buildPythonApplication {
 
   meta = {
     description = "Relay server for monitoring and controlling herdr agents remotely";
-    homepage = "https://github.com/dcolinmorgan/herdr-remote";
-    license = lib.licenses.agpl3Only;
+    homepage = "https://github.com/sbulav/herdr-remote";
+    license = lib.licenses.agpl3Plus;
     mainProgram = "herdr-relay";
   };
 }
