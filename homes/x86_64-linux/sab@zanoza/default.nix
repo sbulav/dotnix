@@ -90,6 +90,8 @@ with lib.custom;
         enableTokenAuth = false;
         # Dedicated token-authenticated relay for the native Android app.
         enableMobileRelay = true;
+        powerHostId = "mz";
+        powerHostMac = "34:5a:60:ba:8e:20";
         autoStart = true;
         # Only live SSH targets. Dead remotes block herdr-relay's asyncio loop
         # (synchronous ssh with ConnectTimeout=5) for tens of seconds per poll,

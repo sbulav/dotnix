@@ -88,6 +88,8 @@ in
       }
     )) [ ] "Server-owned presets available to native mobile clients.";
     herdrBin = mkOpt types.str "herdr" "Herdr command to run locally and on SSH remotes.";
+    powerHostId = mkOpt types.str "" "Single host allowed for native mobile power controls.";
+    powerHostMac = mkOpt types.str "" "MAC address used to wake the allowed power host.";
     defaultRelayUrl =
       mkOpt types.str "wss://herdr-relay.sbulav.ru"
         "Default WebSocket relay URL embedded in the web app.";
@@ -144,10 +146,13 @@ in
             "HERDR_RELAY_PORT=${toString cfg.mobileRelayPort}"
             "HERDR_REMOTES=${concatStringsSep "," cfg.remotes}"
             "HERDR_PRESETS_FILE=${mobilePresets}"
+            "HERDR_POWER_HOST_ID=${cfg.powerHostId}"
+            "HERDR_POWER_HOST_MAC=${cfg.powerHostMac}"
             "PATH=${
               makeBinPath [
                 herdrPackage
                 pkgs.openssh
+                pkgs.wakeonlan
               ]
             }"
           ];
