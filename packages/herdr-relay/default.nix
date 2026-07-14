@@ -8,7 +8,7 @@
 }:
 python3Packages.buildPythonApplication {
   pname = "herdr-relay";
-  version = "0.5.0-unstable-2026-07-14.392f92a";
+  version = "0.5.0-unstable-2026-07-14.3e65a04";
 
   src = inputs.herdr-remote;
   format = "other";
