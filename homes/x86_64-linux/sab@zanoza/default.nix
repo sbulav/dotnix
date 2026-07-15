@@ -7,7 +7,7 @@
 }:
 let
   mobileHost = {
-    target = "192.168.92.136";
+    target = "192.168.92.143";
   };
   launchRepositories = [
     {
