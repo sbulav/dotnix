@@ -211,12 +211,6 @@ in
     SUBSYSTEM=="usb", ATTR{idVendor}=="0416", ATTR{idProduct}=="7395", MODE="0666", GROUP="users"
   '';
 
-  # Authorize zanoza's herdr-relay key so the relay can poll herdr on mz over
-  # SSH non-interactively (BatchMode, no agent → uses zanoza:~/.ssh/id_ed25519).
-  users.users.sab.openssh.authorizedKeys.keys = [
-    "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPhz1eq3urXjH/zUC4xdcwurGlpVml0fcisxJwx25aRE sab@zanoza"
-  ];
-
   # ======================== DO NOT CHANGE THIS ========================
   system.stateVersion = "25.11";
   # ======================== DO NOT CHANGE THIS ========================

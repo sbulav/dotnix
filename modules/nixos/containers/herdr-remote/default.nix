@@ -1,15 +1,4 @@
-# Route-only module (no container): exposes the herdr-remote web app and relay
-# running on zanoza through Traefik at herdr.sbulav.ru / herdr-relay.sbulav.ru.
-#
-# Auth: Authelia only (auth-chain middleware). The relay's own token auth is
-# disabled on zanoza — Authelia's session cookie is scoped to the whole
-# sbulav.ru domain, so the browser sends it on the WebSocket handshake to
-# the relay subdomain after logging in on the web app. Consequently the
-# hosted PWA (herdr-remote.pages.dev) can NOT be used (cross-site cookies);
-# use the self-hosted web app.
-#
-# LAN caveat: this protects only the Traefik front door. The origin ports
-# on zanoza (8080/8375) remain reachable directly on the LAN without auth.
+# Same-origin route from Traefik to the loopback Herdr Remote browser service.
 {
   config,
   lib,
@@ -23,46 +12,39 @@ let
 in
 {
   options.${namespace}.containers.herdr-remote = with types; {
-    enable = mkBoolOpt false "Enable Traefik routes to herdr-remote on zanoza.";
-    host = mkOpt str "herdr.sbulav.ru" "The host to serve the herdr-remote web app on";
-    relayHost =
-      mkOpt str "herdr-relay.sbulav.ru"
-        "The host to serve the herdr-remote relay (WebSocket) on";
-    webUrl = mkOpt str "http://127.0.0.1:8080" "Backend URL of the herdr-remote web app";
-    relayUrl = mkOpt str "http://127.0.0.1:8375" "Backend URL of the herdr-remote relay";
-    mobileRelayUrl =
-      mkOpt str "http://127.0.0.1:8377"
-        "Backend URL of the token-authenticated native mobile relay";
+    enable = mkBoolOpt false "Enable the authenticated Herdr Remote route on zanoza.";
+    host = mkOpt str "herdr.sbulav.ru" "Host serving the Herdr Remote PWA and browser API";
+    backendUrl = mkOpt str "http://127.0.0.1:8080" "Loopback URL of the Herdr Remote browser service";
   };
 
   imports = [
     (import ../shared/shared-traefik-route.nix {
-      app = "herdr-web";
+      app = "herdr-remote";
       host = cfg.host;
-      url = cfg.webUrl;
-      route_enabled = cfg.enable;
-    })
-    (import ../shared/shared-traefik-bypass-route.nix {
-      app = "herdr-relay-mobile";
-      host = cfg.relayHost;
-      url = cfg.mobileRelayUrl;
-      middleware = [ "secure-headers" ];
-      pathregexp = "^/native/ws$";
-      route_enabled = cfg.enable;
-    })
-    (import ../shared/shared-traefik-route.nix {
-      app = "herdr-relay";
-      host = cfg.relayHost;
-      url = cfg.relayUrl;
+      url = cfg.backendUrl;
+      middleware = [
+        "auth-chain"
+        "herdr-oidc-identity"
+      ];
       route_enabled = cfg.enable;
     })
     (import ../shared/shared-adguard-dns-rewrite.nix {
       host = cfg.host;
-      rewrite_enabled = cfg.enable;
-    })
-    (import ../shared/shared-adguard-dns-rewrite.nix {
-      host = cfg.relayHost;
       rewrite_enabled = cfg.enable;
     })
   ];
+
+  config = mkIf (cfg.enable && config.${namespace}.containers.traefik.enable) {
+    # This middleware runs after auth-chain. customRequestHeaders replaces any
+    # client-supplied values, so spoofed identity headers cannot reach Herdr.
+    containers.traefik.config.services.traefik.dynamicConfigOptions.http.middlewares.herdr-oidc-identity =
+      {
+        headers.customRequestHeaders = {
+          X-OIDC-Issuer = "https://authelia.sbulav.ru";
+          X-OIDC-Audience = "herdr-remote";
+          X-OIDC-Subject = "sab";
+          X-OIDC-Assurance = "two_factor";
+        };
+      };
+  };
 }

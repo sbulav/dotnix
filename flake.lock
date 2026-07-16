@@ -296,37 +296,62 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1783464789,
-        "narHash": "sha256-Q2yvMs/N6oAF8xnRIrMxEOOV6Aj8aAXQzuvcaux2enA=",
-        "owner": "ogulcancelik",
+        "lastModified": 1784119137,
+        "narHash": "sha256-EyxkT9iURWDndFCbqpaKAo0aF2kgPeqcsa7e5wJ4rmE=",
+        "owner": "sbulav",
         "repo": "herdr",
-        "rev": "299dd4163a96381ec2d8e5bde13d7ba6d6432373",
+        "rev": "f1df299cea0b29602e1f75243e1c770277458b30",
         "type": "github"
       },
       "original": {
-        "owner": "ogulcancelik",
-        "ref": "v0.7.3",
+        "owner": "sbulav",
+        "ref": "checked-input-v1",
         "repo": "herdr",
         "type": "github"
       }
     },
     "herdr-remote": {
-      "flake": false,
+      "inputs": {
+        "home-manager": "home-manager",
+        "nixpkgs": "nixpkgs_2"
+      },
       "locked": {
-        "lastModified": 1784051034,
-        "narHash": "sha256-izrG1MHsznZ6aYBsWPJ79mFknMnOyV5SRwvPs+hmTEM=",
+        "lastModified": 1784181104,
+        "narHash": "sha256-IIb8G8OhSMZFB2m3W602wK4IgynFqLpxnmqTogUatrg=",
         "owner": "sbulav",
         "repo": "herdr-remote",
-        "rev": "972a7b4e635a9f082606bac6ae730ff844cf8563",
+        "rev": "0760ea3d7683385cdc08e71e91a1a6e52030b44f",
         "type": "github"
       },
       "original": {
         "owner": "sbulav",
+        "ref": "enterprise-v1",
         "repo": "herdr-remote",
         "type": "github"
       }
     },
     "home-manager": {
+      "inputs": {
+        "nixpkgs": [
+          "herdr-remote",
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1783963347,
+        "narHash": "sha256-r376E2XpakiXwModDHIxlvB6qLq4iFVEq730vxOO4JY=",
+        "owner": "nix-community",
+        "repo": "home-manager",
+        "rev": "a45a7c451455a51ae740ec3bce4024b312809c29",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-community",
+        "repo": "home-manager",
+        "type": "github"
+      }
+    },
+    "home-manager_2": {
       "inputs": {
         "nixpkgs": [
           "nixpkgs"
@@ -422,6 +447,22 @@
     },
     "nixpkgs_2": {
       "locked": {
+        "lastModified": 1784007870,
+        "narHash": "sha256-djcLt/JJphyNt4eDY9XTly+/WbCK5lqWq9lSgCmJkkQ=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "18b9261cb3294b6d2a06d03f96872827b8fe2698",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_3": {
+      "locked": {
         "lastModified": 1783148766,
         "narHash": "sha256-uslt2pqShTIXDdAHRHv2QkYLsVdY8Oqwz0EA48/RSM8=",
         "owner": "nixos",
@@ -436,7 +477,7 @@
         "type": "github"
       }
     },
-    "nixpkgs_3": {
+    "nixpkgs_4": {
       "locked": {
         "lastModified": 1780930886,
         "narHash": "sha256-rppURzHviaQN131F+nLiLdGfcb0uCd9gGP0E5+iw9MI=",
@@ -459,8 +500,8 @@
         "determinate": "determinate",
         "herdr": "herdr",
         "herdr-remote": "herdr-remote",
-        "home-manager": "home-manager",
-        "nixpkgs": "nixpkgs_2",
+        "home-manager": "home-manager_2",
+        "nixpkgs": "nixpkgs_3",
         "snowfall-lib": "snowfall-lib",
         "sops-nix": "sops-nix",
         "unstable": "unstable",
@@ -650,7 +691,7 @@
       "inputs": {
         "crane": "crane",
         "flake-utils": "flake-utils_3",
-        "nixpkgs": "nixpkgs_3"
+        "nixpkgs": "nixpkgs_4"
       },
       "locked": {
         "lastModified": 1781518817,

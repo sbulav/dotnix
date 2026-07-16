@@ -52,15 +52,10 @@
     # Herdr: terminal multiplexer for AI coding agents.
     # Intentionally NOT following our nixpkgs: herdr needs zig_0_15
     # (absent from nixos-26.05) so it uses its own nixos-unstable lock.
-    herdr.url = "github:ogulcancelik/herdr/v0.7.3";
+    herdr.url = "github:sbulav/herdr/checked-input-v1";
 
-    # Herdr-remote fork: relay + web app with native session lifecycle and
-    # structured Claude Code/OpenCode output. Plain source repo (not a flake);
-    # packaged in packages/herdr-relay and served by the home module.
-    herdr-remote = {
-      url = "github:sbulav/herdr-remote";
-      flake = false;
-    };
+    # Herdr Remote enterprise control plane, PWA, and outbound connector.
+    herdr-remote.url = "github:sbulav/herdr-remote/enterprise-v1";
 
     # Sops (Secrets)
     sops-nix = {
@@ -132,6 +127,7 @@
           nixos = with inputs; [
             sops-nix.nixosModules.sops
             determinate.nixosModules.default
+            herdr-remote.nixosModules.controlplane
           ];
         };
       };

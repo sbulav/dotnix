@@ -163,6 +163,11 @@ in
                   default_policy = "two_factor";
                   rules = [
                     {
+                      domain = "herdr.sbulav.ru";
+                      subject = [ "user:sab" ];
+                      policy = "two_factor";
+                    }
+                    {
                       domain = "*.${cfg.domain}";
                       # policy = "one_factor";
                       policy = "two_factor";
