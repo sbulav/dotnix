@@ -268,7 +268,7 @@ in
   services.herdr-controlplane = {
     enable = true;
     origin = "https://herdr.sbulav.ru";
-    upstreamLogoutUrl = "https://authelia.sbulav.ru/logout?rd=https%3A%2F%2Fherdr.sbulav.ru";
+    upstreamLogoutUrl = "https://authelia.sbulav.ru/logout?rd=https://herdr.sbulav.ru";
     browserListen = "127.0.0.1:8080";
     connectorListen = ":8443";
     trustedProxyCIDRs = [ "127.0.0.1/32" ];
