@@ -10,6 +10,39 @@ let
   wallpapers = inputs.wallpapers-nix.packages.${pkgs.stdenv.hostPlatform.system}.full;
 in
 {
+  imports = [ inputs.herdr-remote.homeManagerModules.connector ];
+
+  sops.secrets = {
+    herdr_connector_client_cert = {
+      sopsFile = lib.snowfall.fs.get-file "secrets/sab/herdr-mz.yaml";
+      key = "connector_client_cert";
+      mode = "0400";
+    };
+    herdr_connector_client_key = {
+      sopsFile = lib.snowfall.fs.get-file "secrets/sab/herdr-mz.yaml";
+      key = "connector_client_key";
+      mode = "0400";
+    };
+    herdr_connector_server_ca = {
+      sopsFile = lib.snowfall.fs.get-file "secrets/sab/herdr-mz.yaml";
+      key = "connector_server_ca";
+      mode = "0400";
+    };
+  };
+
+  services.herdr-connector = {
+    enable = true;
+    controlPlaneUrl = "wss://herdr.sbulav.ru:8443/v1/connectors/ws";
+    rotateUrl = "https://herdr.sbulav.ru:8443/v1/connectors/rotate";
+    hostId = "019f69b6-b44c-7c97-9fb0-702205c63190";
+    displayName = "mz";
+    credentials = {
+      initialCertFile = config.sops.secrets.herdr_connector_client_cert.path;
+      keyFile = config.sops.secrets.herdr_connector_client_key.path;
+      serverCaFile = config.sops.secrets.herdr_connector_server_ca.path;
+    };
+  };
+
   custom = {
     user = {
       enable = true;
