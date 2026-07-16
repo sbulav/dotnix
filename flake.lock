@@ -296,11 +296,11 @@
         "nixpkgs": "nixpkgs"
       },
       "locked": {
-        "lastModified": 1784119137,
-        "narHash": "sha256-EyxkT9iURWDndFCbqpaKAo0aF2kgPeqcsa7e5wJ4rmE=",
+        "lastModified": 1784196802,
+        "narHash": "sha256-/7cUvTJXn9xufGdO7/qiA6sWuMCEmOEcZP66GamoDS0=",
         "owner": "sbulav",
         "repo": "herdr",
-        "rev": "f1df299cea0b29602e1f75243e1c770277458b30",
+        "rev": "4bb797fb4e3a1512a7b4abd268ab9a50c46cc639",
         "type": "github"
       },
       "original": {
@@ -316,11 +316,11 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1784188574,
-        "narHash": "sha256-BlrNuAAf6+LFH7RI548fcya87nXg3wjO0oxkBC+u54c=",
+        "lastModified": 1784193541,
+        "narHash": "sha256-575LC2xEdbCFNxGqm2ArsCo4e5J4nzsJ3L+kjFaHaLQ=",
         "owner": "sbulav",
         "repo": "herdr-remote",
-        "rev": "6664e6dcc3ff76dc6517dce92c93a0da5e488ca6",
+        "rev": "98d567e140bbd6dc5da245415c903ee0f3a54f40",
         "type": "github"
       },
       "original": {
