@@ -316,11 +316,11 @@
         "nixpkgs": "nixpkgs_2"
       },
       "locked": {
-        "lastModified": 1784193541,
-        "narHash": "sha256-575LC2xEdbCFNxGqm2ArsCo4e5J4nzsJ3L+kjFaHaLQ=",
+        "lastModified": 1784199074,
+        "narHash": "sha256-Ib+MyWBfRP2tD/5vdX1gUJ+Bzoo16wGICM87AYunca4=",
         "owner": "sbulav",
         "repo": "herdr-remote",
-        "rev": "98d567e140bbd6dc5da245415c903ee0f3a54f40",
+        "rev": "24f0d430576e01f38adf66a6b821ce89885b8f40",
         "type": "github"
       },
       "original": {
