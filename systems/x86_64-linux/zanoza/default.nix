@@ -218,6 +218,29 @@ in
     }; # }}}
   };
 
+  # Transparent proxy gateway for the Android TV (YouTube unblock):
+  # the MikroTik policy-routes traffic from the TV here; TCP 80/443 is
+  # redirected via redsocks into the v2rayA SOCKS5 (VLESS outbound).
+  # Scoped by sourceIps so no other LAN host or local service is affected.
+  custom.services.linuxTransparentProxy = {
+    enable = true;
+    mode = "redirect";
+    interface = "enp3s0";
+    # v2rayA container IP directly: host-side forwardPorts DNAT does not
+    # apply to locally-originated connections from redsocks.
+    v2rayAHost = "172.16.64.108";
+    v2rayAPort = 20170;
+    # 12345 (module default) is taken by Grafana Alloy's HTTP listener
+    listenPort = 12346;
+    tcpPorts = [
+      80
+      443
+    ];
+    sourceIps = [
+      "192.168.89.248" # phillips 58pus (Android TV)
+    ];
+  };
+
   services.prometheus.scrapeConfigs = [
     {
       job_name = "beez";
