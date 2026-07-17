@@ -1,2 +1,6 @@
 # Claude Code machine-local settings — generated/edited at runtime, never commit
 **/.claude/settings.local.json
+
+# nix build output symlinks
+result
+result-*
