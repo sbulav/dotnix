@@ -9,6 +9,82 @@
 let
   system = "x86_64-linux";
   hostName = "zanoza";
+  tvProxyAssets = pkgs.symlinkJoin {
+    name = "tv-proxy-xray-assets";
+    paths = [
+      pkgs.v2ray-geoip
+      pkgs.v2ray-domain-list-community
+    ];
+  };
+  tvProxyRouterConfig = pkgs.writeText "tv-proxy-router.json" (
+    builtins.toJSON {
+      log.loglevel = "warning";
+      inbounds = [
+        {
+          tag = "tv";
+          listen = "127.0.0.1";
+          port = 20169;
+          protocol = "socks";
+          settings.udp = false;
+          sniffing = {
+            enabled = true;
+            destOverride = [
+              "http"
+              "tls"
+            ];
+            routeOnly = false;
+          };
+        }
+      ];
+      outbounds = [
+        {
+          tag = "proxy";
+          protocol = "socks";
+          settings.servers = [
+            {
+              address = "172.16.64.108";
+              port = 20170;
+            }
+          ];
+        }
+        {
+          tag = "direct";
+          protocol = "freedom";
+        }
+      ];
+      routing = {
+        domainStrategy = "IPIfNonMatch";
+        rules = [
+          {
+            type = "field";
+            outboundTag = "direct";
+            domain = [
+              "domain:sbulav.ru"
+              "domain:pyn.ru"
+              "domain:hhdev.ru"
+              "geosite:category-ru"
+              "regexp:\\.ru$"
+              "regexp:\\.su$"
+              "regexp:\\.xn--p1ai$"
+            ];
+          }
+          {
+            type = "field";
+            outboundTag = "direct";
+            ip = [
+              "geoip:private"
+              "geoip:ru"
+            ];
+          }
+          {
+            type = "field";
+            outboundTag = "proxy";
+            network = "tcp";
+          }
+        ];
+      };
+    }
+  );
 in
 {
   imports = [
@@ -226,10 +302,10 @@ in
     enable = true;
     mode = "redirect";
     interface = "enp3s0";
-    # v2rayA container IP directly: host-side forwardPorts DNAT does not
-    # apply to locally-originated connections from redsocks.
-    v2rayAHost = "172.16.64.108";
-    v2rayAPort = 20170;
+    # A local Xray router keeps Russian services direct and sends all other
+    # traffic through v2rayA while preserving redsocks' SOCKS5 transport.
+    v2rayAHost = "127.0.0.1";
+    v2rayAPort = 20169;
     # 12345 (module default) is taken by Grafana Alloy's HTTP listener
     listenPort = 12346;
     tcpPorts = [
@@ -239,6 +315,30 @@ in
     sourceIps = [
       "192.168.89.248" # phillips 58pus (Android TV)
     ];
+  };
+
+  systemd.services = {
+    tv-proxy-router = {
+      description = "Route TV traffic between direct and v2rayA outbounds";
+      wantedBy = [ "multi-user.target" ];
+      after = [ "container@v2raya.service" ];
+      requires = [ "container@v2raya.service" ];
+      serviceConfig = {
+        ExecStart = "${lib.getExe pkgs.xray} run -c ${tvProxyRouterConfig}";
+        Restart = "on-failure";
+        RestartSec = "2s";
+        DynamicUser = true;
+        NoNewPrivileges = true;
+        ProtectSystem = "strict";
+        ProtectHome = true;
+        PrivateTmp = true;
+      };
+      environment.XRAY_LOCATION_ASSET = "${tvProxyAssets}/share/v2ray";
+    };
+    redsocks = {
+      after = [ "tv-proxy-router.service" ];
+      requires = [ "tv-proxy-router.service" ];
+    };
   };
 
   services.prometheus.scrapeConfigs = [
