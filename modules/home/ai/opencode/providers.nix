@@ -10,6 +10,12 @@
       "gpt-5.5" = {
         name = "ChatGPT 5.5";
       };
+      "gpt-5.6-sol" = {
+        name = "ChatGPT 5.6 Sol";
+      };
+      "gpt-5.6-terra" = {
+        name = "ChatGPT 5.6 Terra";
+      };
       "gpt-5-mini" = {
         name = "ChatGPT 5 Mini";
         options = {
