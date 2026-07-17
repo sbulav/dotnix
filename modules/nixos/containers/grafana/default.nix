@@ -289,6 +289,17 @@ in
                     };
                     orgId = 1;
                   };
+                  v2rayaTraffic =
+                    if config.${namespace}.containers.v2raya.enable then
+                      [
+                        {
+                          name = "v2rayA traffic";
+                          options.path = ./dashboards/v2raya-traffic.json;
+                          orgId = 1;
+                        }
+                      ]
+                    else
+                      [ ];
                   logs =
                     if config.${namespace}.containers.loki.enable then
                       [
@@ -359,6 +370,7 @@ in
                   smartctlExporter
                   zfsStats
                 ]
+                ++ v2rayaTraffic
                 ++ logs
                 ++ authelia
                 ++ traefik
