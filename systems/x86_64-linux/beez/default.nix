@@ -69,6 +69,48 @@ in
     };
   };
 
+  custom.services.zanoza-external-monitoring = {
+    enable = true;
+    tcpTargets = [
+      {
+        name = "host_ssh";
+        address = "192.168.89.207";
+        port = 22;
+      }
+    ];
+    httpTargets = [
+      {
+        name = "reverse_proxy";
+        url = "https://traefik.sbulav.ru";
+      }
+      {
+        name = "homepage";
+        url = "https://home.sbulav.ru";
+      }
+      {
+        name = "jellyfin";
+        url = "https://jellyfin.sbulav.ru";
+      }
+      {
+        name = "immich";
+        url = "https://immich.sbulav.ru";
+      }
+      {
+        name = "opencloud";
+        url = "https://opencloud.sbulav.ru";
+      }
+    ];
+    dns = {
+      server = "172.16.64.104";
+      name = "home.sbulav.ru";
+      expectedAddress = "192.168.89.207";
+    };
+    backup = {
+      repositoryPath = "/mnt/ext/backup_zanoza";
+      staleAfterSeconds = 36 * 60 * 60;
+    };
+  };
+
   # custom.services.linuxTransparentProxy = {
   #   enable = false;
   #   v2rayAHost = "192.168.89.207";
