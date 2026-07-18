@@ -5,12 +5,21 @@ Automated daily builds of NixOS configurations with binary cache serving via `ni
 ## Overview
 
 This module enables a NixOS system to:
+
 1. Clone your flake repository from GitHub daily
-2. Update flake inputs to get the latest packages
-3. Build NixOS configurations for all specified hosts
-4. Sign and cache the built derivations
+2. Update flake inputs in a disposable working tree (no commit or push)
+3. Attempt every specified NixOS host, even when another host fails
+4. Sign successful closures and atomically publish their result links
 5. Serve them via a binary cache server (nix-serve-ng)
-6. Restrict access to LAN only (192.168.0.0/16)
+6. Report the source revision, input fingerprint, host timings, and final status
+
+The speculative lock is discarded by the next repository sync. Updating or
+switching any host remains a separate manual decision. A failed build or signing
+step leaves that host's previously published result link intact.
+
+The builder does not archive the flake's entire input graph. Only the requested
+Linux configurations determine which build artifacts are cached, so unrelated
+Darwin artifacts cannot block the build phase.
 
 ## Architecture
 
@@ -30,7 +39,8 @@ Daily at 02:00 AM:
   └───────────────┬─────────────────────┘
                   ▼
   ┌─────────────────────────────────────┐
-  │  4. Sign & cache results           │
+  │  4. Sign successful closures       │
+  │     Publish result links atomically│
   │     (/var/cache/nix-builds)        │
   └───────────────┬─────────────────────┘
                   ▼
@@ -187,6 +197,11 @@ sudo systemctl start nix-cache-builder.service
 sudo journalctl -fu nix-cache-builder.service
 ```
 
+The service reports `SUCCESS`, `PARTIAL`, or `FAILED`. A partial run retains and
+serves all successful results. An all-host failure exits non-zero; the service
+does not automatically repeat the expensive batch, and the next timer run tries
+again.
+
 Verify build results:
 ```bash
 ls -lh /var/cache/nix-builds/
@@ -265,13 +280,13 @@ custom.services.nix-cache-builder = {
   flakePath = "/var/lib/nix-cache-builder/flake";   # Where to clone repo
   flakeRepo = "git@github.com:sbulav/dotnix.git";   # GitHub repo URL
   flakeBranch = "main";                              # Branch to track
+  flakeRef = "git+file:///var/lib/nix-cache-builder/flake";
   
-  updateFlake = true;                                # Run nix flake update daily
+  updateFlake = true;                                # Use a disposable updated lock
   
   hosts = [ "nz" "zanoza" "mz" "beez" ];            # Hosts to build
   
-  buildSchedule = "daily";                           # When to run
-  buildTime = "02:00";                               # Specific time
+  buildTime = "*-*-* 02:00:00";                      # systemd OnCalendar value
   
   cacheDir = "/var/cache/nix-builds";               # Build output location
   maxCacheSize = 200;                                # Max size in GB (0 = unlimited)
@@ -308,8 +323,9 @@ sudo journalctl -u nix-cache-builder.service --since today
 # Check when next build is scheduled
 systemctl list-timers nix-cache-builder
 
-# Check cache size
-du -sh /var/cache/nix-builds/
+# Check published result links and Nix store free space
+ls -lh /var/cache/nix-builds/*-result
+df -h /nix/store
 ```
 
 ### Manual Operations
@@ -423,7 +439,7 @@ custom.services.nix-cache-builder.keepGenerations = 2;
 
 ### What's Protected
 
-- ✅ **LAN-only access**: Firewall restricts cache to 192.168.0.0/16
+- ✅ **Firewall-managed port**: The configured cache port is opened by NixOS
 - ✅ **SOPS-encrypted keys**: Private key stored securely
 - ✅ **Signed store paths**: All builds are cryptographically signed
 - ✅ **Root-only access**: Services run as root, secrets mode 0400
@@ -435,7 +451,8 @@ custom.services.nix-cache-builder.keepGenerations = 2;
 2. **Rotate keys periodically**: Generate new signing keys every 6-12 months
 3. **Monitor access logs**: Check nix-serve logs for suspicious activity
 4. **Backup keys**: Keep offline backup of signing keys
-5. **Use firewall**: Ensure only LAN can access port 5000
+5. **Restrict at the network edge**: The module opens the cache port; use your
+   router, host rules, or trusted network boundary if LAN-only access is required
 
 ## Advanced Configuration
 
@@ -445,8 +462,7 @@ To build weekly instead of daily:
 
 ```nix
 custom.services.nix-cache-builder = {
-  buildSchedule = "weekly";  # Or use systemd calendar format
-  buildTime = "Sun 02:00";   # Sunday at 2 AM
+  buildTime = "Sun *-*-* 02:00:00";
 };
 ```
 
@@ -498,10 +514,18 @@ A: Not on Linux. Darwin builds require macOS. Use separate darwin builder.
 A: Flake update downloads ~100-500MB. Builds don't use network (except initial nixpkgs download).
 
 **Q: What if GitHub is down?**  
-A: Build will fail that day. Next timer will retry. If clone exists, uses cached copy.
+A: Repository sync fails and the build does not run against a stale checkout. The
+next scheduled run retries, or you can restart the service manually.
 
-**Q: Can I push flake.lock updates back to GitHub?**  
-A: Yes, but requires write access on deploy key. Not recommended for security.
+**Q: Does the builder push flake.lock updates back to GitHub?**
+
+A: No. The candidate lock is deliberately disposable. Update the repository's
+lock manually when you decide to adopt an input set.
+
+**Q: What happens if an input update fails?**
+
+A: The builder restores the committed lock, attempts every host, and reports the
+run as `PARTIAL` if any host succeeds.
 
 **Q: How do I add more hosts?**  
 A: Add to `hosts` list and redeploy. Next build will include them.
