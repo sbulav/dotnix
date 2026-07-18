@@ -42,14 +42,8 @@ let
     chmod -R u+w $out
     substituteInPlace $out/index.html \
       --replace-fail \
-        "const DEFAULT_RELAY = 'wss://your-relay.example.com';" \
-        "const DEFAULT_RELAY = '${cfg.defaultRelayUrl}';" \
-      --replace-fail \
-        "const DEFAULT_TOKEN = 'YOUR_TOKEN_HERE';" \
-        "const DEFAULT_TOKEN = String();" \
-      --replace-fail \
-        "let url = localStorage.getItem('herdr_relay_url');" \
-        "let url = localStorage.getItem('herdr_relay_url') || DEFAULT_RELAY;"
+        "const autoRelayUrl = (location.protocol === 'https:' ? 'wss://' : 'ws://') + location.host;" \
+        "const autoRelayUrl = '${cfg.defaultRelayUrl}';"
   '';
 in
 {

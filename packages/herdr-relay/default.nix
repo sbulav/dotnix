@@ -8,12 +8,14 @@
 }:
 python3Packages.buildPythonApplication {
   pname = "herdr-relay";
-  version = "0.5.0-unstable-2026-07-14.972a7b4";
+  version = "0.6.3-unstable-2026-07-18.d54d8f5";
 
   src = inputs.herdr-remote;
   format = "other";
 
   propagatedBuildInputs = with python3Packages; [
+    py-vapid
+    pywebpush
     websockets
     zeroconf
   ];
