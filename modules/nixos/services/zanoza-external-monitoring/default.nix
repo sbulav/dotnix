@@ -44,15 +44,17 @@ let
 
             response_file=$(mktemp)
             trap 'rm -f "$response_file"' EXIT
+            proxy_args=()
+            ${optionalString (cfg.telegram.proxyUrl != "") ''
+              proxy_args=(--proxy ${escapeShellArg cfg.telegram.proxyUrl})
+            ''}
             if curl --fail-with-body --silent --show-error \
               --connect-timeout 10 \
               --max-time 30 \
               -H 'Content-Type: application/json' \
               -d "$payload" \
               -o "$response_file" \
-              ${optionalString (cfg.telegram.proxyUrl != "") ''
-                --proxy ${escapeShellArg cfg.telegram.proxyUrl} \
-              ''}
+              "''${proxy_args[@]}" \
               "https://api.telegram.org/bot''${TELEGRAM_TOKEN}/sendMessage" \
               && jq -e '.ok == true' "$response_file" >/dev/null; then
               exit 0
