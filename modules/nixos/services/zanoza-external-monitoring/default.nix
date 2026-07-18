@@ -143,7 +143,10 @@ let
           +time=${toString cfg.connectTimeoutSeconds} \
           +tries=1 \
           @${escapeShellArg cfg.dns.server} \
-          ${escapeShellArg cfg.dns.name} A 2>/dev/null | head -n 1)
+          ${escapeShellArg cfg.dns.name} A 2>/dev/null \
+          | grep -E '^[0-9]+(\.[0-9]+){3}$' \
+          | head -n 1 \
+          || true)
 
         if [ -z "$answer" ]; then
           record_result dns_resolution dns 0 \
