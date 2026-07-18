@@ -76,7 +76,7 @@ let
   monitorScript = pkgs.writeShellApplication {
     name = "zanoza-external-monitor";
     runtimeInputs = with pkgs; [
-      bind
+      bind.dnsutils
       coreutils
       curl
       findutils
