@@ -50,6 +50,9 @@ let
               -H 'Content-Type: application/json' \
               -d "$payload" \
               -o "$response_file" \
+              ${optionalString (cfg.telegram.proxyUrl != "") ''
+                --proxy ${escapeShellArg cfg.telegram.proxyUrl} \
+              ''}
               "https://api.telegram.org/bot''${TELEGRAM_TOKEN}/sendMessage" \
               && jq -e '.ok == true' "$response_file" >/dev/null; then
               exit 0
@@ -359,6 +362,7 @@ in
     telegram = {
       enable = mkBoolOpt true "Try Telegram before the email fallback";
       chatId = mkOpt str "681806836" "Telegram chat ID for alerts";
+      proxyUrl = mkOpt str "" "Optional curl proxy URL for Telegram delivery";
     };
 
     email = {

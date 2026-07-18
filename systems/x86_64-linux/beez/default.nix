@@ -109,6 +109,7 @@ in
       repositoryPath = "/mnt/ext/backup_zanoza";
       staleAfterSeconds = 36 * 60 * 60;
     };
+    telegram.proxyUrl = "socks5h://192.168.89.207:20170";
   };
 
   # custom.services.linuxTransparentProxy = {

@@ -19,6 +19,9 @@ to one every 15 minutes.
 Telegram is attempted first. A timeout, HTTP error, invalid Telegram response,
 or missing token falls back to the existing `msmtp` Gmail relay. Both secrets
 remain in `secrets/beez/default.yaml` and are materialized by SOPS.
+`beez` uses zanoza's SOCKS5 listener for Telegram because direct API access is
+blocked; if zanoza or that proxy is unavailable, the email fallback remains
+independent and delivers the alert.
 
 ## Metrics
 
