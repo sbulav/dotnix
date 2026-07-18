@@ -52,6 +52,10 @@ in
 
     keepGenerations = mkOpt int 3 "Number of generations to keep per host";
 
+    remoteBuilderDisableFile =
+      mkOpt (nullOr str) null
+        "When this file exists, force cache builds to run locally without configured remote builders";
+
     # Cache Server
     cacheServer = {
       enable = mkBoolOpt true "Enable nix-serve-ng cache server";
@@ -218,6 +222,16 @@ in
           INPUT_UPDATE_STATUS="disabled"
           SOURCE_REV=$(${pkgs.git}/bin/git rev-parse HEAD)
           SOURCE_SHORT=$(${pkgs.git}/bin/git rev-parse --short=12 HEAD)
+          BUILD_LOCATION_ARGS=()
+
+          ${optionalString (cfg.remoteBuilderDisableFile != null) ''
+            if [ -e "${cfg.remoteBuilderDisableFile}" ]; then
+              BUILD_LOCATION_ARGS+=(--builders "")
+              echo "Remote builders disabled by ${cfg.remoteBuilderDisableFile}; using beez only"
+            else
+              echo "Remote builder configuration: $(${pkgs.nix}/bin/nix config show builders 2>/dev/null || echo unavailable)"
+            fi
+          ''}
 
           # The candidate lock is intentionally disposable. The sync service resets
           # the checkout to the configured remote branch before every run. This
@@ -284,6 +298,7 @@ in
                           "$FLAKE#nixosConfigurations.${host}.config.system.build.toplevel" \
                           --substituters "${buildSubstituters}" \
                           --print-build-logs \
+                          "''${BUILD_LOCATION_ARGS[@]}" \
                           --keep-going; then
                           echo "Signing store paths for ${host}..."
                           if ${pkgs.nix}/bin/nix store sign \

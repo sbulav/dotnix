@@ -127,6 +127,12 @@ in
     "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDH2vxB14+ZGFFgtQ6UQ6zw33r/4e/vkMIzNKeaTnDRHmmfnjDSU5oXWt7OSCZQw8zPSbzPV7QPKC9MwEdsl9ZXr4kVxAvN/d/oI/cBU/77tMDW/m1d+SEqhztNrBfpSIavuCT+K9l1vMr/R4qoRxSfLRVsBhr3Xfk3bxZ2vh9dsefZXbL4/ebzW74RUoh1GccPqvBQJxP/+wYsyspn3lsmEi2AbIJprR6fN2Vb3pTW/D0E7k2iIcuBOd1hsw3mn5e2OpXOG2R0XcssBjlquS23up3sIujbw46gITIe1+kCLnmCfGXRDOmcUfB4ySwUlFma8RjcZg7vTGUe47PNJmo3 sab@fedoraz.sbulav.tk"
   ];
 
+  services.nix-remote-builder.server = {
+    enable = true;
+    allowedSource = "192.168.92.194";
+    authorizedKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAvkkN80V8+tO5rc40e5xpk0IQMM83nvj/3mwsQh3tfG beez-zanoza-nix-builder";
+  };
+
   # Keep sab's central herdr-remote relay and web app alive without a login.
   users.users.sab.linger = true;
 

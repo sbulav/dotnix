@@ -122,6 +122,8 @@ in
   # };
   custom.services.nix-cache-builder = {
     enable = true;
+    # Touch this volatile file to force the next cache run to build locally.
+    remoteBuilderDisableFile = "/run/nix-cache-builder-local-only";
     hosts = [
       "nz"
       "zanoza"
@@ -149,6 +151,12 @@ in
       notifyOnFailure = true; # Email on any failures
       sendOnTelegramFailure = true; # Always email if TG fails
     };
+  };
+
+  services.nix-remote-builder.client = {
+    enable = true;
+    hostName = "192.168.89.207";
+    publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSVBBdVc2SHArZTlYK3NkK25oWFFwVi9EQkQvSVNXVzkvTU9YOFJuUThvZXkgcm9vdEBuaXhvcwo=";
   };
 
   system.nix.cache-servers = [
