@@ -18,10 +18,9 @@ in
   config = mkIf cfg.enable {
     programs.wlogout = {
       enable = true;
-      style = builtins.replaceStrings
-        [ "/usr/share/wlogout/icons" ]
-        [ "${pkgs.wlogout}/share/wlogout/icons" ]
-        (builtins.readFile (./styles + "/${config.custom.theme.name}.css"));
+      style =
+        builtins.replaceStrings [ "/usr/share/wlogout/icons" ] [ "${pkgs.wlogout}/share/wlogout/icons" ]
+          (builtins.readFile (./styles + "/${config.custom.theme.name}.css"));
     };
   };
 }

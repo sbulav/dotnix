@@ -43,20 +43,23 @@ in
       sudo.u2fAuth = true;
     };
 
-    environment.systemPackages = with pkgs; [
-      # Yubico's official tools
-      yubikey-manager # cli
-      # FIXME: insecure
-      # yubikey-manager-qt # gui
-      yubikey-personalization # cli
-      yubico-piv-tool # cli
-      yubioath-flutter # gui
-      # reload-yubikey
-    ] ++ optionals cfg.smartcard.enable [
-      # Smartcard/GPG tools
-      gnupg
-      pcsc-tools
-    ];
+    environment.systemPackages =
+      with pkgs;
+      [
+        # Yubico's official tools
+        yubikey-manager # cli
+        # FIXME: insecure
+        # yubikey-manager-qt # gui
+        yubikey-personalization # cli
+        yubico-piv-tool # cli
+        yubioath-flutter # gui
+        # reload-yubikey
+      ]
+      ++ optionals cfg.smartcard.enable [
+        # Smartcard/GPG tools
+        gnupg
+        pcsc-tools
+      ];
 
     # Smartcard-specific configuration
     services = mkIf cfg.smartcard.enable {
@@ -85,11 +88,11 @@ in
       text = ''
         # YubiKey works with internal CCID driver (do NOT disable-ccid)
         # GPG's internal driver has better YubiKey support than pcscd
-        
+
         # Optional: Enable debug logging if needed
         # log-file /tmp/scdaemon.log
         # debug-level basic
-        
+
         # Optional: Specify card timeout (default is fine for YubiKey)
         # card-timeout 5
       '';

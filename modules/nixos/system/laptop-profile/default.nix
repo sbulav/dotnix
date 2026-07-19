@@ -429,14 +429,18 @@ in
     batteryPowerNowPath =
       mkOpt str "/sys/class/power_supply/BAT0/power_now"
         "sysfs path used to read instantaneous battery power draw (µW) for runtime estimates.";
-    profileDrawRatio = mkOpt (attrsOf (oneOf [
-      int
-      float
-    ])) {
-      low-power = 0.98;
-      balanced = 1.0;
-      performance = 1.92;
-    } "Estimated idle CPU package draw ratio per profile, relative to balanced. Used to project battery life in the rofi popup.";
+    profileDrawRatio =
+      mkOpt
+        (attrsOf (oneOf [
+          int
+          float
+        ]))
+        {
+          low-power = 0.98;
+          balanced = 1.0;
+          performance = 1.92;
+        }
+        "Estimated idle CPU package draw ratio per profile, relative to balanced. Used to project battery life in the rofi popup.";
     stateDir =
       mkOpt str "/var/lib/laptop-profile"
         "Directory where the remembered battery profile is stored.";
