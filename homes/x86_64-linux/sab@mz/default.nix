@@ -113,6 +113,7 @@ in
       atuin = enabled;
       bottom = enabled;
       fastfetch = enabled;
+      herdr = enabled;
       home-manager = enabled;
       yazi = enabled;
     };

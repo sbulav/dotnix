@@ -41,7 +41,9 @@
     websecure = {
       address = ":443";
       asDefault = true;
-      http.tls.certResolver = "cloudflare";
+      # Default resolver for routers that don't set tls.certResolver themselves;
+      # must name an entry in certificatesResolvers below.
+      http.tls.certResolver = "production";
       transport.respondingTimeouts = {
         readTimeout = "600s";
         idleTimeout = "600s";
@@ -61,7 +63,9 @@
         ];
         delayBeforeCheck = 5;
       };
-      certificatesDuration = 180;
+      # certificatesDuration deliberately left at its default (2160h = 90 days,
+      # matching Let's Encrypt), which renews ~30 days before expiry. The unit
+      # is HOURS — a small value like 180 delays renewal to the last day.
       storage = "/traefik/certs/acme.json"; # where acme certificates live
       caServer = "https://acme-v02.api.letsencrypt.org/directory";
     };
@@ -75,7 +79,6 @@
         ];
         delayBeforeCheck = 5;
       };
-      certificatesDuration = 180;
       storage = "/traefik/certs/acme.json"; # where acme certificates live
       caServer = "https://acme-staging-v02.api.letsencrypt.org/directory";
     };

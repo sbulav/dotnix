@@ -406,6 +406,8 @@ let
 
   settingsFile = pkgs.writeText "claude-settings.json" (builtins.toJSON settings);
 
+  proxy = import ../shared/proxy.nix;
+
   # On Linux wrap claude with the corporate proxy; on Darwin omit it.
   claudeWithProxy = pkgs.symlinkJoin {
     name = "claude-code";
@@ -418,9 +420,9 @@ let
       if pkgs.stdenv.isLinux then
         ''
           wrapProgram $out/bin/claude \
-            --set HTTPS_PROXY "http://fwdproxy.pyn.ru:4443" \
-            --set HTTP_PROXY  "http://fwdproxy.pyn.ru:4443" \
-            --set NO_PROXY    "localhost,127.0.0.1"
+            --set HTTPS_PROXY "${proxy.httpProxy}" \
+            --set HTTP_PROXY  "${proxy.httpProxy}" \
+            --set NO_PROXY    "${proxy.noProxy}"
         ''
       else
         "";

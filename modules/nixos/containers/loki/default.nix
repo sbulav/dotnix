@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  pkgs,
   namespace,
   ...
 }:
@@ -92,6 +93,46 @@ in
     };
 
     services.alloy.enable = true;
+
+    # Alloy runs as a DynamicUser and cannot read the container-owned service
+    # logs under /tank (they are group/owner-only). Give it a shared read group
+    # and grant that group read access via POSIX ACLs. `SupplementaryGroups` is
+    # appended so the module's existing `systemd-journal` membership is kept.
+    users.groups.logreaders = { };
+    systemd.services.alloy.serviceConfig.SupplementaryGroups = lib.mkAfter [ "logreaders" ];
+
+    # ACLs are applied with `setfacl` from a root oneshot rather than
+    # systemd-tmpfiles `A+`: tmpfiles refuses "unsafe path transitions"
+    # (/tank is owned by `sab`, the per-service dirs by container uids) so it
+    # silently skipped authelia/jellyfin, and it does not recalculate the ACL
+    # mask (which left jellyfin's entries `#effective:---`). Running setfacl as
+    # root avoids both problems. Default ACLs are set so rotated/new log files
+    # inherit access.
+    systemd.services.alloy-log-acls = {
+      description = "Grant logreaders group read access to container service logs";
+      after = [ "zfs-mount.service" ];
+      wantedBy = [ "multi-user.target" ];
+      before = [ "alloy.service" ];
+      path = [ pkgs.acl ];
+      serviceConfig = {
+        Type = "oneshot";
+        RemainAfterExit = true;
+      };
+      script = ''
+        set -u
+        # /tank/jellyfin is 0700 - grant traverse so its log dir is reachable.
+        [ -d /tank/jellyfin ] && setfacl -m g:logreaders:x /tank/jellyfin
+        for d in \
+          /tank/authelia/logs \
+          /tank/grafana/data/log \
+          /tank/jellyfin/log \
+          /tank/v2raya/logs; do
+          [ -d "$d" ] || continue
+          setfacl -R -m g:logreaders:rX "$d"
+          setfacl -R -d -m g:logreaders:rX "$d"
+        done
+      '';
+    };
 
     environment.etc."alloy/config.alloy".text = ''
       loki.write "local" {

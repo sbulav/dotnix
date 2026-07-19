@@ -27,6 +27,10 @@ let
   natChain = "TPROXY_REDSOCKS";
   mangleChain = "TPROXY_REDSOCKS_MANGLE";
 
+  # Source scoping: when sourceIps is set, only packets from these
+  # addresses ever enter our chains. Empty list = all sources (legacy).
+  srcMatches = if cfg.sourceIps == [ ] then [ "" ] else map (s: "-s ${s}") cfg.sourceIps;
+
   # defaults
   defaultExcludeCidrs = [
     # RFC1918
@@ -75,7 +79,11 @@ let
   mkNatAttachJump = iface: ''
     # Ensure custom chain exists and is attached idempotently
     ${iptables} -t nat -N ${natChain} 2>/dev/null || true
-    ${iptables} -t nat -C PREROUTING -i ${iface} -j ${natChain} 2>/dev/null || ${iptables} -t nat -A PREROUTING -i ${iface} -j ${natChain}
+    ${concatStringsSep "\n" (
+      map (m: ''
+        ${iptables} -t nat -C PREROUTING -i ${iface} ${m} -j ${natChain} 2>/dev/null || ${iptables} -t nat -A PREROUTING -i ${iface} ${m} -j ${natChain}
+      '') srcMatches
+    )}
     # Clear our chain before adding rules (idempotent re-apply)
     ${iptables} -t nat -F ${natChain}
   '';
@@ -128,7 +136,11 @@ let
 
   mkNatDetach = iface: ''
     ${iptables} -t nat -F ${natChain} 2>/dev/null || true
-    ${iptables} -t nat -D PREROUTING -i ${iface} -j ${natChain} 2>/dev/null || true
+    ${concatStringsSep "\n" (
+      map (m: ''
+        ${iptables} -t nat -D PREROUTING -i ${iface} ${m} -j ${natChain} 2>/dev/null || true
+      '') srcMatches
+    )}
     ${iptables} -t nat -X ${natChain} 2>/dev/null || true
   '';
 
@@ -149,7 +161,11 @@ let
   # TPROXY path (mangle + policy routing)
   mkMangleAttachJump = iface: ''
     ${iptables} -t mangle -N ${mangleChain} 2>/dev/null || true
-    ${iptables} -t mangle -C PREROUTING -i ${iface} -j ${mangleChain} 2>/dev/null || ${iptables} -t mangle -A PREROUTING -i ${iface} -j ${mangleChain}
+    ${concatStringsSep "\n" (
+      map (m: ''
+        ${iptables} -t mangle -C PREROUTING -i ${iface} ${m} -j ${mangleChain} 2>/dev/null || ${iptables} -t mangle -A PREROUTING -i ${iface} ${m} -j ${mangleChain}
+      '') srcMatches
+    )}
     ${iptables} -t mangle -F ${mangleChain}
   '';
 
@@ -201,7 +217,11 @@ let
 
   mkMangleDetach = iface: ''
     ${iptables} -t mangle -F ${mangleChain} 2>/dev/null || true
-    ${iptables} -t mangle -D PREROUTING -i ${iface} -j ${mangleChain} 2>/dev/null || true
+    ${concatStringsSep "\n" (
+      map (m: ''
+        ${iptables} -t mangle -D PREROUTING -i ${iface} ${m} -j ${mangleChain} 2>/dev/null || true
+      '') srcMatches
+    )}
     ${iptables} -t mangle -X ${mangleChain} 2>/dev/null || true
     ${ip} rule del fwmark 0x1/0x1 lookup 100 2>/dev/null || true
     ${ip} route del local 0.0.0.0/0 dev lo table 100 2>/dev/null || true
@@ -263,10 +283,13 @@ in
     ]) "redirect" "Operating mode: NAT REDIRECT (redsocks) or true TPROXY with policy routing.";
 
     v2rayAHost = mkOpt types.str "192.168.89.207" "Host IP of v2rayA (SOCKS5 endpoint).";
-    v2rayAPort = mkOpt types.port 1080 "Port of v2rayA SOCKS5 listener.";
+    v2rayAPort = mkOpt types.port 20170 "Port of v2rayA SOCKS5 listener.";
     listenPort = mkOpt types.port 12345 "Local port redsocks listens on for redirected traffic.";
     interface = mkOpt types.str "enp1s0" "Ingress interface for client traffic (PREROUTING match).";
     tcpPorts = mkOpt (types.listOf types.port) [ 80 443 ] "TCP ports to redirect (set [] for all TCP).";
+    sourceIps =
+      mkOpt (types.listOf types.str) [ ]
+        "Source IPs/CIDRs whose traffic is proxied. Empty list proxies ALL sources on the interface. Strongly recommended to scope this (e.g. to a single TV) so other LAN hosts and local services are never touched.";
 
     ipset = {
       enable = mkBoolOpt false "Enable ipset-based scoping of destinations (redirect only for members).";

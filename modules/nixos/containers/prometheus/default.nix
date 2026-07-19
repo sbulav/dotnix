@@ -66,6 +66,14 @@ in
                 static_configs = [
                   {
                     targets = [ "127.0.0.1:9199" ];
+                    # The nut exporter emits no `ups` label, but the NUT dashboard
+                    # keys every panel off a $ups variable
+                    # (label_values(network_ups_tools_device_info, ups)). Inject a
+                    # constant `ups` label matching the NUT ups name so the
+                    # variable resolves and the panels render.
+                    labels = {
+                      ups = "ups";
+                    };
                   }
                 ];
               }

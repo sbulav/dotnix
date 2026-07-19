@@ -1,6 +1,9 @@
+let
+  tea = (import ../templates.nix).teaConventions;
+in
 {
   name = "workon";
-  version = "1.0.0";
+  version = "1.1.0";
   description = "Resume and work on a Forgejo issue — read state, then implement. Use with an issue number, or infer from the current issue branch when unambiguous.";
   "argument-hint" = "[issue-number|TPL-key]";
   "disable-model-invocation" = true;
@@ -20,17 +23,15 @@
      - Prefer `/workon <issue-number>`.
      - If the argument is a Jira key, resolve it to a Forgejo issue in the current repo only.
      - Read only the issue body, the latest `AI-HANDOFF` comment, and any linked or open PR relevant to the issue.
-     - Do not do broad repo archaeology unless that is required to unblock the next step.
+     - Do broad repo archaeology only when it is required to unblock the next step.
      - Ask before switching branches.
      - Follow issue scope and acceptance criteria strictly.
      - Stop at natural checkpoints and report status via AI-HANDOFF.
-     - Never commit or create PRs — suggest `/ship` when ready.
-     - Use documented `tea` commands only; never use `tea issue comment`, `tea api`, or `python3` for normal workflow.
+     - Leave commits and PRs to `/ship` — suggest it when ready.
      - When a handoff is needed, prefer delegating comment work to the handoff helper when available; otherwise use `tea comment` directly.
-     - If runtime mode or permissions block writes, do not probe tokens, `curl`, config files, or API auth. State that posting is blocked and return the exact handoff body for the user to post manually.
-     - Do not treat planning mode as a reason to avoid `tea comment` unless the runtime explicitly blocks that command.
-     - For `tea comment`, prefer a single safely quoted argument such as `$'...'`; avoid heredocs, command substitution, or backgrounded comment commands.
-     - Never include system reminders, tool diagnostics, or internal policy text inside the handoff body.
+     - Planning mode alone is no reason to avoid `tea comment` — skip it only when the runtime explicitly blocks that command.
+
+    ${tea}
 
      Steps:
      1. Resolve the issue number from `$ARGUMENTS`, or infer it from the current branch if unambiguous.
@@ -56,7 +57,7 @@
         - `blocked` → Surface blockers, ask what to do.
         - `ready-for-commit` / `ready-for-pr` → Suggest `/ship`.
         - `pr-open` / `merged` → Suggest `/complete`.
-     10. If the parent issue has sub-issues, list them and recommend working on the next unblocked sub-issue.
+     10. If the parent issue has sub-issues, list them and recommend working on the next unblocked sub-issue — one whose `**Blocked by:**` line is `none` or references only closed issues.
      11. Ask before switching branches if needed.
 
      During implementation:

@@ -231,13 +231,37 @@ in
                   in
                   [ prometheus ] ++ loki;
               };
-              # TODO: add dashboard for UPS
+              # All dashboards live flat in the General folder (no `folder`
+              # set on any provider). Titles are unified to a
+              # "Category · Subject" pattern via `mkDashboard`, which rewrites
+              # the fetched JSON's `.title` with jq — this normalises the two
+              # external dashboards (Node Exporter Full, Authelia) alongside
+              # our own without editing their upstream sources. The dashboard
+              # uid is preserved, so the rename is an in-place update.
               dashboards.settings.providers =
                 let
+                  mkDashboard =
+                    {
+                      name,
+                      title,
+                      url,
+                      hash,
+                    }:
+                    pkgs.runCommand name { nativeBuildInputs = [ pkgs.jq ]; } ''
+                      jq --arg title ${lib.escapeShellArg title} '.title = $title' \
+                        ${
+                          pkgs.fetchurl {
+                            name = "${name}-src";
+                            inherit url hash;
+                          }
+                        } > $out
+                    '';
+
                   nodeExporterFull = {
                     name = "Node Exporter Full";
-                    options.path = pkgs.fetchurl {
-                      name = "node-exporter-full-37-grafana-dashboard.json";
+                    options.path = mkDashboard {
+                      name = "node-exporter-full.json";
+                      title = "Compute · Nodes";
                       url = "https://grafana.com/api/dashboards/1860/revisions/37/download";
                       hash = "sha256-1DE1aaanRHHeCOMWDGdOS1wBXxOF84UXAjJzT5Ek6mM=";
                     };
@@ -246,8 +270,9 @@ in
 
                   smartctlExporter = {
                     name = "Smartctl Exporter";
-                    options.path = pkgs.fetchurl {
-                      name = "smartctl-exporter-dashboard2.json";
+                    options.path = mkDashboard {
+                      name = "smartctl.json";
+                      title = "Storage · SMART";
                       url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/smartctl/smartctl.json";
                       hash = "sha256-B6cWUiGsM3dbx2BVUdnaqjYVQgTzd/y7DNm2Rq1Cvws=";
                     };
@@ -256,22 +281,35 @@ in
 
                   zfsStats = {
                     name = "ZFS stats";
-                    options.path = pkgs.fetchurl {
-                      name = "zfs-stats2.json";
+                    options.path = mkDashboard {
+                      name = "zfs-stats.json";
+                      title = "Storage · ZFS";
                       url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/zfs/zfs-stats.json";
                       hash = "sha256-1+DFTJXC9w41dYVHiarCN3QqWX6WCE053Sj0BktE2Bg=";
                     };
                     orgId = 1;
                   };
+                  v2rayaTraffic =
+                    if config.${namespace}.containers.v2raya.enable then
+                      [
+                        {
+                          name = "v2rayA traffic";
+                          options.path = ./dashboards/v2raya-traffic.json;
+                          orgId = 1;
+                        }
+                      ]
+                    else
+                      [ ];
                   logs =
                     if config.${namespace}.containers.loki.enable then
                       [
                         {
                           name = "Logs dashboard";
-                          options.path = pkgs.fetchurl {
-                            name = "logs-dashboard2.json";
+                          options.path = mkDashboard {
+                            name = "logs.json";
+                            title = "Logs · Applications";
                             url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/monitoring/Logs-promtail.json";
-                            hash = "sha256-rBgTrpMWOphSOVXPHc7kayzuTy0PylPOzk50VSnRrRs=";
+                            hash = "sha256-GuwnN2VkEbqa3HNApYmu7482pgRDmC2EJx2DJpl7ZJo=";
                           };
                           orgId = 1;
                         }
@@ -283,8 +321,9 @@ in
                       [
                         {
                           name = "Authelia dashboard";
-                          options.path = pkgs.fetchurl {
-                            name = "authelia-dashboard.json";
+                          options.path = mkDashboard {
+                            name = "authelia.json";
+                            title = "Security · Authelia";
                             url = "https://raw.githubusercontent.com/authelia/authelia/refs/heads/master/examples/grafana-dashboards/simple.json";
                             hash = "sha256-y+WbEev4ezdJyorjnnZi37CL1Pd9PxYAvl5N0hsFJnk=";
                           };
@@ -298,10 +337,11 @@ in
                       [
                         {
                           name = "Traefik via Loki dashboard";
-                          options.path = pkgs.fetchurl {
-                            name = "traefik-via-loki-dashboard2.json";
+                          options.path = mkDashboard {
+                            name = "traefik.json";
+                            title = "Network · Traefik";
                             url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/traefik/traefik-via-loki.json";
-                            hash = "sha256-jKXBG3PGYHwJVAkN44U7BmQ+KsHWE4KVAGllb3kt7g4=";
+                            hash = "sha256-KsYXA/rZC7AHy2YnUu5VDaQb2gnl4obkCoHLYp8b+Rg=";
                           };
                           orgId = 1;
                         }
@@ -313,10 +353,11 @@ in
                       [
                         {
                           name = "UPS info via NUT prometheus exporter";
-                          options.path = pkgs.fetchurl {
-                            name = "prometheus-nut-exporter2.json";
+                          options.path = mkDashboard {
+                            name = "ups.json";
+                            title = "Power · UPS";
                             url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/ups/prometheus-nut-exporter.json";
-                            hash = "sha256-quC1L5wv2iCcX5aorSFSDdp1napV69+FcPW+aQyqBtc=";
+                            hash = "sha256-+ru9ZrrFBk22seI0uDuXIP7NkRLqfSJ48NLHDCpfG/I=";
                           };
                           orgId = 1;
                         }
@@ -329,6 +370,7 @@ in
                   smartctlExporter
                   zfsStats
                 ]
+                ++ v2rayaTraffic
                 ++ logs
                 ++ authelia
                 ++ traefik

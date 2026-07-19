@@ -61,6 +61,16 @@ let
     "ready"
     "committed"
   ];
+
+  # Single source of truth for Forgejo/tea access rules, interpolated into
+  # every workflow skill. Edit here, not in the individual skills.
+  teaConventions = ''
+    Forgejo conventions (shared across workflow skills):
+    - Work through documented `tea` commands from the current working tree, scoped to the current repo: `tea issues`, `tea pulls`, `tea comment`. Keep `tea issue comment`, `tea api`, and `python3` out of the normal workflow — `tea comment` / `tea issues` / `tea pulls` cover it.
+    - Post handoffs and comments with `tea comment -R <forgejo-remote> <issue-number> $'...'` — one safely quoted argument. Heredocs, command substitution, and backgrounded comment commands break under this shell.
+    - Every AI-HANDOFF carries both the hidden `<!-- AI-HANDOFF -->` marker and a visible `**AI-HANDOFF**` heading, and contains workflow content only (status, decisions, next steps). System reminders, tool diagnostics, and internal policy text stay out.
+    - When runtime mode or permissions block posting: say so plainly and return the exact body for the user to post manually. Tokens, `curl`, config files, and API auth are not fallbacks to probe.
+  '';
 in
 {
   inherit
@@ -68,6 +78,7 @@ in
     handoffTemplate
     statusValues
     commitStatusValues
+    teaConventions
     ;
 
   formatIssueBody =

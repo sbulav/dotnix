@@ -9,6 +9,82 @@
 let
   system = "x86_64-linux";
   hostName = "zanoza";
+  tvProxyAssets = pkgs.symlinkJoin {
+    name = "tv-proxy-xray-assets";
+    paths = [
+      pkgs.v2ray-geoip
+      pkgs.v2ray-domain-list-community
+    ];
+  };
+  tvProxyRouterConfig = pkgs.writeText "tv-proxy-router.json" (
+    builtins.toJSON {
+      log.loglevel = "warning";
+      inbounds = [
+        {
+          tag = "tv";
+          listen = "127.0.0.1";
+          port = 20169;
+          protocol = "socks";
+          settings.udp = false;
+          sniffing = {
+            enabled = true;
+            destOverride = [
+              "http"
+              "tls"
+            ];
+            routeOnly = false;
+          };
+        }
+      ];
+      outbounds = [
+        {
+          tag = "proxy";
+          protocol = "socks";
+          settings.servers = [
+            {
+              address = "172.16.64.108";
+              port = 20170;
+            }
+          ];
+        }
+        {
+          tag = "direct";
+          protocol = "freedom";
+        }
+      ];
+      routing = {
+        domainStrategy = "IPIfNonMatch";
+        rules = [
+          {
+            type = "field";
+            outboundTag = "direct";
+            domain = [
+              "domain:sbulav.ru"
+              "domain:pyn.ru"
+              "domain:hhdev.ru"
+              "geosite:category-ru"
+              "regexp:\\.ru$"
+              "regexp:\\.su$"
+              "regexp:\\.xn--p1ai$"
+            ];
+          }
+          {
+            type = "field";
+            outboundTag = "direct";
+            ip = [
+              "geoip:private"
+              "geoip:ru"
+            ];
+          }
+          {
+            type = "field";
+            outboundTag = "proxy";
+            network = "tcp";
+          }
+        ];
+      };
+    }
+  );
 in
 {
   imports = [
@@ -50,6 +126,15 @@ in
   users.users.sab.openssh.authorizedKeys.keys = [
     "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDH2vxB14+ZGFFgtQ6UQ6zw33r/4e/vkMIzNKeaTnDRHmmfnjDSU5oXWt7OSCZQw8zPSbzPV7QPKC9MwEdsl9ZXr4kVxAvN/d/oI/cBU/77tMDW/m1d+SEqhztNrBfpSIavuCT+K9l1vMr/R4qoRxSfLRVsBhr3Xfk3bxZ2vh9dsefZXbL4/ebzW74RUoh1GccPqvBQJxP/+wYsyspn3lsmEi2AbIJprR6fN2Vb3pTW/D0E7k2iIcuBOd1hsw3mn5e2OpXOG2R0XcssBjlquS23up3sIujbw46gITIe1+kCLnmCfGXRDOmcUfB4ySwUlFma8RjcZg7vTGUe47PNJmo3 sab@fedoraz.sbulav.tk"
   ];
+
+  services.nix-remote-builder.server = {
+    enable = true;
+    allowedSource = "192.168.92.194";
+    authorizedKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAvkkN80V8+tO5rc40e5xpk0IQMM83nvj/3mwsQh3tfG beez-zanoza-nix-builder";
+  };
+
+  # Keep sab's central herdr-remote relay and web app alive without a login.
+  users.users.sab.linger = true;
 
   custom.virtualisation = {
     virt-manager.enable = false;
@@ -158,6 +243,12 @@ in
       hostAddress = "172.16.64.10";
       localAddress = "172.16.64.105";
     };
+    # Route-only: proxies to herdr-remote services running locally on zanoza.
+    herdr-remote = {
+      enable = true;
+      host = "herdr.sbulav.ru";
+      relayHost = "herdr-relay.sbulav.ru";
+    };
     nextcloud = {
       enable = false;
       host = "nextcloud.sbulav.ru";
@@ -207,6 +298,53 @@ in
         Downloads = "/tank/torrents/download";
       };
     }; # }}}
+  };
+
+  # Transparent proxy gateway for the Android TV (YouTube unblock):
+  # the MikroTik policy-routes traffic from the TV here; TCP 80/443 is
+  # redirected via redsocks into the v2rayA SOCKS5 (VLESS outbound).
+  # Scoped by sourceIps so no other LAN host or local service is affected.
+  custom.services.linuxTransparentProxy = {
+    enable = true;
+    mode = "redirect";
+    interface = "enp3s0";
+    # A local Xray router keeps Russian services direct and sends all other
+    # traffic through v2rayA while preserving redsocks' SOCKS5 transport.
+    v2rayAHost = "127.0.0.1";
+    v2rayAPort = 20169;
+    # 12345 (module default) is taken by Grafana Alloy's HTTP listener
+    listenPort = 12346;
+    tcpPorts = [
+      80
+      443
+    ];
+    sourceIps = [
+      "192.168.89.248" # phillips 58pus (Android TV)
+    ];
+  };
+
+  systemd.services = {
+    tv-proxy-router = {
+      description = "Route TV traffic between direct and v2rayA outbounds";
+      wantedBy = [ "multi-user.target" ];
+      after = [ "container@v2raya.service" ];
+      requires = [ "container@v2raya.service" ];
+      serviceConfig = {
+        ExecStart = "${lib.getExe pkgs.xray} run -c ${tvProxyRouterConfig}";
+        Restart = "on-failure";
+        RestartSec = "2s";
+        DynamicUser = true;
+        NoNewPrivileges = true;
+        ProtectSystem = "strict";
+        ProtectHome = true;
+        PrivateTmp = true;
+      };
+      environment.XRAY_LOCATION_ASSET = "${tvProxyAssets}/share/v2ray";
+    };
+    redsocks = {
+      after = [ "tv-proxy-router.service" ];
+      requires = [ "tv-proxy-router.service" ];
+    };
   };
 
   services.prometheus.scrapeConfigs = [

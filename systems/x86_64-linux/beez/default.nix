@@ -69,6 +69,49 @@ in
     };
   };
 
+  custom.services.zanoza-external-monitoring = {
+    enable = true;
+    tcpTargets = [
+      {
+        name = "host_ssh";
+        address = "192.168.89.207";
+        port = 22;
+      }
+    ];
+    httpTargets = [
+      {
+        name = "reverse_proxy";
+        url = "https://traefik.sbulav.ru";
+      }
+      {
+        name = "homepage";
+        url = "https://home.sbulav.ru";
+      }
+      {
+        name = "jellyfin";
+        url = "https://jellyfin.sbulav.ru";
+      }
+      {
+        name = "immich";
+        url = "https://immich.sbulav.ru";
+      }
+      {
+        name = "opencloud";
+        url = "https://opencloud.sbulav.ru";
+      }
+    ];
+    dns = {
+      server = "172.16.64.104";
+      name = "home.sbulav.ru";
+      expectedAddress = "192.168.89.207";
+    };
+    backup = {
+      repositoryPath = "/mnt/ext/backup_zanoza";
+      staleAfterSeconds = 36 * 60 * 60;
+    };
+    telegram.proxyUrl = "socks5h://192.168.89.207:20170";
+  };
+
   # custom.services.linuxTransparentProxy = {
   #   enable = false;
   #   v2rayAHost = "192.168.89.207";
@@ -79,6 +122,8 @@ in
   # };
   custom.services.nix-cache-builder = {
     enable = true;
+    # Touch this volatile file to force the next cache run to build locally.
+    remoteBuilderDisableFile = "/run/nix-cache-builder-local-only";
     hosts = [
       "nz"
       "zanoza"
@@ -106,6 +151,12 @@ in
       notifyOnFailure = true; # Email on any failures
       sendOnTelegramFailure = true; # Always email if TG fails
     };
+  };
+
+  services.nix-remote-builder.client = {
+    enable = true;
+    hostName = "192.168.89.207";
+    publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSVBBdVc2SHArZTlYK3NkK25oWFFwVi9EQkQvSVNXVzkvTU9YOFJuUThvZXkgcm9vdEBuaXhvcwo=";
   };
 
   system.nix.cache-servers = [

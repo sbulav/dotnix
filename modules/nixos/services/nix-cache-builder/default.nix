@@ -10,7 +10,7 @@ with lib.custom;
 let
   cfg = config.${namespace}.services.nix-cache-builder;
 
-  # Explicit substituter list for build/archive commands. `--substituters`
+  # Explicit substituter list for build commands. `--substituters`
   # REPLACES the resolved list, so this bypasses the Determinate-injected
   # `install.determinate.systems` / `cache.flakehub.com` caches, which time
   # out (<1 B/s) and 401 from this network and otherwise poison every build.
@@ -33,7 +33,7 @@ in
       mkOpt str "git+file:///var/lib/nix-cache-builder/flake"
         "Flake reference for nix build commands";
 
-    updateFlake = mkBoolOpt true "Run nix flake update before each build";
+    updateFlake = mkBoolOpt true "Build with a disposable nix flake update before each run";
 
     hosts = mkOpt (listOf str) [
       "nz"
@@ -51,6 +51,10 @@ in
     maxCacheSize = mkOpt int 200 "Maximum cache size in GB (0 = unlimited)";
 
     keepGenerations = mkOpt int 3 "Number of generations to keep per host";
+
+    remoteBuilderDisableFile =
+      mkOpt (nullOr str) null
+        "When this file exists, force cache builds to run locally without configured remote builders";
 
     # Cache Server
     cacheServer = {
@@ -188,12 +192,14 @@ in
       # Build service: Build NixOS configurations
       systemd.services."nix-cache-builder" = {
         description = "Build NixOS configurations for cache";
-        wants = [ "nix-cache-builder-sync.service" ];
         after = [
           "nix-cache-builder-sync.service"
           "network-online.target"
         ];
-        requires = [ "network-online.target" ];
+        requires = [
+          "nix-cache-builder-sync.service"
+          "network-online.target"
+        ];
 
         script = ''
           #!/usr/bin/env bash
@@ -211,46 +217,68 @@ in
           TOTAL_START=$(date +%s)
           SUCCESS_COUNT=0
           FAILED_COUNT=0
-          TOTAL_HOSTS=${toString (builtins.length cfg.hosts)}
           BUILD_RESULTS=""
-          CACHE_SIZE_BEFORE=$(${pkgs.coreutils}/bin/du -sb "$CACHE_DIR" 2>/dev/null | ${pkgs.coreutils}/bin/cut -f1 || echo "0")
+          PREPARATION_FAILED=0
+          INPUT_UPDATE_STATUS="disabled"
+          SOURCE_REV=$(${pkgs.git}/bin/git rev-parse HEAD)
+          SOURCE_SHORT=$(${pkgs.git}/bin/git rev-parse --short=12 HEAD)
+          BUILD_LOCATION_ARGS=()
 
-          # Update flake inputs before building
-          ${optionalString cfg.updateFlake ''
-            echo "Updating flake inputs..."
-            if ${pkgs.nix}/bin/nix flake update --commit-lock-file; then
-              echo "✓ Flake inputs updated successfully"
+          ${optionalString (cfg.remoteBuilderDisableFile != null) ''
+            if [ -e "${cfg.remoteBuilderDisableFile}" ]; then
+              BUILD_LOCATION_ARGS+=(--builders "")
+              echo "Remote builders disabled by ${cfg.remoteBuilderDisableFile}; using beez only"
             else
-              echo "⚠ Warning: Failed to update flake inputs, continuing with existing lock file"
+              echo "Remote builder configuration: $(${pkgs.nix}/bin/nix config show builders 2>/dev/null || echo unavailable)"
             fi
           ''}
 
-          # Display flake info for logging
-          echo "=== Flake Information ==="
-          ${pkgs.nix}/bin/nix flake metadata "$FLAKE"
-          echo "========================"
-
-          echo "Archiving flake inputs for cache clients..."
-          ARCHIVE_JSON=$(${pkgs.coreutils}/bin/mktemp)
-          if ${pkgs.coreutils}/bin/timeout 15m ${pkgs.nix}/bin/nix flake archive --json --substituters "${buildSubstituters}" "$FLAKE" > "$ARCHIVE_JSON"; then
-            INPUT_PATHS=$(${pkgs.jq}/bin/jq -r '.. | objects | .path? // empty' "$ARCHIVE_JSON" | ${pkgs.coreutils}/bin/sort -u)
-
-            if [ -n "$INPUT_PATHS" ]; then
-              while IFS= read -r path; do
-                echo "Signing flake input: $path"
-                ${pkgs.nix}/bin/nix store sign \
-                  --recursive \
-                  --key-file ${config.sops.secrets."nix-cache-priv-key".path} \
-                  "$path"
-              done <<< "$INPUT_PATHS"
-              echo "✓ Archived and signed flake inputs"
+          # The candidate lock is intentionally disposable. The sync service resets
+          # the checkout to the configured remote branch before every run. This
+          # never needs a commit, Git identity, branch, or push.
+          ${optionalString cfg.updateFlake ''
+            echo "Updating flake inputs..."
+            if ${pkgs.nix}/bin/nix flake update; then
+              INPUT_UPDATE_STATUS="updated"
+              echo "✓ Flake inputs updated successfully"
             else
-              echo "No flake input store paths found in archive output"
+              ${pkgs.git}/bin/git restore --source=HEAD -- flake.lock
+              INPUT_UPDATE_STATUS="failed; using source lock"
+              PREPARATION_FAILED=1
+              echo "⚠ Failed to update flake inputs; building the committed source lock" >&2
             fi
+          ''}
+
+          LOCK_FINGERPRINT=$(${pkgs.coreutils}/bin/sha256sum flake.lock | ${pkgs.coreutils}/bin/cut -d' ' -f1)
+          METADATA_JSON=$(${pkgs.coreutils}/bin/mktemp)
+          trap '${pkgs.coreutils}/bin/rm -f "$METADATA_JSON"' EXIT
+
+          if ${pkgs.nix}/bin/nix flake metadata --json "$FLAKE" > "$METADATA_JSON"; then
+            FLAKE_FINGERPRINT=$(${pkgs.jq}/bin/jq -r '.fingerprint // "unknown"' "$METADATA_JSON")
+            RESOLVED_INPUTS=$(${pkgs.jq}/bin/jq -r '
+              .locks.nodes as $nodes
+              | .locks.nodes.root.inputs
+              | to_entries[]
+              | .key as $name
+              | (.value | if type == "array" then .[0] else . end) as $node
+              | $nodes[$node].locked as $locked
+              | "\($name)=\($locked.rev // $locked.ref // ($locked.lastModified // "unversioned" | tostring))"
+            ' "$METADATA_JSON" | ${pkgs.coreutils}/bin/sort)
           else
-            echo "⚠ Warning: Failed to archive flake inputs, continuing with builds"
+            FLAKE_FINGERPRINT="unavailable"
+            RESOLVED_INPUTS="unavailable"
+            PREPARATION_FAILED=1
+            echo "⚠ Failed to collect flake metadata; builds will still be attempted" >&2
           fi
-          rm -f "$ARCHIVE_JSON"
+
+          echo "=== Flake Information ==="
+          echo "Source revision: $SOURCE_REV"
+          echo "Input update: $INPUT_UPDATE_STATUS"
+          echo "Candidate lock SHA-256: $LOCK_FINGERPRINT"
+          echo "Flake fingerprint: $FLAKE_FINGERPRINT"
+          echo "Resolved direct inputs:"
+          echo "$RESOLVED_INPUTS"
+          echo "========================"
 
           # Build each host
           ${concatMapStringsSep "\n" (host: ''
@@ -259,54 +287,74 @@ in
                         echo "Building configuration for ${host}..."
                         echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-                        BUILD_START=$(date +%s)
+                        RESULT_LINK="$CACHE_DIR/${host}-result"
+                        CANDIDATE_LINK="$CACHE_DIR/.${host}-candidate-result"
+                        ${pkgs.coreutils}/bin/rm -f "$CANDIDATE_LINK"
 
+                        BUILD_START=$(date +%s)
+                        BUILD_OK=false
                         if ${pkgs.nix}/bin/nix build \
-                          --out-link "$CACHE_DIR/${host}-result" \
+                          --out-link "$CANDIDATE_LINK" \
                           "$FLAKE#nixosConfigurations.${host}.config.system.build.toplevel" \
                           --substituters "${buildSubstituters}" \
                           --print-build-logs \
+                          "''${BUILD_LOCATION_ARGS[@]}" \
                           --keep-going; then
-
-                          BUILD_END=$(date +%s)
-                          BUILD_TIME=$((BUILD_END - BUILD_START))
-
-                          echo "✓ Successfully built ${host} in ''${BUILD_TIME}s"
-
-                          # Sign the store paths
                           echo "Signing store paths for ${host}..."
-                          ${pkgs.nix}/bin/nix store sign \
+                          if ${pkgs.nix}/bin/nix store sign \
                             --recursive \
                             --key-file ${config.sops.secrets."nix-cache-priv-key".path} \
-                            "$CACHE_DIR/${host}-result"
+                            "$CANDIDATE_LINK"; then
+                            if ${pkgs.coreutils}/bin/mv -Tf "$CANDIDATE_LINK" "$RESULT_LINK"; then
+                              BUILD_OK=true
+                              echo "✓ Signed and published ${host}"
+                            else
+                              echo "✗ Failed to publish ${host}; previous result preserved" >&2
+                            fi
+                          else
+                            echo "✗ Failed to sign ${host}; previous result preserved" >&2
+                          fi
+                        else
+                          echo "✗ Failed to build ${host}; previous result preserved" >&2
+                        fi
 
-                          echo "✓ Signed store paths for ${host}"
-
+                        BUILD_END=$(date +%s)
+                        BUILD_TIME=$((BUILD_END - BUILD_START))
+                        if [ "$BUILD_OK" = true ]; then
+                          echo "✓ Successfully built ${host} in ''${BUILD_TIME}s"
                           SUCCESS_COUNT=$((SUCCESS_COUNT + 1))
                           BUILD_RESULTS="''${BUILD_RESULTS}✅ ${host}: ''${BUILD_TIME}s
             "
-
                         else
-                          BUILD_END=$(date +%s)
-                          BUILD_TIME=$((BUILD_END - BUILD_START))
-
-                          echo "✗ Failed to build ${host} after ''${BUILD_TIME}s" >&2
-
+                          ${pkgs.coreutils}/bin/rm -f "$CANDIDATE_LINK"
+                          echo "✗ ${host} attempt failed after ''${BUILD_TIME}s" >&2
                           FAILED_COUNT=$((FAILED_COUNT + 1))
                           BUILD_RESULTS="''${BUILD_RESULTS}❌ ${host}: ''${BUILD_TIME}s ✗
             "
-
-                          # Continue with next host instead of failing entirely
                         fi
           '') cfg.hosts}
 
           TOTAL_END=$(date +%s)
           TOTAL_TIME=$((TOTAL_END - TOTAL_START))
 
+          if [ "$SUCCESS_COUNT" -eq 0 ]; then
+            STATUS_TEXT="FAILED"
+          elif [ "$FAILED_COUNT" -gt 0 ] || [ "$PREPARATION_FAILED" -gt 0 ]; then
+            STATUS_TEXT="PARTIAL"
+          else
+            STATUS_TEXT="SUCCESS"
+          fi
+
           echo ""
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
           echo "Build summary:"
           echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
+          echo "Status: $STATUS_TEXT"
+          echo "Source revision: $SOURCE_REV"
+          echo "Input update: $INPUT_UPDATE_STATUS"
+          echo "Candidate lock SHA-256: $LOCK_FINGERPRINT"
+          echo "Flake fingerprint: $FLAKE_FINGERPRINT"
+          printf '%s' "$BUILD_RESULTS"
           ls -lh "$CACHE_DIR/"*-result 2>/dev/null || echo "No builds found"
 
           # Cleanup old generations
@@ -331,19 +379,6 @@ in
             echo "Preparing notifications..."
             echo "━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━"
 
-            # Calculate cache statistics
-            CACHE_SIZE_AFTER=$(${pkgs.coreutils}/bin/du -sb "$CACHE_DIR" 2>/dev/null | ${pkgs.coreutils}/bin/cut -f1 || echo "0")
-            CACHE_DIFF=$((CACHE_SIZE_AFTER - CACHE_SIZE_BEFORE))
-            CACHE_SIZE_HUMAN=$(${pkgs.coreutils}/bin/numfmt --to=iec-i --suffix=B $CACHE_SIZE_AFTER 2>/dev/null || echo "unknown")
-
-            # Handle cache diff formatting (can be negative)
-            if [ $CACHE_DIFF -ge 0 ]; then
-              CACHE_DIFF_HUMAN="+$(${pkgs.coreutils}/bin/numfmt --to=iec-i --suffix=B $CACHE_DIFF 2>/dev/null || echo "0B")"
-            else
-              CACHE_DIFF_ABS=$((0 - CACHE_DIFF))
-              CACHE_DIFF_HUMAN="-$(${pkgs.coreutils}/bin/numfmt --to=iec-i --suffix=B $CACHE_DIFF_ABS 2>/dev/null || echo "0B")"
-            fi
-
             DISK_FREE=$(${pkgs.coreutils}/bin/df -h "$CACHE_DIR" | ${pkgs.coreutils}/bin/tail -1 | ${pkgs.gawk}/bin/awk '{print $4}')
 
             # Format total time (convert seconds to human readable)
@@ -355,38 +390,27 @@ in
               TIME_HUMAN="''${TOTAL_SECONDS}s"
             fi
 
-            # Determine notification status
-            if [ $SUCCESS_COUNT -eq $TOTAL_HOSTS ]; then
-              STATUS_TEXT="SUCCESS"
-            elif [ $SUCCESS_COUNT -eq 0 ]; then
-              STATUS_TEXT="FAILED"
-            else
-              STATUS_TEXT="PARTIAL"
-            fi
-
             # Build notification message
-            if [ $SUCCESS_COUNT -eq 0 ]; then
-              message=$(printf 'Cache Build Status:\n%s\n==========\n⏱️ %s total' \
-                "$BUILD_RESULTS" \
-                "$TIME_HUMAN")
-            else
-              message=$(printf 'Cache Build Status:\n%s\n==========\n⏱️ %s total\n💾 Cache: %s (%s)\n💿 Free: %s' \
-                "$BUILD_RESULTS" \
-                "$TIME_HUMAN" \
-                "$CACHE_SIZE_HUMAN" \
-                "$CACHE_DIFF_HUMAN" \
-                "$DISK_FREE")
-            fi
+            message=$(printf 'Cache Build: %s\nSource: %s\nInput update: %s\nLock: %.12s\nFlake: %.12s\n==========\n%s\n==========\n⏱️ %s total\n💿 Free: %s\nDirect inputs:\n%s' \
+              "$STATUS_TEXT" \
+              "$SOURCE_SHORT" \
+              "$INPUT_UPDATE_STATUS" \
+              "$LOCK_FINGERPRINT" \
+              "$FLAKE_FINGERPRINT" \
+              "$BUILD_RESULTS" \
+              "$TIME_HUMAN" \
+              "$DISK_FREE" \
+              "$RESOLVED_INPUTS")
 
             TELEGRAM_SENT="false"
           ''}
 
           ${optionalString cfg.telegram.enable ''
             # Determine Telegram notification priority
-            if [ $SUCCESS_COUNT -eq $TOTAL_HOSTS ]; then
+            if [ "$STATUS_TEXT" = "SUCCESS" ]; then
               TG_SHOULD_NOTIFY="${if cfg.telegram.notifyOnSuccess then "true" else "false"}"
               PRIORITY="${cfg.telegram.successPriority}"
-            elif [ $SUCCESS_COUNT -eq 0 ]; then
+            elif [ "$STATUS_TEXT" = "FAILED" ]; then
               TG_SHOULD_NOTIFY="${if cfg.telegram.notifyOnFailure then "true" else "false"}"
               PRIORITY="${cfg.telegram.failurePriority}"
             else
@@ -428,6 +452,8 @@ in
           ${optionalString cfg.email.enable ''
             # Determine if email should be sent
             EMAIL_SHOULD_SEND="false"
+            EMAIL_NOTIFY_SUCCESS="${if cfg.email.notifyOnSuccess then "true" else "false"}"
+            EMAIL_NOTIFY_FAILURE="${if cfg.email.notifyOnFailure then "true" else "false"}"
 
             # Send email if Telegram failed and sendOnTelegramFailure is enabled
             ${optionalString cfg.email.sendOnTelegramFailure ''
@@ -438,13 +464,9 @@ in
             ''}
 
             # Send email based on build status
-            if [ $SUCCESS_COUNT -eq $TOTAL_HOSTS ] && [ "${
-              if cfg.email.notifyOnSuccess then "true" else "false"
-            }" = "true" ]; then
+            if [ "$STATUS_TEXT" = "SUCCESS" ] && [ "$EMAIL_NOTIFY_SUCCESS" = "true" ]; then
               EMAIL_SHOULD_SEND="true"
-            elif [ $SUCCESS_COUNT -lt $TOTAL_HOSTS ] && [ "${
-              if cfg.email.notifyOnFailure then "true" else "false"
-            }" = "true" ]; then
+            elif [ "$STATUS_TEXT" != "SUCCESS" ] && [ "$EMAIL_NOTIFY_FAILURE" = "true" ]; then
               EMAIL_SHOULD_SEND="true"
             fi
 
@@ -463,6 +485,12 @@ in
               echo "Skipping email notification"
             fi
           ''}
+
+          # Report an all-host failure to systemd. The service is not restarted
+          # automatically, so each scheduled run attempts every host exactly once.
+          if [ "$SUCCESS_COUNT" -eq 0 ]; then
+            exit 1
+          fi
         '';
 
         serviceConfig = {
@@ -474,14 +502,15 @@ in
           # Limit resources. 250% = 2.5 of 4 cores: leaves headroom and caps
           # heat while still letting the rare from-source build finish in time.
           CPUQuota = "250%";
-          MemoryMax = "8G";
+          # Begin reclaiming at 8 GiB but permit another 2 GiB before a hard
+          # limit. This fits beez's 12 GiB RAM without forcing normal builds to
+          # swap as aggressively as the previous 8 GiB hard cap.
+          MemoryHigh = "8G";
+          MemoryMax = "10G";
 
           # Increase timeout for long builds
           TimeoutStartSec = "6h";
 
-          # Restart on failure (transient network issues, etc.)
-          Restart = "on-failure";
-          RestartSec = "30m";
         }
         // (optionalAttrs cfg.telegram.enable {
           EnvironmentFile = config.sops.secrets."telegram-notifications-bot-token".path;

@@ -256,7 +256,3 @@ hl.window_rule({ match = { class = "^(steam_app).*" }, idle_inhibit = "focus" })
 -- Tearing for games
 hl.window_rule({ match = { class = "^(gamescope|steam_app).*" }, immediate = true })
 
-----------------------------------------------------------------
--- Workspace rules
-----------------------------------------------------------------
-hl.workspace_rule({ workspace = "4", on_created_empty = "steam" })

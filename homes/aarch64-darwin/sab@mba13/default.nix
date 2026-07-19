@@ -50,6 +50,7 @@ with lib.custom;
       atuin = enabled;
       bottom = enabled;
       fastfetch = enabled;
+      herdr = enabled;
       home-manager = enabled;
       yazi = enabled;
     };

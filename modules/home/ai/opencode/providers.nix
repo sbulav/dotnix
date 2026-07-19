@@ -7,11 +7,14 @@
       apiKey = "{env:OPENAI_API_KEY}";
     };
     models = {
-      "gpt-5.5-pro" = {
-        name = "ChatGPT 5.5 Pro";
-      };
       "gpt-5.5" = {
         name = "ChatGPT 5.5";
+      };
+      "gpt-5.6-sol" = {
+        name = "ChatGPT 5.6 Sol";
+      };
+      "gpt-5.6-terra" = {
+        name = "ChatGPT 5.6 Terra";
       };
       "gpt-5-mini" = {
         name = "ChatGPT 5 Mini";
@@ -115,8 +118,23 @@
       baseURL = "https://llmgtw.hhdev.ru/proxy/xai";
     };
     models = {
-      "grok-4.3" = {
-        name = "Grok 4.3";
+      "grok-4.5" = {
+        id = "grok-4.5";
+        name = "Grok 4.5";
+        cost = {
+          input = 0.2;
+          output = 0.6;
+          cache_read = 0.05;
+          context_over_200k = {
+            input = 0.4;
+            output = 1.2;
+            cache_read = 0.1;
+          };
+        };
+        limit = {
+          context = 500000;
+          output = 60000;
+        };
       };
     };
   };
