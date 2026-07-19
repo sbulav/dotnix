@@ -1,64 +1,113 @@
 { writeShellScriptBin, ... }:
 writeShellScriptBin "sys" ''
+  set -euo pipefail
+
+  fail() {
+    printf 'sys: %s\n' "$*" >&2
+    exit 1
+  }
+
+  resolve_flake() {
+    if [[ -n "''${1:-}" ]]; then
+      printf '%s\n' "$1"
+      return
+    fi
+
+    if [[ -n "''${SYS_FLAKE:-}" ]]; then
+      printf '%s\n' "$SYS_FLAKE"
+      return
+    fi
+
+    local directory="$PWD"
+    while true; do
+      if [[ -f "$directory/flake.nix" ]]; then
+        printf '%s\n' "$directory"
+        return
+      fi
+      [[ "$directory" == / ]] && break
+      directory="''${directory%/*}"
+      [[ -n "$directory" ]] || directory=/
+    done
+
+    fail "no flake.nix found; run inside a flake, pass a flake reference, or set SYS_FLAKE"
+  }
+
+  require_at_most() {
+    local maximum="$1"
+    shift
+    (( $# <= maximum )) || fail "too many arguments"
+  }
 
   cmd_rebuild() {
-      echo "🔨 Building system configuration with $REBUILD_COMMAND"
-      $REBUILD_COMMAND switch --flake ~/dotfiles/nix#
+    require_at_most 1 "$@"
+    local flake
+    flake="$(resolve_flake "''${1:-}")"
+    printf 'Rebuilding system from %s with %s\n' "$flake" "$REBUILD_COMMAND"
+    "$REBUILD_COMMAND" switch --flake "$flake"
   }
 
   cmd_test() {
-      echo "🏗️ Building ephemeral system configuration with $REBUILD_COMMAND"
-      $REBUILD_COMMAND test --fast --flake ~/dotfiles/nix#
+    require_at_most 1 "$@"
+    local flake
+    flake="$(resolve_flake "''${1:-}")"
+    printf 'Testing system from %s with %s\n' "$flake" "$REBUILD_COMMAND"
+    "$REBUILD_COMMAND" test --fast --flake "$flake"
   }
 
-  # TODO: Make it update a single input
   cmd_update() {
-      echo "🔒Updating flake.lock"
-      nix flake update
+    require_at_most 1 "$@"
+    local flake
+    flake="$(resolve_flake)"
+    if [[ -n "''${1:-}" ]]; then
+      printf 'Updating flake input %s in %s\n' "$1" "$flake"
+      nix flake update "$1" --flake "$flake"
+    else
+      printf 'Updating all flake inputs in %s\n' "$flake"
+      nix flake update --flake "$flake"
+    fi
   }
 
   cmd_clean() {
-      echo "🗑️ Cleaning and optimizing the Nix store."
-      nix store optimise --verbose &&
-      nix store gc --verbose
+    require_at_most 0 "$@"
+    printf 'Cleaning and optimizing the Nix store\n'
+    nix store optimise --verbose
+    nix store gc --verbose
   }
 
   cmd_usage() {
-      cat <<-_EOF
+    cat <<-_EOF
   Usage:
-      $PROGRAM rebuild
-          Rebuild the system. (You must be in the system flake directory!)
-          Must be run as root.
-      $PROGRAM test
-          Like rebuild but faster and not persistant.
+      $PROGRAM rebuild [flake]
+          Rebuild and switch the system configuration.
+      $PROGRAM test [flake]
+          Build and activate the configuration ephemerally.
       $PROGRAM update [input]
-          Update all inputs or the input specified. (You must be in the system flake directory!)
-          Must be run as root.
+          Update all inputs or only the named input.
       $PROGRAM clean
-          Garbage collect and optimise the Nix Store.
+          Garbage collect and optimize the Nix store.
       $PROGRAM help
           Show this text.
+
+  The flake defaults to SYS_FLAKE or the nearest flake.nix in the current
+  directory hierarchy. rebuild and test also accept an explicit flake reference.
   _EOF
   }
 
-
-  if [[ "$OSTYPE" == "linux"* ]]; then
-    REBUILD_COMMAND=nixos-rebuild
-  elif [[ "$OSTYPE" == "darwin"* ]]; then
-    REBUILD_COMMAND=darwin-rebuild
-  fi
-
-  # Subcommand utils based on pass
+  case "$OSTYPE" in
+    linux*) REBUILD_COMMAND=nixos-rebuild ;;
+    darwin*) REBUILD_COMMAND=darwin-rebuild ;;
+    *) fail "unsupported operating system: $OSTYPE" ;;
+  esac
 
   PROGRAM=sys
-  COMMAND="$1"
-  case "$1" in
-      rebuild|r) shift;       cmd_rebuild ;;
-      test|t) shift;          cmd_test ;;
-      update|u) shift;        cmd_update ;;
-      clean|c) shift;         cmd_clean ;;
-      help|--help) shift;     cmd_usage "$@" ;;
-      *)              echo "Unknown command: $@" ;;
+  COMMAND="''${1:-help}"
+  (( $# == 0 )) || shift
+  case "$COMMAND" in
+    rebuild|r) cmd_rebuild "$@" ;;
+    test|t) cmd_test "$@" ;;
+    update|u) cmd_update "$@" ;;
+    clean|c) cmd_clean "$@" ;;
+    help|-h|--help) cmd_usage ;;
+    *) fail "unknown command: $COMMAND" ;;
   esac
-  exit 0
 ''

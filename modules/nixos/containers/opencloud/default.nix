@@ -29,8 +29,12 @@ in
     # After the user logs in for the first time, look up their UUID under
     # /tank/opencloud/posix-storage/users/ and set it here. Leave empty to skip
     # external-mount setup entirely.
-    userId = mkOpt str "" "OpenCloud user UUID (read from posix-storage/users/<uuid>/ after first login)";
-    externalMounts = mkOpt (attrsOf str) { } "Map of <subfolder-in-personal-space> -> <hostPath> to bind into the user's personal space";
+    userId =
+      mkOpt str ""
+        "OpenCloud user UUID (read from posix-storage/users/<uuid>/ after first login)";
+    externalMounts =
+      mkOpt (attrsOf str) { }
+        "Map of <subfolder-in-personal-space> -> <hostPath> to bind into the user's personal space";
   };
 
   imports = [
@@ -80,7 +84,9 @@ in
       ++ lib.optionals haveUser [
         "d ${userDir}                             0750 998 998 -"
       ]
-      ++ lib.optionals haveUser (lib.mapAttrsToList (sub: _: "d ${userDir}/${sub} 0750 998 998 -") cfg.externalMounts);
+      ++ lib.optionals haveUser (
+        lib.mapAttrsToList (sub: _: "d ${userDir}/${sub} 0750 998 998 -") cfg.externalMounts
+      );
 
     # Enforce 998:998 0750 on the posix-storage tree before each container
     # start. -R is safe here: the external bind mounts (Video, Downloads) are
@@ -97,7 +103,9 @@ in
       };
       script = ''
         mkdir -p ${cfg.dataPath}/posix-storage/users
-        ${lib.optionalString (cfg.userId != "") "mkdir -p ${cfg.dataPath}/posix-storage/users/${cfg.userId}"}
+        ${lib.optionalString (
+          cfg.userId != ""
+        ) "mkdir -p ${cfg.dataPath}/posix-storage/users/${cfg.userId}"}
         chown 998:998 ${cfg.dataPath}/posix-storage ${cfg.dataPath}/posix-storage/users
         chmod 0750     ${cfg.dataPath}/posix-storage ${cfg.dataPath}/posix-storage/users
         ${lib.optionalString (cfg.userId != "") ''
@@ -134,33 +142,32 @@ in
       hostAddress = cfg.hostAddress;
       localAddress = cfg.localAddress;
 
-      bindMounts =
-        {
-          "${config.sops.secrets."opencloud-env".path}" = {
-            isReadOnly = true;
-          };
-          "/var/lib/opencloud" = {
-            hostPath = "${cfg.dataPath}";
-            isReadOnly = false;
-          };
-        }
-        # Externally-managed folders (Jellyfin libraries, torrent downloads,
-        # etc.) bound *inside* the POSIX user space so OpenCloud surfaces them
-        # as ordinary folders. The watcher picks up out-of-band changes via
-        # inotify. uid 998 on host must have rwx on the source paths (use
-        # `setfacl -R -m u:998:rwx` if the source belongs to another service).
-        // (
-          if cfg.userId == "" then
-            { }
-          else
-            lib.mapAttrs' (sub: src: {
-              name = "/var/lib/opencloud/posix-storage/users/${cfg.userId}/${sub}";
-              value = {
-                hostPath = src;
-                isReadOnly = false;
-              };
-            }) cfg.externalMounts
-        );
+      bindMounts = {
+        "${config.sops.secrets."opencloud-env".path}" = {
+          isReadOnly = true;
+        };
+        "/var/lib/opencloud" = {
+          hostPath = "${cfg.dataPath}";
+          isReadOnly = false;
+        };
+      }
+      # Externally-managed folders (Jellyfin libraries, torrent downloads,
+      # etc.) bound *inside* the POSIX user space so OpenCloud surfaces them
+      # as ordinary folders. The watcher picks up out-of-band changes via
+      # inotify. uid 998 on host must have rwx on the source paths (use
+      # `setfacl -R -m u:998:rwx` if the source belongs to another service).
+      // (
+        if cfg.userId == "" then
+          { }
+        else
+          lib.mapAttrs' (sub: src: {
+            name = "/var/lib/opencloud/posix-storage/users/${cfg.userId}/${sub}";
+            value = {
+              hostPath = src;
+              isReadOnly = false;
+            };
+          }) cfg.externalMounts
+      );
 
       specialArgs = {
         inherit inputs;

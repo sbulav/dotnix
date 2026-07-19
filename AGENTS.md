@@ -32,12 +32,12 @@ This guide provides comprehensive instructions for AI agents and developers work
 
 | Command | Action |
 |---|---|
-| `sys rebuild` / `sys r` | `nixos-rebuild switch --flake .#` (or `darwin-rebuild` on macOS) |
-| `sys test` / `sys t` | `nixos-rebuild test --fast --flake .#` (ephemeral, no bootloader update) |
-| `sys update` / `sys u` | `nix flake update` |
+| `sys rebuild [flake]` / `sys r [flake]` | `nixos-rebuild switch --flake` (or `darwin-rebuild` on macOS) |
+| `sys test [flake]` / `sys t [flake]` | `nixos-rebuild test --fast --flake` (ephemeral, no bootloader update) |
+| `sys update [input]` / `sys u [input]` | Updates every input or only the named input |
 | `sys clean` / `sys c` | `nix store optimise && nix store gc` |
 
-Caveat: as of writing, the script hardcodes `--flake ~/dotfiles/nix#`. If the checkout lives elsewhere (e.g. `~/dotnix`), invoke the underlying `nixos-rebuild` / `nix` commands directly until the path is fixed.
+The wrapper uses `SYS_FLAKE` or the nearest `flake.nix` in the current directory hierarchy. `rebuild` and `test` also accept an explicit flake reference.
 
 ### Development & Validation
 - **Format code**: `nix fmt` (uses nixfmt)

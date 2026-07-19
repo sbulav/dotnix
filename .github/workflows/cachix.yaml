@@ -1,4 +1,4 @@
-name: Build flake and upload to cachix
+name: Validate flake and upload builds to Cachix
 
 on:
   pull_request:
@@ -13,38 +13,87 @@ env:
   CACHIX_BINARY_CACHE: dotnix
 
 jobs:
-  check:
-    name: Check expressions on ${{ matrix.arch }}
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [ubuntu-latest]
-        arch: [x86_64-linux, aarch64-darwin]
-    runs-on: ${{ matrix.os }}
-
-    # if: github.ref == 'refs/heads/main'
+  quality:
+    name: Formatting and static checks
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
 
       - uses: cachix/install-nix-action@v31
-        with:
-          nix_path: nixpkgs=channel:nixos-unstable
-
-      - uses: cachix/cachix-action@v17
-        with:
-          authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-          name: ${{ env.CACHIX_BINARY_CACHE }}
 
       - name: Check Nix flake inputs
         uses: DeterminateSystems/flake-checker-action@v13
 
-  build:
-    needs:
-      - check
-    runs-on: ubuntu-latest
+      - name: Check formatting
+        run: git ls-files -z '*.nix' | xargs -0 nix fmt -- --check
 
+      # These expose the existing lint baseline without blocking configuration
+      # validation. New warnings should still be fixed when touching a file.
+      - name: Run statix
+        continue-on-error: true
+        run: nix develop --no-write-lock-file -c statix check .
+
+      - name: Run deadnix
+        continue-on-error: true
+        run: nix develop --no-write-lock-file -c deadnix .
+
+      - name: Check flake outputs
+        run: nix flake check --no-build --no-write-lock-file --print-build-logs
+
+      - name: Verify the committed lock file is unchanged
+        run: git diff --exit-code -- flake.lock
+
+  evaluate:
+    name: Evaluate ${{ matrix.name }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: all NixOS configurations
+            target: .#nixosConfigurations
+            apply: 'configs: builtins.mapAttrs (_: config: config.config.system.build.toplevel.drvPath) configs'
+          - name: all Darwin configurations
+            target: .#darwinConfigurations
+            apply: 'configs: builtins.mapAttrs (_: config: config.config.system.build.toplevel.drvPath) configs'
+          - name: all Home Manager configurations
+            target: .#homeConfigurations
+            apply: 'configs: builtins.mapAttrs (_: config: config.activationPackage.drvPath) configs'
     steps:
-      - name: Free Disk Space
+      - uses: actions/checkout@v7
+
+      - uses: cachix/install-nix-action@v31
+
+      - name: Evaluate derivation
+        run: nix eval --json --no-write-lock-file '${{ matrix.target }}' --apply '${{ matrix.apply }}'
+
+      - name: Verify the committed lock file is unchanged
+        run: git diff --exit-code -- flake.lock
+
+  # These representative outputs cover Linux desktop/server configurations and
+  # the active Apple Silicon host without building every large closure per PR.
+  build:
+    name: Build ${{ matrix.name }}
+    needs: [quality, evaluate]
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: NixOS nz
+            os: ubuntu-latest
+            target: .#nixosConfigurations.nz.config.system.build.toplevel
+          - name: NixOS zanoza
+            os: ubuntu-latest
+            target: .#nixosConfigurations.zanoza.config.system.build.toplevel
+          - name: Darwin mba13
+            os: macos-15
+            target: .#darwinConfigurations.mba13.config.system.build.toplevel
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Free disk space
+        if: runner.os == 'Linux'
         uses: endersonmenezes/free-disk-space@v3
         with:
           remove_android: true
@@ -56,75 +105,16 @@ jobs:
           remove_packages_one_command: true
           remove_folders: "/usr/share/swift /usr/share/miniconda /usr/share/az* /usr/share/glade* /usr/local/lib/node_modules /usr/local/share/chromium /usr/local/share/powershell"
           testing: false
+
       - uses: cachix/install-nix-action@v31
-        with:
-          nix_path: nixpkgs=channel:nixos-unstable
 
       - uses: cachix/cachix-action@v17
         with:
           authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
           name: ${{ env.CACHIX_BINARY_CACHE }}
 
-      - uses: actions/checkout@v7
+      - name: Build committed output
+        run: nix build --no-link --no-write-lock-file --print-build-logs '${{ matrix.target }}'
 
-      # - name: Update flake.lock
-      #   uses: DeterminateSystems/update-flake-lock@v25
-        # with:
-        #   path-to-flake-dir: 'dotnix/'
-
-      - run: nix build --json --no-link --print-build-logs .#nixosConfigurations.zanoza.config.system.build.toplevel
-      - run: nix build --json --no-link --print-build-logs .#nixosConfigurations.nz.config.system.build.toplevel
-
-  # build-darwin:
-  #   needs:
-  #     - check
-  #   runs-on: macos-latest
-  #   steps:
-  #     - uses: cachix/install-nix-action@v31
-  #       with:
-  #         nix_path: nixpkgs=channel:nixos-unstable
-
-  #     - uses: cachix/cachix-action@v16
-  #       with:
-  #         authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-  #         name: ${{ env.CACHIX_BINARY_CACHE }}
-
-  #     - uses: actions/checkout@v4
-
-  #     - run: nix develop -c just darwin-build "x86_64"
-
-  # build-home-manager:
-  #   needs:
-  #     - check
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: cachix/install-nix-action@v31
-  #       with:
-  #         nix_path: nixpkgs=channel:nixos-unstable
-
-  #     - uses: cachix/cachix-action@v16
-  #       with:
-  #         authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-  #         name: ${{ env.CACHIX_BINARY_CACHE }}
-
-  #     - uses: actions/checkout@v4
-
-  #     - run: nix develop -c just home-manager-build "x86_64-linux"
-
-  # build-nixos:
-  #   needs:
-  #     - check
-  #   runs-on: ubuntu-latest
-  #   steps:
-  #     - uses: cachix/install-nix-action@v31
-  #       with:
-  #         nix_path: nixpkgs=channel:nixos-unstable
-
-  #     - uses: cachix/cachix-action@v16
-  #       with:
-  #         authToken: ${{ secrets.CACHIX_AUTH_TOKEN }}
-  #         name: ${{ env.CACHIX_BINARY_CACHE }}
-
-  #     - uses: actions/checkout@v4
-
-  #     - run: nix develop -c just nixos-build "x86_64"
+      - name: Verify the committed lock file is unchanged
+        run: git diff --exit-code -- flake.lock

@@ -48,6 +48,32 @@ Kudos for config inspiration to:
 
 You might also want to check out my blog with [#Nix category](https://sbulav.github.io/categories/#nix)
 
+### Validation
+
+CI validates the committed `flake.lock` without updating it. It checks formatting,
+runs `statix`, `deadnix`, and `nix flake check`, and evaluates every active NixOS,
+nix-darwin, and Home Manager configuration. The build matrix intentionally builds
+the `nz` and `zanoza` NixOS systems plus the `mba13` Apple Silicon system; all
+other active outputs are evaluation-only to keep pull request builds bounded.
+
+Run the strict local checks with:
+
+```sh
+git ls-files -z '*.nix' | xargs -0 nix fmt -- --check
+nix flake check --no-build --no-write-lock-file
+```
+
+CI also reports the repository's existing static-analysis baseline with:
+
+```sh
+nix develop --no-write-lock-file -c statix check .
+nix develop --no-write-lock-file -c deadnix .
+```
+
+The `sys` wrapper finds the nearest enclosing `flake.nix`. `sys rebuild` and
+`sys test` also accept a flake reference, and `SYS_FLAKE` sets the default. Use
+`sys update nixpkgs` to update only the `nixpkgs` input.
+
 ### Useful NIX commands
 
 Quickly try out new package in the shell without installing it:

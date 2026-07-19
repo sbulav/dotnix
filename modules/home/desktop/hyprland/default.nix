@@ -52,7 +52,9 @@ let
       isTitleLike = rawField == "title" || rawField == "initialTitle";
       regex = if isTitleLike then "^(.*${pattern}.*)$" else "^(${pattern})$";
     in
-    { inherit field regex; };
+    {
+      inherit field regex;
+    };
 
   mkWorkspaceRules =
     assignments:
@@ -199,10 +201,9 @@ let
           ${mkBind mainMod kb.split "layoutmsg, togglesplit"}
         '';
 
-      copyPasteBindings =
-        optionalString (kb.floating != null && kb.paste != null) ''
-          ${mkBind mainMod "SHIFT ${kb.floating}" "togglefloating,"}
-        '';
+      copyPasteBindings = optionalString (kb.floating != null && kb.paste != null) ''
+        ${mkBind mainMod "SHIFT ${kb.floating}" "togglefloating,"}
+      '';
 
       # `extra` entries are now expected to be full Lua statements.
       extraBindings = concatStringsSep "\n" kb.extra;
@@ -210,8 +211,7 @@ let
       screenshotCfg = config.custom.desktop.addons.screenshot;
       sc = screenshotCfg.commands;
       hasAnnotate = screenshotCfg.enable && screenshotCfg.annotator != "none";
-      mkPrintBind =
-        modKey: cmd: "hl.bind(${luaStr modKey}, hl.dsp.exec_cmd(${luaStr cmd}))";
+      mkPrintBind = modKey: cmd: "hl.bind(${luaStr modKey}, hl.dsp.exec_cmd(${luaStr cmd}))";
       screenshotBindings =
         if !screenshotCfg.enable then
           ""
@@ -347,9 +347,7 @@ in
             })
           '';
           monitors = concatStringsSep "\n" (map mkMonitor cfg.monitors);
-          monitorBindings = concatStringsSep "\n" (
-            mkWorkspaceMonitorBindings cfg.workspaces.monitorBindings
-          );
+          monitorBindings = concatStringsSep "\n" (mkWorkspaceMonitorBindings cfg.workspaces.monitorBindings);
         in
         ''
           ${builtins.readFile ./hyprland.lua}
