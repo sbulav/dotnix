@@ -72,7 +72,6 @@ jobs:
         # with:
         #   path-to-flake-dir: 'dotnix/'
 
-      - run: nix flake update
       - run: nix build --json --no-link --print-build-logs .#nixosConfigurations.zanoza.config.system.build.toplevel
       - run: nix build --json --no-link --print-build-logs .#nixosConfigurations.nz.config.system.build.toplevel
 
