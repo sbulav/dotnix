@@ -45,14 +45,11 @@ let
 
     case "$1" in
       onbatt)
-        send "[zanoza] UPS ON BATTERY" "Utility power lost. status=$status charge=$charge% runtime=$runtime s. Auto-shutdown in ${toString cfg.shutdownDelay}s unless power returns." ;;
+        send "[zanoza] UPS ON BATTERY" "Utility power lost. status=$status charge=$charge% runtime=$runtime s. Will shut down when runtime drops below ${toString cfg.runtimeLow}s (~${toString (cfg.runtimeLow / 60)} min) unless power returns." ;;
       online)
         send "[zanoza] UPS back ONLINE" "Utility power restored. status=$status charge=$charge%." ;;
       lowbatt)
-        send "[zanoza] UPS LOW BATTERY - shutting down" "status=$status charge=$charge%. Forcing graceful shutdown now."
-        upsmon -c fsd ;;
-      onbattdelay)
-        send "[zanoza] UPS on battery > ${toString cfg.shutdownDelay}s - shutting down" "status=$status charge=$charge%. Forcing graceful shutdown now."
+        send "[zanoza] UPS LOW BATTERY - shutting down" "runtime=$runtime s left (threshold ${toString cfg.runtimeLow}s). status=$status charge=$charge%. Forcing graceful shutdown now."
         upsmon -c fsd ;;
       commbad)
         send "[zanoza] UPS COMM LOST" "upsmon lost communication with the UPS. status=$status" ;;
@@ -66,15 +63,15 @@ let
     PIPEFN /run/nut/upssched.pipe
     LOCKFN /run/nut/upssched.lock
 
-    # Timed graceful shutdown: arm a timer when going on battery, cancel it
-    # when mains returns. If the timer expires we shut down.
-    AT ONBATT  * START-TIMER onbattdelay ${toString cfg.shutdownDelay}
-    AT ONLINE  * CANCEL-TIMER onbattdelay
+    # Runtime-based shutdown: we do NOT shut down on a fixed on-battery timer.
+    # Instead `ignorelb` + `override.battery.runtime.low` make the driver raise
+    # the LB flag once the UPS reports less than runtimeLow seconds remaining,
+    # which fires LOWBATT below and issues the graceful shutdown.
+    AT LOWBATT * EXECUTE lowbatt
 
     # Email notifications for every relevant power event.
     AT ONBATT  * EXECUTE onbatt
     AT ONLINE  * EXECUTE online
-    AT LOWBATT * EXECUTE lowbatt
     AT COMMBAD * EXECUTE commbad
     AT COMMOK  * EXECUTE commok
   '';
@@ -84,7 +81,9 @@ in
     enable = mkBoolOpt false "Enable UPS monitoring";
     driver = mkOpt str "huawei-ups2000" "Driver to use to connect to UPS";
     port = mkOpt str "/dev/ttyUSB0" "Port to connect";
-    shutdownDelay = mkOpt int 600 "Seconds on battery before a graceful shutdown is triggered";
+    runtimeLow =
+      mkOpt int 300
+        "Battery runtime (seconds) remaining at which a graceful shutdown is triggered";
     notifyEmail = mkOpt str "zppfan@gmail.com" "Address for UPS power-event email notifications";
   };
 
@@ -136,6 +135,13 @@ in
         directives = [
           "offdelay = 60"
           "ondelay = 120"
+          # Runtime-based low-battery: ignore the UPS's own LB flag and instead
+          # raise LB when reported runtime drops below runtimeLow seconds. This
+          # is what drives the shutdown (LOWBATT -> upsmon -c fsd), so we run on
+          # battery for as long as the UPS estimates it can, and only shut down
+          # with ~runtimeLow seconds of headroom left.
+          "ignorelb"
+          "override.battery.runtime.low = ${toString cfg.runtimeLow}"
         ];
         # this option is not valid for usbhid-ups
         maxStartDelay = null;
