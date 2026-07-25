@@ -141,7 +141,7 @@ in
         yubikeyKeyId = ""; # Auto-detect from YubiKey card
         fallbackKeyId = "7C43420F61CEC7FB";
       };
-      rbw = disabled; # TODO: Re-enable after nixpkgs fixes broken dependencies
+      rbw = enabled;
       vault = enabled;
       openconnect = enabled;
       sops = {

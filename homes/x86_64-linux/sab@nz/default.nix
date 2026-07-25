@@ -80,7 +80,7 @@ in
       sqlite-jira = enabled;
     };
     security = {
-      rbw = disabled; # TODO: Re-enable after nixpkgs fixes broken dependencies
+      rbw = enabled;
       vault = enabled;
       openconnect = enabled;
       sops = {

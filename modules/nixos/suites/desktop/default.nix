@@ -30,7 +30,7 @@ in
         feh = disabled;
         slack = disabled;
         zoom-us = disabled;
-        telegram = disabled; # TODO: Re-enable after nixpkgs fixes missing libzip header
+        telegram = enabled;
         vlc = enabled;
         zathura = enabled;
         pcmanfm = enabled;

@@ -45,7 +45,6 @@ in
     };
     custom.cli-apps = {
       neovim.enable = lib.mkDefault true;
-      lf.enable = lib.mkDefault false;
       tmux.enable = lib.mkDefault true;
     };
   };

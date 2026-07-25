@@ -36,7 +36,6 @@ in
       cachix
       deploy-rs
       gcc
-      nil
       nix-index
       nix-prefetch-git
       nixfmt
