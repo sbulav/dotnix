@@ -19,8 +19,12 @@
     };
 
     snowfall-lib = {
-      url = "github:snowfallorg/lib";
+      # Maintained Snowfall fork with current Nix compatibility fixes and
+      # correct namespace/Home Manager argument propagation.
+      url = "github:anntnzrb/snowfall-lib";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.darwin.follows = "darwin";
+      inputs.home-manager.follows = "home-manager";
     };
 
     darwin = {
