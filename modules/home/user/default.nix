@@ -2,7 +2,7 @@
   lib,
   config,
   pkgs,
-  osConfig ? { },
+  user ? config.snowfallorg.user.name,
   ...
 }:
 let
@@ -30,7 +30,7 @@ in
 {
   options.custom.user = {
     enable = mkOpt types.bool false "Whether to configure the user account.";
-    name = mkOpt types.str "sab" "The name to use for the user account.";
+    name = mkOpt types.str user "The name to use for the user account.";
     fullName = mkOpt types.str "Sergei Bulavintsev" "The full name of the user.";
     email = mkOpt types.str "bulavintsev.sergey@gmail.com" "The email of the user.";
 

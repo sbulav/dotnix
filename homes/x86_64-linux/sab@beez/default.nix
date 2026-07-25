@@ -1,6 +1,5 @@
 {
   lib,
-  config,
   inputs,
   pkgs,
   ...
@@ -10,7 +9,6 @@ with lib.custom;
   custom = {
     user = {
       enable = true;
-      name = config.snowfallorg.user.name;
     };
 
     cli-apps = {

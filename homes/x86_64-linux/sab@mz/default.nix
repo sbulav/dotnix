@@ -1,6 +1,5 @@
 {
   lib,
-  config,
   inputs,
   pkgs,
   ...
@@ -13,7 +12,6 @@ in
   custom = {
     user = {
       enable = true;
-      name = config.snowfallorg.user.name;
     };
 
     desktop = {
