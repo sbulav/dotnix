@@ -153,11 +153,7 @@ in
     };
   };
 
-  services.nix-remote-builder.client = {
-    enable = true;
-    hostName = "192.168.89.207";
-    publicHostKey = "c3NoLWVkMjU1MTkgQUFBQUMzTnphQzFsWkRJMU5URTVBQUFBSVBBdVc2SHArZTlYK3NkK25oWFFwVi9EQkQvSVNXVzkvTU9YOFJuUThvZXkgcm9vdEBuaXhvcwo=";
-  };
+  services.nix-remote-builder.client.enable = false;
 
   system.nix.cache-servers = [
     {
