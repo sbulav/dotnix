@@ -1,90 +1,113 @@
-"""Transcription via faster-whisper (CTranslate2) with GPU + Silero VAD."""
+"""Transcription through a local whisper.cpp server."""
+
+from __future__ import annotations
 
 import logging
 import re
 import threading
+import time
+import uuid
 from collections.abc import Callable
 from pathlib import Path
-
-from faster_whisper import WhisperModel
+from urllib.error import HTTPError, URLError
+from urllib.request import Request, urlopen
 
 logger = logging.getLogger(__name__)
 
 
 class WhisperTranscriber:
-    """Transcribes audio using faster-whisper; model is loaded lazily and kept warm."""
+    """Sends WAV recordings to a warm, localhost-only whisper.cpp server."""
 
     def __init__(self, config):
         self.config = config
-        self._model: WhisperModel | None = None
-        self._model_lock = threading.Lock()
+        self.server_url = self.config.get(
+            "whisper.server_url", "http://127.0.0.1:8178/inference"
+        )
 
-    def _get_model(self) -> WhisperModel:
-        with self._model_lock:
-            if self._model is None:
-                model_name = self.config.get("whisper.model", "large-v3-turbo")
-                device = self.config.get("whisper.device", "cuda")
-                compute_type = self.config.get("whisper.compute_type", "float16")
-                cpu_threads = int(self.config.get("whisper.threads", 4))
+    @staticmethod
+    def _multipart_body(audio_file: Path, fields: dict[str, str]) -> tuple[bytes, str]:
+        boundary = f"----whisper-dictation-{uuid.uuid4().hex}"
+        chunks: list[bytes] = []
 
-                logger.info(
-                    "Loading faster-whisper model=%s device=%s compute_type=%s",
-                    model_name, device, compute_type,
-                )
-                self._model = WhisperModel(
-                    model_name,
-                    device=device,
-                    compute_type=compute_type,
-                    cpu_threads=cpu_threads,
-                )
-            return self._model
+        for name, value in fields.items():
+            chunks.extend(
+                [
+                    f"--{boundary}\r\n".encode(),
+                    (
+                        f'Content-Disposition: form-data; name="{name}"'
+                        "\r\n\r\n"
+                    ).encode(),
+                    str(value).encode(),
+                    b"\r\n",
+                ]
+            )
+
+        chunks.extend(
+            [
+                f"--{boundary}\r\n".encode(),
+                (
+                    'Content-Disposition: form-data; name="file"; '
+                    f'filename="{audio_file.name}"\r\n'
+                ).encode(),
+                b"Content-Type: audio/wav\r\n\r\n",
+                audio_file.read_bytes(),
+                b"\r\n",
+                f"--{boundary}--\r\n".encode(),
+            ]
+        )
+
+        return b"".join(chunks), boundary
+
+    def _request(self, audio_file: Path) -> str:
+        language = self.config.get("whisper.language", "auto")
+        beam_size = int(self.config.get("whisper.beam_size", 5))
+        initial_prompt = self.config.get("whisper.initial_prompt", "")
+
+        fields = {
+            "response_format": "text",
+            "temperature": "0.0",
+            "beam_size": str(beam_size),
+            "best_of": str(beam_size),
+        }
+        if language:
+            fields["language"] = language
+        if initial_prompt:
+            fields["prompt"] = initial_prompt
+
+        body, boundary = self._multipart_body(audio_file, fields)
+        request = Request(
+            self.server_url,
+            data=body,
+            headers={"Content-Type": f"multipart/form-data; boundary={boundary}"},
+            method="POST",
+        )
+
+        for attempt in range(5):
+            try:
+                with urlopen(request, timeout=120) as response:
+                    return response.read().decode("utf-8")
+            except HTTPError as error:
+                details = error.read().decode("utf-8", errors="replace")
+                raise RuntimeError(
+                    f"whisper.cpp returned HTTP {error.code}: {details}"
+                ) from error
+            except URLError as error:
+                if attempt == 4:
+                    raise RuntimeError(
+                        f"Cannot reach whisper.cpp at {self.server_url}: {error.reason}"
+                    ) from error
+                time.sleep(1)
+
+        raise RuntimeError("whisper.cpp request failed")
 
     def transcribe(self, audio_file: Path) -> str | None:
         try:
-            model = self._get_model()
-        except Exception as e:
-            logger.error("Failed to load model: %s", e, exc_info=True)
-            return None
-
-        beam_size = int(self.config.get("whisper.beam_size", 5))
-        best_of = int(self.config.get("whisper.best_of", beam_size))
-        language = self.config.get("whisper.language", "en")
-        if language in ("auto", "", None):
-            language = None
-        initial_prompt = self.config.get("whisper.initial_prompt", "") or None
-
-        vad_filter = bool(self.config.get("whisper.vad.enable", True))
-        vad_parameters = {
-            "min_silence_duration_ms": int(
-                self.config.get("whisper.vad.min_silence_ms", 500)
-            ),
-            "speech_pad_ms": int(
-                self.config.get("whisper.vad.speech_pad_ms", 200)
-            ),
-        }
-
-        try:
-            segments, info = model.transcribe(
-                str(audio_file),
-                language=language,
-                beam_size=beam_size,
-                best_of=best_of,
-                temperature=0.0,
-                condition_on_previous_text=False,
-                initial_prompt=initial_prompt,
-                vad_filter=vad_filter,
-                vad_parameters=vad_parameters,
-                word_timestamps=False,
-            )
-            text = " ".join(seg.text.strip() for seg in segments).strip()
-            logger.info(
-                "Transcribed (%s p=%.2f): %s",
-                info.language, info.language_probability, text[:80],
-            )
+            text = self._request(audio_file).strip()
+            logger.info("Transcribed: %s", text[:80])
             return self._post_process(text) or None
-        except Exception as e:
-            logger.error("Transcription error: %s", e, exc_info=True)
-            return None
+        except Exception:
+            logger.exception("Transcription error")
+            raise
 
     def transcribe_async(
         self,

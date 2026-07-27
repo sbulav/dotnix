@@ -8,67 +8,45 @@
 with lib.custom;
 let
   inherit (lib)
-    getOutput
+    escapeShellArgs
     mkIf
-    optionalString
     types
     ;
   cfg = config.custom.apps.whisper-dictation;
 
   socketPath = cfg.ydotoolSocketPath;
 
-  # Scoped CUDA build: only the C++ ctranslate2 rebuilds against CUDA.
-  # Everything else keeps its cached, CPU-only binary.
-  ct2cppCuda = pkgs.unstable.ctranslate2.override { withCUDA = true; };
+  defaultModel = pkgs.fetchurl {
+    name = "ggml-large-v3-turbo-q5_0.bin";
+    url = "https://huggingface.co/ggerganov/whisper.cpp/resolve/main/ggml-large-v3-turbo-q5_0.bin?download=true";
+    hash = "sha256-OUIhcJzVrR9AxG5gMcphvOiJMebgiMGIKUxtWlX/p+I=";
+  };
 
-  # Use the default Python (3.13). Hydra only builds/caches the default
-  # interpreter's package set, so pinning python312 forced torch and the
-  # whole env to compile from source. Tracking the default keeps torch cached.
-  python = pkgs.unstable.python3;
+  whisperCpp = pkgs.unstable.whisper-cpp-vulkan.override {
+    withFFmpegSupport = false;
+    withSDL = false;
+  };
+
+  python = pkgs.python3;
   pythonEnv = python.withPackages (
     ps: with ps; [
-      (faster-whisper.override {
-        ctranslate2 = ctranslate2.override { ctranslate2-cpp = ct2cppCuda; };
-      })
       evdev
-      pygobject3
-      pyaudio
-      numpy
-      scipy
       pyyaml
     ]
   );
 
-  giTypelibPath = lib.concatStringsSep ":" [
-    "${getOutput "out" pkgs.harfbuzz}/lib/girepository-1.0"
-    "${getOutput "out" pkgs.pango}/lib/girepository-1.0"
-    "${getOutput "out" pkgs.cairo}/lib/girepository-1.0"
-    "${getOutput "out" pkgs.gdk-pixbuf}/lib/girepository-1.0"
-    "${getOutput "out" pkgs.graphene}/lib/girepository-1.0"
-    "${getOutput "out" pkgs.gtk4}/lib/girepository-1.0"
-    "${getOutput "out" pkgs.glib}/lib/girepository-1.0"
-    "${pkgs.gobject-introspection}/lib/girepository-1.0"
-  ];
-
   whisper-dictation = pkgs.stdenv.mkDerivation {
     pname = "whisper-dictation";
-    version = "0.1.0-faster-whisper";
+    version = "0.2.0-whisper-cpp";
     src = inputs.whisper-dictation;
 
     nativeBuildInputs = [ pkgs.makeWrapper ];
 
-    buildInputs = [
-      pythonEnv
-      pkgs.ffmpeg
-      pkgs.ydotool
-      pkgs.libnotify
-      pkgs.gtk4
-      pkgs.gobject-introspection
-    ];
-
     postPatch = ''
       cp ${./transcriber.py} src/whisper_dictation/transcriber.py
       cp ${./paste.py} src/whisper_dictation/paste.py
+      cp ${./recorder.py} src/whisper_dictation/recorder.py
+      cp ${./ui.py} src/whisper_dictation/ui.py
     '';
 
     dontBuild = true;
@@ -84,30 +62,48 @@ let
         --set PYTHONPATH "$out/lib/whisper-dictation" \
         --prefix PATH : ${
           lib.makeBinPath [
-            pkgs.ffmpeg
-            pkgs.ydotool
             pkgs.libnotify
+            pkgs.pipewire
+            pkgs.procps
             pkgs.wl-clipboard
             pkgs.wtype
-            pkgs.procps
+            pkgs.ydotool
           ]
-        } \
-        --prefix GI_TYPELIB_PATH : "${giTypelibPath}"
+        }
 
       runHook postInstall
     '';
 
     meta = with lib; {
-      description = "Local push-to-talk speech-to-text dictation (faster-whisper backend)";
+      description = "Local push-to-talk speech-to-text dictation (whisper.cpp backend)";
       homepage = "https://github.com/jacopone/whisper-dictation";
       license = licenses.mit;
       platforms = platforms.linux;
     };
   };
 
-  daemonExec = "${whisper-dictation}/bin/whisper-dictation --language ${cfg.language}${
-    optionalString (cfg.model != "") " --model ${cfg.model}"
-  }";
+  daemonExec = escapeShellArgs [
+    "${cfg.package}/bin/whisper-dictation"
+    "--language"
+    cfg.language
+  ];
+
+  serverExec = escapeShellArgs [
+    "${cfg.server.package}/bin/whisper-server"
+    "--model"
+    (toString cfg.model)
+    "--host"
+    cfg.server.host
+    "--port"
+    (toString cfg.server.port)
+    "--language"
+    cfg.language
+    "--threads"
+    (toString cfg.server.threads)
+    "--beam-size"
+    (toString cfg.beamSize)
+    "--flash-attn"
+  ];
 in
 {
   options.custom.apps.whisper-dictation = {
@@ -119,15 +115,7 @@ in
 
     language = mkOpt types.str "auto" "Language code (auto, en, ru, it, ...).";
 
-    model =
-      mkOpt types.str "large-v3-turbo"
-        "faster-whisper model name (tiny, base, small, medium, large-v3, large-v3-turbo, distil-large-v3).";
-
-    device = mkOpt types.str "cuda" "Compute device: cuda | cpu | auto.";
-
-    computeType =
-      mkOpt types.str "float16"
-        "CTranslate2 compute type (float16 | int8_float16 | int8 | float32).";
+    model = mkOpt types.path defaultModel "Path to a whisper.cpp GGML model.";
 
     beamSize = mkOpt types.int 5 "Beam size for decoding. Higher = better, slower.";
 
@@ -135,10 +123,11 @@ in
       mkOpt types.str ""
         "Initial prompt to bias vocabulary (names, jargon). Empty to disable.";
 
-    vad = {
-      enable = mkBoolOpt true "Use Silero VAD to skip silence before decoding.";
-      minSilenceMs = mkOpt types.int 500 "Min silence duration (ms) to cut.";
-      speechPadMs = mkOpt types.int 200 "Padding around detected speech (ms).";
+    server = {
+      package = mkOpt types.package whisperCpp "whisper.cpp server package.";
+      host = mkOpt types.str "127.0.0.1" "Address for the local transcription server.";
+      port = mkOpt types.port 8178 "Port for the local transcription server.";
+      threads = mkOpt types.int 4 "CPU threads used by whisper.cpp.";
     };
 
     hotkey = {
@@ -162,14 +151,13 @@ in
   config = mkIf cfg.enable {
     environment.systemPackages = [
       cfg.package
-      pkgs.ydotool
+      cfg.server.package
+      pkgs.pipewire
       pkgs.procps
       pkgs.wl-clipboard
       pkgs.wtype
-      pkgs.ffmpeg
+      pkgs.ydotool
     ];
-
-    home.file.".cache/whisper-dictation/.keep".text = "";
 
     home.configFile."whisper-dictation/config.yaml".text = ''
       hotkey:
@@ -181,16 +169,10 @@ in
           modifiers: ${builtins.toJSON cfg.paste.shortcut.modifiers}
           key: ${builtins.toJSON cfg.paste.shortcut.key}
       whisper:
-        language: ${cfg.language}
-        model: ${cfg.model}
-        device: ${cfg.device}
-        compute_type: ${cfg.computeType}
+        server_url: ${builtins.toJSON "http://${cfg.server.host}:${toString cfg.server.port}/inference"}
+        language: ${builtins.toJSON cfg.language}
         beam_size: ${toString cfg.beamSize}
         initial_prompt: ${builtins.toJSON cfg.initialPrompt}
-        vad:
-          enable: ${lib.boolToString cfg.vad.enable}
-          min_silence_ms: ${toString cfg.vad.minSilenceMs}
-          speech_pad_ms: ${toString cfg.vad.speechPadMs}
     '';
 
     systemd.user.services.ydotoold = {
@@ -202,28 +184,45 @@ in
       };
     };
 
+    systemd.user.services.whisper-dictation-server = {
+      enable = cfg.autoStart;
+      wantedBy = [ "graphical-session.target" ];
+      after = [ "graphical-session.target" ];
+      serviceConfig = {
+        ExecStart = serverExec;
+        Restart = "on-failure";
+        RestartSec = "2s";
+        NoNewPrivileges = true;
+        PrivateTmp = true;
+        ProtectSystem = "strict";
+      };
+    };
+
     systemd.user.services.whisper-dictation = {
       enable = cfg.autoStart;
       wantedBy = [ "graphical-session.target" ];
       after = [
         "graphical-session.target"
+        "whisper-dictation-server.service"
         "ydotoold.service"
       ];
-      wants = [ "ydotoold.service" ];
+      wants = [
+        "whisper-dictation-server.service"
+        "ydotoold.service"
+      ];
       path = [
+        pkgs.libnotify
+        pkgs.pipewire
         pkgs.procps
-        pkgs.ydotool
         pkgs.wl-clipboard
         pkgs.wtype
-        pkgs.ffmpeg
+        pkgs.ydotool
       ];
       serviceConfig = {
         ExecStart = daemonExec;
         Restart = "on-failure";
-        Environment = [
-          "GI_TYPELIB_PATH=${giTypelibPath}"
-          "YDOTOOL_SOCKET=${socketPath}"
-        ];
+        RestartSec = "2s";
+        Environment = [ "YDOTOOL_SOCKET=${socketPath}" ];
       };
     };
   };
