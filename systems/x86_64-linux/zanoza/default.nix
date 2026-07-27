@@ -102,7 +102,13 @@ in
 
   # The system ASint/Maxio NVMe has repeatedly timed out under I/O load.
   # Avoid its deepest autonomous power states while it is being replaced.
-  boot.kernelParams = [ "nvme_core.default_ps_max_latency_us=0" ];
+  #
+  # The WTR Pro's ata3 link also produces ICRC/BadCRC errors with DIPM active.
+  # Keep all AHCI links at maximum performance to avoid faulty LPM transitions.
+  boot.kernelParams = [
+    "nvme_core.default_ps_max_latency_us=0"
+    "ahci.mobile_lpm_policy=1"
+  ];
 
   hardware = {
     fingerprint.enable = false;
