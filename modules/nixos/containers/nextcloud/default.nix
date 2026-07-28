@@ -62,7 +62,7 @@ in
     networking.nat = {
       enable = true;
       internalInterfaces = [ "ve-nextcloud" ];
-      externalInterface = "ens3";
+      externalInterface = "enp3s0";
     };
 
     custom.security.sops.secrets = {

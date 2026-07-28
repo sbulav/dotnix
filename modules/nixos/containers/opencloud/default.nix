@@ -55,7 +55,7 @@ in
     networking.nat = {
       enable = true;
       internalInterfaces = [ "ve-opencloud" ];
-      externalInterface = "ens3";
+      externalInterface = "enp3s0";
     };
 
     # NOTE: nixpkgs already bumps fs.inotify.max_user_watches and

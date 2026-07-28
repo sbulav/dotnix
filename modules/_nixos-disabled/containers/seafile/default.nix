@@ -53,7 +53,7 @@ in
     networking.nat = {
       enable = true;
       internalInterfaces = [ "ve-seafile" ];
-      externalInterface = "ens3";
+      externalInterface = "enp3s0";
     };
     containers.seafile = {
       ephemeral = true;

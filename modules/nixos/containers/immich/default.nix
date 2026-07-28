@@ -64,7 +64,7 @@ in
     networking.nat = {
       enable = true;
       internalInterfaces = [ "ve-immich" ];
-      externalInterface = "ens3";
+      externalInterface = "enp3s0";
     };
     containers.immich = {
       ephemeral = true;

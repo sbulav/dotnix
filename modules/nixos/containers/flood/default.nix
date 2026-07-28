@@ -46,7 +46,7 @@ in
     networking.nat = {
       enable = true;
       internalInterfaces = [ "ve-flood" ];
-      externalInterface = "ens3";
+      externalInterface = "enp3s0";
     };
     containers.flood = {
       ephemeral = true;

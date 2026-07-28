@@ -224,7 +224,7 @@ in
     networking.nat = {
       enable = true;
       internalInterfaces = [ "ve-v2raya" ];
-      externalInterface = "ens3";
+      externalInterface = "enp3s0";
     };
 
     containers.v2raya = {

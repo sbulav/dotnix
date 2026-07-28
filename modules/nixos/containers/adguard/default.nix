@@ -50,7 +50,7 @@ in
     networking.nat = {
       enable = true;
       internalInterfaces = [ "ve-adguard" ];
-      externalInterface = "ens3";
+      externalInterface = "enp3s0";
     };
     containers.adguard = {
       ephemeral = true;

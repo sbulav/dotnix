@@ -57,7 +57,7 @@ in
     networking.nat = {
       enable = true;
       internalInterfaces = [ "ve-jellyfin" ];
-      externalInterface = "ens3";
+      externalInterface = "enp3s0";
     };
     containers.jellyfin = {
       ephemeral = true;

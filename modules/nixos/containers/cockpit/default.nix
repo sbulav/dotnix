@@ -34,7 +34,7 @@ in
     networking.nat = {
       enable = true;
       internalInterfaces = [ "ve-cockpit" ];
-      externalInterface = "ens3";
+      externalInterface = "enp3s0";
     };
     containers.cockpit = {
       ephemeral = true;
