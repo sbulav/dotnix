@@ -26,7 +26,7 @@ Move a quarantined module back into the active tree only after:
 | NixOS LF | Quarantine | No host enables it, every active home enables Yazi, and the module mixes obsolete Home Manager configuration into a NixOS module. |
 | Authentik | Quarantine | No host enables it and its implementation is entirely commented out. Authelia remains active on `zanoza`. |
 | Seafile | Quarantine | No host enables it; the module is marked non-working and still contains placeholder credentials. OpenCloud remains active on `zanoza`. |
-| Nextcloud | Retain, suspended | It is explicitly disabled on `zanoza`, but encrypted credentials and backups for its retained data still exist. Removal needs a separate data-retention decision. |
+| Nextcloud | Retain, suspended | It is explicitly disabled on `zanoza`; its former Restic job was replaced by OpenCloud user-data backups after migration. Removal of the retained module and data remains a separate decision. |
 | Historical Darwin | Retain in quarantine | The old `mbp16` profiles and modules already live under `.disabled` and `modules/_darwin-disabled`; the active Darwin host is `mba13`. |
 
 The active Nix language server is `nixd`. Development suites install it through

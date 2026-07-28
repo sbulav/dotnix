@@ -43,15 +43,12 @@ in
     };
     # Run backup script on a timer start at 01:05
     services.restic.backups = {
-      tank_nextcloud = {
+      tank_opencloud = {
         initialize = true;
         user = cfg.backup_user;
         passwordFile = config.sops.secrets."backups/restic_odroid".path;
         repository = "sftp:${cfg.backup_user}@${cfg.backup_host}:/mnt/ext/backup_zanoza";
-        paths = [ "/tank/nextcloud/data/" ];
-        exclude = [
-          "/tank/nextcloud/data/appdata_*"
-        ];
+        paths = [ "/tank/opencloud/posix-storage/users/" ];
         extraBackupArgs = [
           "--exclude-caches"
           "--compression=max"
@@ -61,6 +58,7 @@ in
           RandomizedDelaySec = "1h";
         };
         pruneOpts = [
+          "--path /tank/opencloud/posix-storage/users"
           "--keep-daily 7"
           "--keep-weekly 2"
           "--keep-monthly 6"
@@ -84,6 +82,7 @@ in
           RandomizedDelaySec = "1h";
         };
         pruneOpts = [
+          "--path /tank/immich"
           "--keep-daily 7"
           "--keep-weekly 2"
           "--keep-monthly 6"
@@ -109,6 +108,7 @@ in
         # --keep-weekly n for the last n weeks which have one or more snapshots, keep only the most recent one for each week.
         # --keep-monthly n for the last n months which have one or more snapshots, keep only the most recent one for each month.
         pruneOpts = [
+          "--path /tank/photos"
           "--keep-daily 3"
           "--keep-weekly 2"
           "--keep-monthly 6"
@@ -132,7 +132,7 @@ in
       # Restic backup services with failure hooks
       {
         restic-backups-tank_immich.onFailure = [ "restic-backups-telegram-failure.service" ];
-        restic-backups-tank_nextcloud.onFailure = [ "restic-backups-telegram-failure.service" ];
+        restic-backups-tank_opencloud.onFailure = [ "restic-backups-telegram-failure.service" ];
         restic-backups-tank_photos.onFailure = [ "restic-backups-telegram-failure.service" ];
       }
 
@@ -153,11 +153,11 @@ in
             output="Backup Status:"
 
             # Check each backup service
-            for service in restic-backups-tank_nextcloud restic-backups-tank_immich restic-backups-tank_photos; do
+            for service in restic-backups-tank_opencloud restic-backups-tank_immich restic-backups-tank_photos; do
               # Get status in original format: "ExecMainStatus=0"
               status=$(systemctl show $service.service --property=ExecMainStatus 2>/dev/null || echo "ExecMainStatus=unknown")
               
-              # Extract backup name (nextcloud, immich, photos)
+              # Extract backup name (opencloud, immich, photos)
               backup_name=$(echo "$service" | sed 's/restic-backups-tank_//')
               
               # Check if status is success (ExecMainStatus=0)
@@ -174,7 +174,7 @@ in
           # Identify which services failed for log extraction
           getFailedServicesScript = ''
             failed_services=""
-            for service in restic-backups-tank_nextcloud restic-backups-tank_immich restic-backups-tank_photos; do
+            for service in restic-backups-tank_opencloud restic-backups-tank_immich restic-backups-tank_photos; do
               status=$(systemctl show $service.service --property=ExecMainStatus --value 2>/dev/null || echo "unknown")
               if [ "$status" != "0" ]; then
                 failed_services="$failed_services $service.service"
@@ -199,7 +199,7 @@ in
             hostName = config.system.name;
             chatId = cfg.telegram.chatId;
             backupServices = [
-              "restic-backups-tank_nextcloud"
+              "restic-backups-tank_opencloud"
               "restic-backups-tank_immich"
               "restic-backups-tank_photos"
             ];
