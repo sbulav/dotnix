@@ -141,7 +141,10 @@ in
       };
       rbw = enabled;
       vault = enabled;
-      openconnect = enabled;
+      openconnect = {
+        enable = true;
+        routes.lanGateway = "192.168.90.1";
+      };
       sops = {
         enable = true;
         # Shared module auto-resolves to secrets/sab/default.yaml

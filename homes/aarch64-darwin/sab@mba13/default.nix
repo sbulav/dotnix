@@ -78,11 +78,14 @@ with lib.custom;
         enable = true;
         yubikeyKeyId = "15DB4B4A58D027CB73D0E911D06334BAEC6DC034";
       };
-      openconnect = enabled;
+      openconnect = {
+        enable = true;
+        routes.lanGateway = "192.168.89.1";
+      };
       sops = {
         enable = true;
         # Decrypt secrets/sab/default.yaml to ~/.ssh/sops-env-credentials;
-        # Fish sources this file for new interactive sessions.
+        # myvpn sources this file when credentials are absent from its environment.
         commonSecrets.enableCredentials = true;
         profile = "home";
       };

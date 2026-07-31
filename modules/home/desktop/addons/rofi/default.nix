@@ -9,6 +9,7 @@ with lib;
 with lib.custom;
 let
   cfg = config.custom.desktop.addons.rofi;
+  vpnCfg = config.custom.security.openconnect;
 in
 {
   options.custom.desktop.addons.rofi = with types; {
@@ -40,7 +41,9 @@ in
         drun-display-format = "{icon} {name}";
         icon-theme = "Fluent";
         location = 0;
-        modi = "run,drun,vpn:~/.config/rofi/rofi-vpn.sh,clip:~/.config/rofi/rofi-cliphist.sh,";
+        modi =
+          "run,drun,clip:~/.config/rofi/rofi-cliphist.sh,"
+          + optionalString vpnCfg.enable "vpn:~/.config/rofi/rofi-vpn.sh,";
         show-icons = true;
         sidebar-mode = true;
         sorting-method = "fzf";
@@ -54,25 +57,17 @@ in
       };
       theme = ./themes/cyberdream.rasi;
     };
-    home.file.".config/rofi/rofi-vpn.sh" = {
+    home.file.".config/rofi/rofi-vpn.sh" = mkIf vpnCfg.enable {
       executable = true;
       text = ''
         #!/usr/bin/env sh
 
-        # --- SECURELY SOURCE SECRETS ---
-        SECRETS="$HOME/.ssh/sops-env-credentials"
-        if [ -f "$SECRETS" ]; then
-          . "$SECRETS"
-        else
-          echo "Secrets file $SECRETS not found!" >&2
-          exit 1
-        fi
-
-        MYVPN="/etc/profiles/per-user/sab/bin/myvpn"  # Use absolute path if not in $PATH
+        MYVPN="${vpnCfg.scriptPackage}/bin/myvpn"
 
         multiple=false
         active_marker='[*] '
-        myvpn_label="🚀 Connect to myvpn"
+        myvpn_connect_label="🚀 Connect to myvpn"
+        myvpn_disconnect_label="[*] Disconnect from myvpn"
 
         notify() {
           if command -v notify-send >/dev/null 2>&1; then
@@ -137,30 +132,44 @@ in
           nmcli connection "$action" "$connection" > /dev/null &
         }
 
-        myvpn_check_and_run() {
-          status_output="$($MYVPN status 2>/dev/null)"
-
-          openconnect_lines=$(echo "$status_output" | awk '/Pid of openconnect are:/{found=1; next} /^\*+/{if(found){exit}} found')
-
-          if echo "$openconnect_lines" | grep -q openconnect; then
-            notify "myvpn is already running."
-            exit 0
+        myvpn_label() {
+          if "$MYVPN" status >/dev/null 2>&1; then
+            echo "$myvpn_disconnect_label"
           else
-            notify "Connecting via myvpn…"
-            "$MYVPN" up
+            echo "$myvpn_connect_label"
+          fi
+        }
+
+        myvpn_up() {
+          notify "Connecting via myvpn…"
+          if "$MYVPN" up; then
+            notify "myvpn connected."
+          else
+            notify "myvpn failed to connect."
+            exit 1
+          fi
+        }
+
+        myvpn_down() {
+          notify "Disconnecting myvpn…"
+          if "$MYVPN" down; then
+            notify "myvpn disconnected."
+          else
+            notify "myvpn cleanup failed."
+            exit 1
           fi
         }
 
         run_rofi_mode() {
           if [ $# -eq 0 ]; then
-            echo "$myvpn_label"
+            myvpn_label
             connection_list
           else
-            if [ "$1" = "$myvpn_label" ]; then
-              myvpn_check_and_run
-            else
-              toggle_connection "$1"
-            fi
+            case "$1" in
+              "$myvpn_connect_label") myvpn_up ;;
+              "$myvpn_disconnect_label") myvpn_down ;;
+              *) toggle_connection "$1" ;;
+            esac
           fi
         }
 
