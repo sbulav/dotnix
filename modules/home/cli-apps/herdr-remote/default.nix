@@ -11,10 +11,15 @@
 #
 # Notes / accepted risks:
 # - Token auth (enableTokenAuth): the relay requires the sops-managed shared
-#   token (secrets/sab, key herdr_relay_token) on every connection. Disabled
-#   on zanoza — Authelia guards the Traefik path instead; the LAN-direct ports
-#   are accepted as open. Retrieve the token (if re-enabled) with:
+#   token (secrets/sab, key herdr_relay_token) on every connection. No longer
+#   optional in practice — the relay exits at startup without a token, so this
+#   flag only decides whether the wrapper hands it one. Authelia still guards
+#   the Traefik path; the token is what keeps the LAN-direct ports from being
+#   open. Retrieve it with:
 #     sops -d --extract '["herdr_relay_token"]' secrets/sab/default.yaml
+#   The web app takes the token in its own field and appends it as ?token=,
+#   which is why it is not baked into defaultRelayUrl: that string is
+#   substituted into an index.html served from a world-readable store path.
 # - Without autoStart, user services die on logout unless linger is enabled.
 # - The hosted PWA (herdr-remote.pages.dev) can NOT be used: on the LAN,
 #   HTTPS pages are blocked from opening insecure ws:// connections; via

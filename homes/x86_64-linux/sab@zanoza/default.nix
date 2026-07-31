@@ -84,8 +84,13 @@ with lib.custom;
       herdr = enabled;
       herdr-remote = {
         enable = true;
-        # Traefik and Authelia on zanoza provide the public auth layer.
-        enableTokenAuth = false;
+        # Authelia still guards the Traefik path, but the relay refuses to start
+        # without a token since it gained a mandatory auth gate — the socket can
+        # drive a terminal and shut hosts down over SSH, so an unset token is no
+        # longer treated as "open". The web app carries the token itself, in its
+        # own field rather than in `defaultRelayUrl`, which would bake a secret
+        # into the world-readable store path it serves from.
+        enableTokenAuth = true;
         # Dedicated token-authenticated relay for the native Android app.
         enableMobileRelay = true;
         powerHostId = "mz";
