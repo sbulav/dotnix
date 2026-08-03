@@ -356,8 +356,8 @@ in
                           options.path = mkDashboard {
                             name = "ups.json";
                             title = "Power · UPS";
-                            url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/ups/prometheus-nut-exporter.json";
-                            hash = "sha256-+ru9ZrrFBk22seI0uDuXIP7NkRLqfSJ48NLHDCpfG/I=";
+                            url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/6caacb895957ccfbbc5a015c5c6d3afe0a7c9096/ups/prometheus-nut-exporter.json";
+                            hash = "sha256-413TxCcXNU01XvvY5O+oZPxz7UDSTchoJg9irxdqKFc=";
                           };
                           orgId = 1;
                         }

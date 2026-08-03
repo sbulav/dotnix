@@ -900,5 +900,90 @@
     "notification_settings": {
       "receiver": "default-alerts"
     }
+  },
+  {
+    "uid": "ceupshightemp01",
+    "title": "UPS - temperature high",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max(network_ups_tools_ups_temperature{job=\"nut\"})",
+          "instant": true,
+          "intervalMs": 1000,
+          "legendFormat": "__auto",
+          "maxDataPoints": 43200,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "C",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "datasourceUid": "__expr__",
+        "model": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [45],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": ["C"]
+              },
+              "reducer": {
+                "params": [],
+                "type": "last"
+              },
+              "type": "query"
+            }
+          ],
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "expression": "A",
+          "intervalMs": 1000,
+          "maxDataPoints": 43200,
+          "refId": "C",
+          "type": "threshold"
+        }
+      }
+    ],
+    "dashboardUid": "39-PZnrf",
+    "panelId": 14,
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "for": "5m",
+    "annotations": {
+      "summary": "UPS internal temperature >45 °C for 5m. Failed SLA packs overheat — check batteries, airflow, and load.",
+      "__dashboardUid__": "39-PZnrf",
+      "__panelId__": "14"
+    },
+    "labels": {
+      "category": "ups",
+      "host": "zanoza"
+    },
+    "isPaused": false,
+    "notification_settings": {
+      "receiver": "default-alerts"
+    }
   }
 ]

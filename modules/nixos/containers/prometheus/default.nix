@@ -51,6 +51,21 @@ in
         };
         nut = {
           enable = true;
+          # Binary default is a short list and omits runtime/temperature.
+          # Explicit list so the UPS dash + temp alert have the series they need.
+          nutVariables = [
+            "battery.charge"
+            "battery.runtime"
+            "battery.runtime.low"
+            "battery.voltage"
+            "battery.voltage.nominal"
+            "input.voltage"
+            "input.voltage.nominal"
+            "output.voltage"
+            "ups.load"
+            "ups.status"
+            "ups.temperature"
+          ];
         };
       };
 
