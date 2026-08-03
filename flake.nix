@@ -58,11 +58,13 @@
     # (absent from nixos-26.05) so it uses its own nixos-unstable lock.
     herdr.url = "github:ogulcancelik/herdr/v0.7.3";
 
-    # Herdr-remote fork: relay + web app with native session lifecycle and
+    # Herdr-remote relay + web app with native session lifecycle and
     # structured Claude Code/OpenCode output. Plain source repo (not a flake);
     # packaged in packages/herdr-relay and served by the home module.
+    # (Repo was renamed from herdr-remote to herdr-relay; input name kept for
+    # compatibility with references throughout the config.)
     herdr-remote = {
-      url = "github:sbulav/herdr-remote";
+      url = "github:sbulav/herdr-relay";
       flake = false;
     };
 
