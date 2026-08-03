@@ -1,6 +1,6 @@
 {
   name = "delegate";
-  version = "1.2.0";
+  version = "1.3.0";
   description = "Split a task or a batch of issues into subtasks and route each to the cheapest-capable model via opencode run. Use for multi-model orchestration, delegating grunt work to cheap models, issue-batch swarms with git worktrees, parallel investigations, and cross-model reviews.";
   "argument-hint" = "[task, issue number(s), or repo issue list]";
   "user-invocable" = true;
@@ -41,6 +41,24 @@
     heavyweight worker running while you continue). Otherwise do the hard thinking yourself
     and delegate the mechanical work.
 
+    **Push everything mechanical onto self-hosted models.** Two models run on our own
+    hardware and cost nothing per token:
+
+    - `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` — 26B A4B, 128k context, very fast.
+      This is the **first choice for any subtask that does not need strong reasoning or
+      code judgement**: renames, formatting, boilerplate, log and output parsing, file
+      and format conversion, extracting fields from docs, summarising long output,
+      drafting commit/PR text, triage passes over many files, first-pass reading of big
+      logs (its 128k window swallows them whole). Use it aggressively and in parallel —
+      a wasted gemma call costs nothing but wall clock.
+    - `hhdev-glm5-fp8/zai-org/GLM-5.2-FP8` — also free, slower, but noticeably better at
+      code. Use it when a mechanical task still needs to *understand* code, or when gemma
+      returns something sloppy.
+
+    Escalation ladder for cheap work: **gemma → GLM-5.2 → grok-4.5 → paid tiers.** Never
+    spend paid tokens on a task the self-hosted pair can do; never keep a paid model doing
+    grunt work just because it is already in the loop.
+
     ## Model scorecard (the weights)
 
     Scores 0-10. Cost: lower = cheaper. Selection rule: cheapest model whose scores clear
@@ -48,7 +66,8 @@
 
     | Model | Reason | Code | Speed | Cost | Notes |
     |---|---|---|---|---|---|
-    | `hhdev-glm5-fp8/zai-org/GLM-5.2-FP8` | 6 | 7 | 7 | **0** | self-hosted, free; grunt-work default |
+    | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` | 5 | 5 | 9 | **0** | self-hosted, free, 128k ctx; **default for grunt work, lookups, and bulk text** |
+    | `hhdev-glm5-fp8/zai-org/GLM-5.2-FP8` | 6 | 7 | 7 | **0** | self-hosted, free; grunt work that needs real code sense |
     | `hhdev-grok/grok-4.5` | 8 | 8 | 8 | **1** | cheap gateway model; generalist, research, and independent review |
     | `openai/gpt-5.6-sol` | 10 | 9 | 7 | 2 | personal sub; reasoning, planning, spec, and difficult analysis |
     | `openai/gpt-5.6-terra` | 9 | 10 | 7 | 2 | personal sub; implementation, refactoring, debugging, and code review |
@@ -70,8 +89,11 @@
 
     | Task class | Primary | Escalation | Variant |
     |---|---|---|---|
-    | Grunt work: renames, formatting, boilerplate, log parsing, file conversion | GLM-5.2 | `hhdev-grok/grok-4.5` | low/medium |
-    | Quick lookups, summarization, doc extraction | `hhdev-grok/grok-4.5` | `openai/gpt-5.6-sol` | low/medium |
+    | Grunt work: renames, formatting, boilerplate, log parsing, file conversion | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` | GLM-5.2, then `hhdev-grok/grok-4.5` | low/medium |
+    | Quick lookups, summarization, doc extraction | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` | `hhdev-grok/grok-4.5` | low/medium |
+    | Bulk text: commit/PR drafts, changelogs, release notes, translation | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` | GLM-5.2 | low/medium |
+    | First-pass triage over many files or a long log (fan out, then read the hits yourself) | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` (parallel) | GLM-5.2 | low |
+    | Mechanical work that still needs code understanding (mass edits across a codebase) | GLM-5.2 | `openai/gpt-5.6-terra` | medium |
     | Well-specified code implementation | `openai/gpt-5.6-terra` | `openai/gpt-5.6-sol` | medium |
     | Complex implementation / refactoring | `openai/gpt-5.6-terra` | `openai/gpt-5.6-sol` | medium, high if truly hard |
     | Deep debugging / root-cause analysis | orchestrator itself; delegate a parallel code lens to `openai/gpt-5.6-terra` and a reasoning lens to `openai/gpt-5.6-sol` | `hhdev-anthropic/claude-opus-4-8` | high |
@@ -92,6 +114,8 @@
     - `--variant medium` is the default for everything else. GPT-5.6 Sol and Terra perform
       very well at medium — do not bump them to high for generic work.
     - `--variant low`/minimal for grunt work and lookups where supported.
+    - Gemma 4 26B ignores `--variant`: its thinking is switched on in the provider config
+      (`chat_template_kwargs.enable_thinking`), not per call. Dispatch it plainly.
 
     ## Dispatch mechanics
 
@@ -180,9 +204,13 @@
       remaining subtasks — deep debugging -> orchestrator itself or the appropriate
       `openai/gpt-5.6-sol` / `openai/gpt-5.6-terra` lane; large-context -> Sol;
       research -> Sol.
-      GLM-5.2 is unaffected (different gateway: llm-gateway.pyn.ru) and stays primary
-      for grunt work. Announce the reroute ONCE, then continue; do not report it per
+      The self-hosted pair (gemma-4-26b, GLM-5.2) is unaffected — different gateway,
+      llm-gateway.pyn.ru — and stays primary for grunt work; lean on it harder while
+      hhdev is out. Announce the reroute ONCE, then continue; do not report it per
       subtask.
+    - **llm-gateway.pyn.ru down / gemma returns errors**: fall through the cheap ladder —
+      GLM-5.2, then `hhdev-grok/grok-4.5`. Do not promote grunt work straight to a paid
+      reasoning tier.
     - **fwdproxy.pyn.ru unreachable** (`openai/*` dispatches fail to connect): reroute
       `openai/*` traffic to cheap Grok / GLM-5.2 first, then `hhdev-*` equivalents
       (including legacy `hhdev-openai/gpt-5.5`) when their capability clears the bar.

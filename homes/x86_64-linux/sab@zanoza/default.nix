@@ -56,6 +56,12 @@ let
       model = "hhdev-grok/grok-4.5";
     }
     {
+      id = "opencode-gemma4";
+      label = "OpenCode · Gemma 4 26B";
+      agent = "opencode";
+      model = "hhdev-gemma4-26b/google/gemma-4-26B-A4B-it";
+    }
+    {
       id = "opencode-glm52";
       label = "OpenCode · GLM 5.2";
       agent = "opencode";

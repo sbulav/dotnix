@@ -157,6 +157,37 @@
     };
   };
 
+  # Self-hosted on the pyn.ru gateway (same box family as GLM-5.2): free, fast,
+  # 128k context. Reasoning is OFF unless the request explicitly carries
+  # chat_template_kwargs.enable_thinking — vLLM's chat template gates it there,
+  # not behind a `reasoning` flag.
+  "hhdev-gemma4-26b" = {
+    name = "Gemma 4 26B A4B it";
+    npm = "@ai-sdk/openai-compatible";
+    options = {
+      baseURL = "https://llm-gateway.pyn.ru/proxy/gemma-4-26b-a4b-it/v1";
+      apiKey = "{env:OPENAI_API_PYN_KEY}";
+    };
+    models = {
+      "google/gemma-4-26B-A4B-it" = {
+        name = "Gemma 4 26B A4B";
+        options = {
+          chat_template_kwargs = {
+            enable_thinking = true;
+          };
+        };
+        limit = {
+          context = 128000;
+          output = 16000;
+        };
+        cost = {
+          input = 0;
+          output = 0;
+        };
+      };
+    };
+  };
+
   # "pyn-gpt-oss-120b" = {
   #   name = "GPT-OSS 120B";
   #   npm = "@ai-sdk/openai-compatible";

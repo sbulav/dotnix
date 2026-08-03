@@ -1,6 +1,6 @@
 {
   name = "delegate-review";
-  version = "1.3.0";
+  version = "1.4.0";
   description = "Multi-model PR review orchestrator. Use when reviewing a pull request or a list of PRs: classify PR complexity, route reasoning/spec work to GPT-5.6 Sol, code/correctness work to GPT-5.6 Terra, use cheap Grok 4.5 for independent-family passes, degrade on API limits, pack a context brief, spawn parallel opencode sessions, reconcile findings, and plan fixes. Triggers: delegate-review, review PR, review pull request, multi-model review, PR review swarm.";
   "argument-hint" = "[PR number(s), or 'open' for open PRs]";
   "user-invocable" = true;
@@ -88,8 +88,31 @@
 
     ### Not a review slot (on scorecard but forbidden for `-m` review)
 
+    - `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` — free, self-hosted, 128k
+      context. **Never a reviewer session** (no verdicts, no severities), but it
+      is the **default engine for review support work** — see below.
     - `hhdev-glm5-fp8/zai-org/GLM-5.2-FP8` — free; may help *you* list files
       locally, **never** a reviewer session.
+
+    ### Self-hosted support lane (use it constantly)
+
+    Reviewer slots produce findings; everything *around* them is mechanical and
+    belongs on the free self-hosted models — dispatch these in parallel with the
+    real reviewers, they cost nothing:
+
+    - Fetching and flattening PR metadata, commit lists, and CI output into the
+      shared context brief.
+    - Summarising a huge diff or long test log into a file-by-file map (128k
+      context: feed it the whole thing).
+    - Listing which files a PR touches and grouping them by subsystem for
+      classification.
+    - Reformatting reconciled findings into the final table, and drafting the
+      PR comment text once *you* have decided the content.
+
+    Prefer gemma-4-26b for these; use GLM-5.2 when the support task needs code
+    understanding rather than text shuffling. **Never** let either one decide
+    whether a finding is real, or assign a severity — that is orchestrator or
+    reviewer-slot work.
 
     ## Model scorecard (same weights as `delegate`)
 
@@ -110,6 +133,7 @@
 
     | Model | Reason | Code | Speed | Cost | Family | Review notes |
     |---|---|---|---|---|---|---|
+    | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` | 5 | 5 | 9 | **0** | gemma | **NOT a review slot** — self-hosted support lane (brief packing, diff/log summarisation, formatting) |
     | `hhdev-glm5-fp8/zai-org/GLM-5.2-FP8` | 6 | 7 | 7 | **0** | glm | **NOT a review slot** (triage only for orchestrator) |
     | `hhdev-grok/grok-4.5` | 8 | 8 | 8 | **1** | grok | cheap skim, batch, and independent-family reviewer |
     | `openai/gpt-5.6-sol` | 10 | 9 | 7 | 2 | openai/sol | spec, intent, architecture, and reasoning reviewer |
@@ -463,7 +487,7 @@
     | 429 / quota / rate limit on `hhdev-*` (llmgtw.hhdev.ru) | `hhdev-quota` | mark that model (or all `hhdev-*` if gateway-wide) unavailable |
     | 429 / quota on `openai/*` (personal sub / via fwdproxy) | `openai-quota` | mark that model / `openai/*` unavailable |
     | connect error / timeout to fwdproxy for `openai/*` | `fwdproxy-down` | mark `openai/*` unavailable for network; prefer `hhdev-openai/gpt-5.5` + other `hhdev-*` |
-    | 429 on `hhdev-glm5-fp8/*` only | `glm-quota` | ignore for review (GLM is not a review slot anyway) |
+    | 429 / error on `hhdev-glm5-fp8/*` or `hhdev-gemma4-26b/*` (llm-gateway.pyn.ru) | `selfhosted-down` | no effect on review slots; do the support work yourself or on the other self-hosted model |
     | model error "not found" / invalid id | `bad-id` | you chose off-allowlist — fix routing, do not retry same id |
     | empty / nonsense review, no file evidence | `garbage` | one session follow-up; then next candidate |
     | hang past reasonable wait | `hang` | kill; treat as failed once |
@@ -485,8 +509,8 @@
        - Slot plan: Terra covers correctness and Sol covers spec/reasoning.
          Record `lineage-diversity-compromised`; self-cover an independent lens
          when the class requires a genuinely different lineage.
-       - Do **not** pull haiku, gpt-4.1, deepseek, or GLM into a review slot to
-         "replace" anthropic.
+       - Do **not** pull haiku, gpt-4.1, deepseek, GLM, or gemma into a review
+         slot to "replace" anthropic.
 
     2. **`openai-quota` (personal sub exhausted)**  
        - Drop `openai/*`.  
@@ -529,8 +553,8 @@
 
     ### Step C — what you must never do under pressure
 
-    - Never dispatch `*haiku*`, `gpt-4.1`, `deepseek*`, or GLM as a reviewer
-      because "something is better than nothing". Self-cover instead.
+    - Never dispatch `*haiku*`, `gpt-4.1`, `deepseek*`, GLM, or gemma as a
+      reviewer because "something is better than nothing". Self-cover instead.
     - Never lower the capability bar to admit a weak model (bars are fixed;
       unavailable set only shrinks the pool).
     - Never silently skip a lens: either a valid reviewer returns or you write
@@ -557,7 +581,8 @@
     - Never skip the routing card — silent model choice is a process failure.
     - **Allowlist only** for `-m`. **HARD BAN is absolute** (haiku, gpt-4.1,
       deepseek, and any non-scorecard id).
-    - **Never use GLM as a review slot.**
+    - **Never use GLM or gemma as a review slot** — they are the free support
+      lane only (brief packing, summarisation, formatting).
     - On total API loss: self-cover, do not invent banned substitutes.
 
     ## Input
