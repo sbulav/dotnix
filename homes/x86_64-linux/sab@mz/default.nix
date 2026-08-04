@@ -143,7 +143,7 @@ in
       vault = enabled;
       openconnect = {
         enable = true;
-        routes.lanGateway = "192.168.90.1";
+        routes.lanGateway = "192.168.89.1";
       };
       sops = {
         enable = true;

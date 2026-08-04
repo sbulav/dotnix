@@ -142,22 +142,24 @@ in
 
         myvpn_up() {
           notify "Connecting via myvpn…"
-          if "$MYVPN" up; then
-            notify "myvpn connected."
-          else
-            notify "myvpn failed to connect."
-            exit 1
-          fi
+          (
+            if "$MYVPN" up; then
+              notify "myvpn connected."
+            else
+              notify "myvpn failed to connect."
+            fi
+          ) >/dev/null 2>&1 &
         }
 
         myvpn_down() {
           notify "Disconnecting myvpn…"
-          if "$MYVPN" down; then
-            notify "myvpn disconnected."
-          else
-            notify "myvpn cleanup failed."
-            exit 1
-          fi
+          (
+            if "$MYVPN" down; then
+              notify "myvpn disconnected."
+            else
+              notify "myvpn cleanup failed."
+            fi
+          ) >/dev/null 2>&1 &
         }
 
         run_rofi_mode() {
@@ -170,6 +172,9 @@ in
               "$myvpn_disconnect_label") myvpn_down ;;
               *) toggle_connection "$1" ;;
             esac
+            # Return no rows so rofi closes instead of reopening the menu while
+            # a long-running myvpn/nmcli action holds the seat grab.
+            exit 0
           fi
         }
 
