@@ -42,6 +42,10 @@ let
       inherit (cfg) presets;
     }
   );
+  # Saved-project metadata (relay >= 0.7.0, f73dd79) lives in a SQLite file the
+  # relay creates on first use. The two relays are separate processes, so they
+  # get separate databases rather than contending on one file.
+  projectsDb = name: "${config.xdg.stateHome}/${name}/projects.sqlite3";
   webRoot = pkgs.runCommand "herdr-remote-web" { } ''
     cp -r ${inputs.herdr-remote}/web $out
     chmod -R u+w $out
@@ -117,6 +121,7 @@ in
             "HERDR_BIN=${cfg.herdrBin}"
             "HERDR_RELAY_PORT=${toString cfg.relayPort}"
             "HERDR_REMOTES=${concatStringsSep "," cfg.remotes}"
+            "HERDR_PROJECTS_DB=${projectsDb "herdr-relay"}"
             "PATH=${
               makeBinPath [
                 herdrPackage
@@ -144,6 +149,7 @@ in
             "HERDR_BIN=${cfg.herdrBin}"
             "HERDR_RELAY_PORT=${toString cfg.mobileRelayPort}"
             "HERDR_REMOTES=${concatStringsSep "," cfg.remotes}"
+            "HERDR_PROJECTS_DB=${projectsDb "herdr-relay-mobile"}"
             "HERDR_PRESETS_FILE=${mobilePresets}"
             "HERDR_POWER_HOST_ID=${cfg.powerHostId}"
             "HERDR_POWER_HOST_MAC=${cfg.powerHostMac}"

@@ -1,57 +1,59 @@
+# Adapted from mattpocock/skills `grill-me` / `grilling` (v1.2.2) — the
+# frontier/rounds interview loop, kept as a single user-invoked skill.
 {
   name = "grill-me";
-  version = "1.0.0";
-  description = "Interview the user relentlessly to pin down requirements and design before building. Use when a request is ambiguous, a plan has unresolved decisions, or the user explicitly asks to be grilled, interviewed, or pushed on a design.";
+  version = "2.0.0";
+  description = "Grill the user relentlessly about a plan, decision, or idea until every branch of the design tree is resolved. Use when the user wants to stress-test their thinking, or uses any 'grill' trigger phrases.";
   "argument-hint" = "[topic]";
+  "disable-model-invocation" = true;
   "user-invocable" = true;
   allowed-tools = [
     "Read"
     "Grep"
     "Glob"
     "Bash"
+    "Task"
   ];
   content = ''
-    # Grill Me: Relentless Design Interview
+    Interview the user relentlessly until you reach a shared understanding. Map
+    this as a **design tree**: every decision branches into the decisions that
+    hang off it.
 
-    Interrogate the user one question at a time until you reach a shared, unambiguous
-    understanding of what they want. Do not start building. Your job is to surface and
-    resolve every meaningful decision before any implementation begins.
+    Work the tree in **rounds**. The **frontier** is every decision whose
+    prerequisites are already settled — the questions you can ask *now* without
+    guessing at answers you haven't heard yet. Ask the whole frontier in one
+    round: number each question and give your recommended answer. Then wait for
+    the user's answers before the next round.
 
-    ## Core loop
+    Each question should be formatted like so:
 
-    1. **Explore before asking.** If a question can be answered by reading the codebase,
-       git history, config, or docs — answer it yourself with the read-only tools. Only
-       ask the user what the codebase genuinely cannot tell you.
-    2. **One question at a time.** Never batch. Ask, wait, absorb, then ask the next.
-    3. **Always recommend an answer.** End every question with your recommended default
-       and a one-line rationale, so the user can simply confirm or redirect.
-    4. **Walk the design tree depth-first.** Resolve dependencies one-by-one: a decision
-       that other decisions hinge on comes first. When an answer opens a new branch,
-       descend into it before returning to siblings.
-    5. **Follow the consequences.** When an answer rules options in or out elsewhere, say
-       so and adjust the remaining questions.
+    ```
+    ❓ **Q1** - **<question title>**: <question body, might be multiple paragraphs, including multiple choices>
 
-    ## What to grill on
+    ➡️ <your recommended answer>
+    ```
 
-    - Scope boundaries: what is explicitly in and out.
-    - Hidden assumptions and unstated constraints.
-    - Trade-offs the user may not have noticed (cost, complexity, reversibility, blast radius).
-    - Edge cases, failure modes, and the "what happens when" gaps.
-    - Success criteria: how will we know it is done and correct.
+    Each round the user answers reshapes the tree — settled decisions push the
+    frontier outward and unblock questions that depended on them. Recompute the
+    frontier and ask the next round. A question whose answer depends on another
+    question still open in this round belongs to a *later* round, not this one.
 
-    ## Style
+    Finding *facts* is your job, never the user's. When a frontier question
+    needs a fact from the environment (filesystem, git history, config, docs),
+    dispatch a sub-agent to find it — don't ask the user for anything you could
+    look up yourself. Don't block on it: a running exploration is an unsettled
+    prerequisite, so only the questions downstream of it wait for the sub-agent
+    to report — ask the rest of the frontier now. The *decisions* are the
+    user's — put each to them and wait.
 
-    - Be direct and skeptical, never sycophantic. Push back when something is vague,
-      contradictory, or under-specified.
-    - Keep each question tight — one decision, framed clearly, with your recommendation.
-    - Prefer concrete options ("A, B, or C — I recommend B because…") over open prompts.
+    Be direct and skeptical, never sycophantic. Push back when an answer is
+    vague, contradictory, or under-specified.
 
-    ## Stop condition
-
-    Stop when no meaningful decision remains open. Then produce a **shared-understanding
-    summary**: the resolved decisions, the agreed scope, and the open risks deferred by
-    choice. Do not begin implementation inside this skill — hand the summary back so the
-    user can approve it and choose how to proceed.
+    The session is done when the frontier is empty: every branch of the design
+    tree visited, nothing left silently assumed. Then produce a
+    **shared-understanding summary**: the resolved decisions, the agreed scope,
+    and the open risks deferred by choice. Do not act on it until the user
+    confirms you have reached a shared understanding.
 
     ## Input
 

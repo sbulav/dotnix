@@ -313,11 +313,11 @@
     "herdr-remote": {
       "flake": false,
       "locked": {
-        "lastModified": 1785783136,
-        "narHash": "sha256-Ka6LnGd4mx03iXkPhqwjq1LOp9PjvpV3nyFfAF6vXqw=",
+        "lastModified": 1785933433,
+        "narHash": "sha256-+t9nssKumdqc4rZiBwd9J/m+l52bgd+rgbjM/JCJRS8=",
         "owner": "sbulav",
         "repo": "herdr-relay",
-        "rev": "46a4856ee36116347900067c95d2e4873b301e55",
+        "rev": "f73dd79298f3117659cac3f5decb66da80c97173",
         "type": "github"
       },
       "original": {
