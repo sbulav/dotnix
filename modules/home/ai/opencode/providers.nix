@@ -188,6 +188,32 @@
     };
   };
 
+  # Self-hosted DeepSeek-V4-Flash on pyn.ru gateway. Reasoning requires
+  # chat_template_kwargs.thinking = true (not enable_thinking).
+  "hhdev-deepseek-v4-flash" = {
+    name = "HHDev DeepSeek V4 Flash";
+    npm = "@ai-sdk/openai-compatible";
+    options = {
+      baseURL = "https://llm-gateway.pyn.ru/proxy/deepseek-v4-flash-0731/v1";
+      apiKey = "{env:OPENAI_API_PYN_KEY}";
+    };
+    models = {
+      "deepseek-ai/DeepSeek-V4-Flash-0731" = {
+        name = "HHDev DeepSeek V4 Flash";
+        reasoning = true;
+        options = {
+          chat_template_kwargs = {
+            thinking = true;
+          };
+        };
+        cost = {
+          input = 0;
+          output = 0;
+        };
+      };
+    };
+  };
+
   # "pyn-gpt-oss-120b" = {
   #   name = "GPT-OSS 120B";
   #   npm = "@ai-sdk/openai-compatible";
