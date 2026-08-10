@@ -313,11 +313,11 @@
     "herdr-remote": {
       "flake": false,
       "locked": {
-        "lastModified": 1785933433,
-        "narHash": "sha256-+t9nssKumdqc4rZiBwd9J/m+l52bgd+rgbjM/JCJRS8=",
+        "lastModified": 1786356857,
+        "narHash": "sha256-5iyKgnQbglF6KkptdF7xc7qc2zxqGrVQtB2n5d0RVCA=",
         "owner": "sbulav",
         "repo": "herdr-relay",
-        "rev": "f73dd79298f3117659cac3f5decb66da80c97173",
+        "rev": "992f0c6eda973a1247ce65913943a3481561557f",
         "type": "github"
       },
       "original": {
@@ -755,11 +755,11 @@
         "nixpkgs": "nixpkgs_3"
       },
       "locked": {
-        "lastModified": 1781518817,
-        "narHash": "sha256-2lUZYRs80VBkCvrIpceKmWBvqg/aQedN5shhrlFBcD0=",
+        "lastModified": 1786348843,
+        "narHash": "sha256-u7EB3rv/ns931enQeUSdGrpGYdyuBIYbZEFraBJstvU=",
         "owner": "sbulav",
         "repo": "woomer",
-        "rev": "fc8c03ab85f03732bd025d892e5538e20c99e45f",
+        "rev": "208c8c7765c49099614d82edccd13fae613e4973",
         "type": "github"
       },
       "original": {
