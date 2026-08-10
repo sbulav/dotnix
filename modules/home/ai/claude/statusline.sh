@@ -101,7 +101,7 @@ if [ -n "$DIR" ] && [ -d "$DIR" ]; then
   CACHE="${TMPDIR:-/tmp}/cc-statusline-git-$SESSION"
   STALE=1
   if [ -f "$CACHE" ]; then
-    MTIME=$(stat -f %m "$CACHE" 2>/dev/null || stat -c %Y "$CACHE" 2>/dev/null || echo 0)
+    MTIME=$(stat -c %Y "$CACHE" 2>/dev/null || stat -f %m "$CACHE" 2>/dev/null || echo 0)
     [ $((NOW - MTIME)) -lt 5 ] && STALE=0
   fi
   if [ "$STALE" -eq 1 ]; then
