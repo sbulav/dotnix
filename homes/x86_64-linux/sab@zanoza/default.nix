@@ -50,10 +50,10 @@ let
       model = "anthropic/claude-sonnet-4-6";
     }
     {
-      id = "opencode-grok45";
-      label = "OpenCode · Grok 4.5";
+      id = "opencode-grok46";
+      label = "OpenCode · Grok 4.6";
       agent = "opencode";
-      model = "hhdev-grok/grok-4.5";
+      model = "hhdev-grok/grok-4.6";
     }
     {
       id = "opencode-gemma4";

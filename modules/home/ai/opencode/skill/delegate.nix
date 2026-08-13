@@ -55,7 +55,7 @@
       code. Use it when a mechanical task still needs to *understand* code, or when gemma
       returns something sloppy.
 
-    Escalation ladder for cheap work: **gemma → GLM-5.2 → grok-4.5 → paid tiers.** Never
+    Escalation ladder for cheap work: **gemma → GLM-5.2 → grok-4.6 → paid tiers.** Never
     spend paid tokens on a task the self-hosted pair can do; never keep a paid model doing
     grunt work just because it is already in the loop.
 
@@ -68,7 +68,7 @@
     |---|---|---|---|---|---|
     | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` | 5 | 5 | 9 | **0** | self-hosted, free, 128k ctx; **default for grunt work, lookups, and bulk text** |
     | `hhdev-glm5-fp8/zai-org/GLM-5.2-FP8` | 6 | 7 | 7 | **0** | self-hosted, free; grunt work that needs real code sense |
-    | `hhdev-grok/grok-4.5` | 8 | 8 | 8 | **1** | cheap gateway model; generalist, research, and independent review |
+    | `hhdev-grok/grok-4.6` | 8 | 8 | 8 | **1** | cheap gateway model; generalist, research, and independent review |
     | `openai/gpt-5.6-sol` | 10 | 9 | 7 | 2 | personal sub; reasoning, planning, spec, and difficult analysis |
     | `openai/gpt-5.6-terra` | 9 | 10 | 7 | 2 | personal sub; implementation, refactoring, debugging, and code review |
     | `hhdev-anthropic/claude-sonnet-4-6` | 8 | 9 | 7 | 6 | work tokens |
@@ -89,8 +89,8 @@
 
     | Task class | Primary | Escalation | Variant |
     |---|---|---|---|
-    | Grunt work: renames, formatting, boilerplate, log parsing, file conversion | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` | GLM-5.2, then `hhdev-grok/grok-4.5` | low/medium |
-    | Quick lookups, summarization, doc extraction | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` | `hhdev-grok/grok-4.5` | low/medium |
+    | Grunt work: renames, formatting, boilerplate, log parsing, file conversion | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` | GLM-5.2, then `hhdev-grok/grok-4.6` | low/medium |
+    | Quick lookups, summarization, doc extraction | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` | `hhdev-grok/grok-4.6` | low/medium |
     | Bulk text: commit/PR drafts, changelogs, release notes, translation | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` | GLM-5.2 | low/medium |
     | First-pass triage over many files or a long log (fan out, then read the hits yourself) | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` (parallel) | GLM-5.2 | low |
     | Mechanical work that still needs code understanding (mass edits across a codebase) | GLM-5.2 | `openai/gpt-5.6-terra` | medium |
@@ -98,9 +98,9 @@
     | Complex implementation / refactoring | `openai/gpt-5.6-terra` | `openai/gpt-5.6-sol` | medium, high if truly hard |
     | Deep debugging / root-cause analysis | orchestrator itself; delegate a parallel code lens to `openai/gpt-5.6-terra` and a reasoning lens to `openai/gpt-5.6-sol` | `hhdev-anthropic/claude-opus-4-8` | high |
     | Large-context analysis (huge logs, many files) | `openai/gpt-5.6-sol` | `hhdev-google/gemini-3.1-pro-preview` | medium |
-    | Web research / current events | `hhdev-grok/grok-4.5` | `openai/gpt-5.6-sol` | medium |
-    | Cross-model code review (2nd opinion) | `openai/gpt-5.6-terra`; use cheap `hhdev-grok/grok-4.5` when a different family is required | `openai/gpt-5.6-sol` | high |
-    | Docs / prose writing | `openai/gpt-5.6-sol` | `hhdev-grok/grok-4.5` | medium |
+    | Web research / current events | `hhdev-grok/grok-4.6` | `openai/gpt-5.6-sol` | medium |
+    | Cross-model code review (2nd opinion) | `openai/gpt-5.6-terra`; use cheap `hhdev-grok/grok-4.6` when a different family is required | `openai/gpt-5.6-sol` | high |
+    | Docs / prose writing | `openai/gpt-5.6-sol` | `hhdev-grok/grok-4.6` | medium |
     | Parallel investigation lenses (3-agent root-cause) | Sol reasoning / Terra code / Grok independent-family challenge | — | high |
 
     Debugging-class dispatches: tell the worker to load the `diagnosing-bugs` skill so it
@@ -209,7 +209,7 @@
       hhdev is out. Announce the reroute ONCE, then continue; do not report it per
       subtask.
     - **llm-gateway.pyn.ru down / gemma returns errors**: fall through the cheap ladder —
-      GLM-5.2, then `hhdev-grok/grok-4.5`. Do not promote grunt work straight to a paid
+      GLM-5.2, then `hhdev-grok/grok-4.6`. Do not promote grunt work straight to a paid
       reasoning tier.
     - **fwdproxy.pyn.ru unreachable** (`openai/*` dispatches fail to connect): reroute
       `openai/*` traffic to cheap Grok / GLM-5.2 first, then `hhdev-*` equivalents

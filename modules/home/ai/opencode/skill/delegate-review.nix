@@ -126,7 +126,7 @@
     > **Reviewer profiles:** use `openai/gpt-5.6-sol` for reasoning, intent, and
     > specification lenses; use `openai/gpt-5.6-terra` for code correctness,
     > tests, debugging, and implementation detail. Use cheap
-    > `hhdev-grok/grok-4.5` for skim/batch reviews and independent-family
+    > `hhdev-grok/grok-4.6` for skim/batch reviews and independent-family
     > challenge passes. Sol and Terra are distinct reviewer profiles but share
     > OpenAI lineage; security and contested reviews should include Grok or
     > another non-OpenAI family when one clears the bar.
@@ -135,7 +135,7 @@
     |---|---|---|---|---|---|---|
     | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` | 5 | 5 | 9 | **0** | gemma | **NOT a review slot** — self-hosted support lane (brief packing, diff/log summarisation, formatting) |
     | `hhdev-glm5-fp8/zai-org/GLM-5.2-FP8` | 6 | 7 | 7 | **0** | glm | **NOT a review slot** (triage only for orchestrator) |
-    | `hhdev-grok/grok-4.5` | 8 | 8 | 8 | **1** | grok | cheap skim, batch, and independent-family reviewer |
+    | `hhdev-grok/grok-4.6` | 8 | 8 | 8 | **1** | grok | cheap skim, batch, and independent-family reviewer |
     | `openai/gpt-5.6-sol` | 10 | 9 | 7 | 2 | openai/sol | spec, intent, architecture, and reasoning reviewer |
     | `openai/gpt-5.6-terra` | 9 | 10 | 7 | 2 | openai/terra | correctness, tests, debugging, and code reviewer |
     | `hhdev-anthropic/claude-sonnet-4-6` | 8 | 9 | 7 | 6 | anthropic | default work-tokens reviewer |
@@ -261,7 +261,7 @@
       variant=high both.
 
     - **Docs-only README**  
-      class=`skim`, 1 slot, bar R≥7 C≥7 → **hhdev-grok/grok-4.5** (cheapest
+      class=`skim`, 1 slot, bar R≥7 C≥7 → **hhdev-grok/grok-4.6** (cheapest
       clearer). variant=medium.
 
     - **Auth middleware change**  
@@ -514,7 +514,7 @@
 
     2. **`openai-quota` (personal sub exhausted)**  
        - Drop `openai/*`.  
-       - Use cheap `hhdev-grok/grok-4.5` first when it clears the bar, then
+       - Use cheap `hhdev-grok/grok-4.6` first when it clears the bar, then
          `hhdev-anthropic/claude-sonnet-4-6`, `hhdev-google/gemini-3.1-pro-preview`,
          or `hhdev-anthropic/claude-opus-4-8` (security), still by role + bar + cost.
        - If only one hhdev clearer remains: one reviewer + self-cover.
