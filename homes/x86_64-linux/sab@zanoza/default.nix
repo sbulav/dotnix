@@ -5,73 +5,32 @@
   ...
 }:
 let
-  mobileHost = {
-    target = "192.168.92.136";
-  };
-  launchRepositories = [
+  # Claude Code has no machine-readable model listing, so the relay offers
+  # exactly what is declared here. Every other harness is enumerated by probing
+  # the host, and what is declared for it is ignored.
+  claudeModels = [
     {
-      id = "dotnix";
-      label = "dotnix";
-      cwd = "/Users/sab/dotnix";
-      extraHosts.mz = {
-        target = "mz";
-        cwd = "/home/sab/dotnix";
-      };
+      id = "opus";
+      displayName = "Opus";
     }
     {
-      id = "herdr-mobile";
-      label = "Herdr Mobile";
-      cwd = "/Users/sab/git_priv/herdr-mobile";
+      id = "sonnet";
+      displayName = "Sonnet";
+    }
+    {
+      id = "haiku";
+      displayName = "Haiku";
     }
   ];
-  launchHarnesses = [
+  harnesses = [
     {
-      id = "claude-opus";
-      label = "Claude · Opus";
-      agent = "claude";
-      model = "opus";
+      id = "claude";
+      displayName = "Claude Code";
+      modelAliases = claudeModels;
     }
     {
-      id = "claude-sonnet";
-      label = "Claude · Sonnet";
-      agent = "claude";
-      model = "sonnet";
-    }
-    {
-      id = "opencode-opus";
-      label = "OpenCode · Opus 4.8";
-      agent = "opencode";
-      model = "anthropic/claude-opus-4-8";
-    }
-    {
-      id = "opencode-sonnet";
-      label = "OpenCode · Sonnet 4.6";
-      agent = "opencode";
-      model = "anthropic/claude-sonnet-4-6";
-    }
-    {
-      id = "opencode-grok46";
-      label = "OpenCode · Grok 4.6";
-      agent = "opencode";
-      model = "hhdev-grok/grok-4.6";
-    }
-    {
-      id = "opencode-gemma4";
-      label = "OpenCode · Gemma 4 26B";
-      agent = "opencode";
-      model = "hhdev-gemma4-26b/google/gemma-4-26B-A4B-it";
-    }
-    {
-      id = "opencode-glm52";
-      label = "OpenCode · GLM 5.2";
-      agent = "opencode";
-      model = "hhdev-glm5-fp8/zai-org/GLM-5.2-FP8";
-    }
-    {
-      id = "codex-gpt56";
-      label = "Codex · GPT-5.6 Sol";
-      agent = "codex";
-      model = "gpt-5.6-sol";
+      id = "opencode";
+      displayName = "OpenCode";
     }
   ];
 in
@@ -99,33 +58,43 @@ with lib.custom;
         enableTokenAuth = true;
         # Dedicated token-authenticated relay for the native Android app.
         enableMobileRelay = true;
-        powerHostId = "mz";
-        powerHostMac = "34:5a:60:ba:8e:20";
         autoStart = true;
-        # Only live SSH targets. Dead remotes block herdr-relay's asyncio loop
-        # (synchronous ssh with ConnectTimeout=5) for tens of seconds per poll,
-        # which freezes WebSocket broadcasts and makes agents "disappear".
-        remotes = [
-          "192.168.92.136" # mba13 (current DHCP)
-          "mz" # resolves to 192.168.89.200 via home-lab split DNS; stable across DHCP
+        # Only list machines that are actually reachable. A host that is down
+        # costs one ConnectTimeout=5 per poll cycle, and every host here is
+        # polled whether or not anyone is looking at it.
+        #
+        # This list *is* the catalog: a client sees these hosts, browses their
+        # project roots for a folder, and picks from the harnesses discovered
+        # on each. Nothing outside a project root can be launched, so a root is
+        # the unit of access, not a convenience.
+        hosts = [
+          {
+            id = "mba13";
+            displayName = "MacBook Air";
+            target = "192.168.92.136"; # current DHCP lease
+            # git_priv holds the repositories; dotnix sits outside it and is
+            # named directly, which also makes it selectable as a project —
+            # a root is browsable *and* startable.
+            projectRoots = [
+              "/Users/sab/git_priv"
+              "/Users/sab/dotnix"
+            ];
+            inherit harnesses;
+          }
+          {
+            id = "mz";
+            displayName = "Workstation";
+            target = "mz"; # 192.168.89.200 via split DNS; stable across DHCP
+            projectRoots = [ "/home/sab/dotnix" ];
+            inherit harnesses;
+            wakeMac = "34:5a:60:ba:8e:20";
+            # Left off deliberately: the relay shuts a host down with
+            # `sudo -n systemctl poweroff`, which mz's herdr account cannot run
+            # unprompted. Advertising the capability would only produce a
+            # failing button.
+            shutdown = false;
+          }
         ];
-        # The relay keeps a flat allowlist; the mobile app presents these as
-        # independent Repository → Harness → Model → Host selectors.
-        presets = lib.concatMap (
-          repository:
-          map (harness: {
-            id = "${repository.id}-${harness.id}";
-            label = "${repository.label} · ${harness.label}";
-            repository = repository.id;
-            inherit (harness) agent model;
-            hosts = {
-              mba13 = mobileHost // {
-                inherit (repository) cwd;
-              };
-            }
-            // (repository.extraHosts or { });
-          }) launchHarnesses
-        ) launchRepositories;
       };
       home-manager = enabled;
       yazi = enabled;
