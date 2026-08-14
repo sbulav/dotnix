@@ -91,11 +91,12 @@ with lib.custom;
             ];
             inherit harnesses;
             wakeMac = "34:5a:60:ba:8e:20";
-            # Left off deliberately: the relay shuts a host down with
-            # `sudo -n systemctl poweroff`, which mz's herdr account cannot run
-            # unprompted. Advertising the capability would only produce a
-            # failing button.
-            shutdown = false;
+            # The relay powers a host off with `sudo -n systemctl poweroff`
+            # over SSH — the same command since relay 0.7 — and it reaches mz
+            # as sab, who holds NOPASSWD sudo there. Verified end-to-end from
+            # zanoza (`ssh mz sudo -n true`), so the button is real, not
+            # decorative.
+            shutdown = true;
           }
         ];
       };
