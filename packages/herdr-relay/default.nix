@@ -10,7 +10,7 @@
   openssh,
 }:
 let
-  version = "0.8.2";
+  version = "0.8.3";
 
   pythonEnv = python3.withPackages (ps: [ ps.websockets ]);
 in
