@@ -85,7 +85,10 @@ with lib.custom;
             id = "mz";
             displayName = "Workstation";
             target = "mz"; # 192.168.89.200 via split DNS; stable across DHCP
-            projectRoots = [ "/home/sab/dotnix" ];
+            projectRoots = [
+              "/home/sab/dotnix"
+              "/home/sab/git_priv/"
+            ];
             inherit harnesses;
             wakeMac = "34:5a:60:ba:8e:20";
             # Left off deliberately: the relay shuts a host down with

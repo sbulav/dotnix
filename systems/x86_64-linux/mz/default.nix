@@ -91,9 +91,12 @@ in
     xpadneo.enable = false;
   };
 
-  # environment.systemPackages = with pkgs; [
-  #   # Any particular packages only for this host
-  # ];
+  environment.systemPackages = with pkgs; [
+    # herdr-relay browses this host's project roots by running a python3
+    # helper over non-interactive SSH; without python3 on the system PATH
+    # every browse of this host fails as "Folder is unavailable".
+    python3
+  ];
 
   # Suites managed by nix, see suites by home-manager in homes
   suites = {
