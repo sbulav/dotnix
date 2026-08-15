@@ -40,6 +40,8 @@ in
 
         [keys]
         prefix = "${cfg.prefix}"
+        next_agent = "prefix+shift+n"
+        previous_agent = "prefix+shift+p"
 
         [[keys.command]]
         key = "prefix+o"
