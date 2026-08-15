@@ -20,6 +20,7 @@ in
       desktop.addons = {
         keyring = enabled;
         regreet = enabled;
+        system-polish = enabled;
         xdg-portal = enabled;
         hyprland-utils = enabled;
         uwsm = enabled;

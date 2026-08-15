@@ -5,17 +5,14 @@
 -- See https://wiki.hyprland.org/Configuring/
 
 local mainMod = "SUPER"
+local uwsmApp = "/run/current-system/sw/bin/uwsm-app -- "
 
 ----------------------------------------------------------------
 -- Autostart
 ----------------------------------------------------------------
 hl.on("hyprland.start", function()
-	hl.exec_cmd("mako")
-	hl.exec_cmd("waybar")
-	hl.exec_cmd("wl-paste --watch cliphist store")
-	hl.exec_cmd("wezterm")
-	hl.exec_cmd("firefox")
-	hl.exec_cmd("dbus-update-activation-environment --systemd WAYLAND_DISPLAY XDG_CURRENT_DESKTOP --all")
+	hl.exec_cmd(uwsmApp .. "wezterm")
+	hl.exec_cmd(uwsmApp .. "firefox")
 	hl.exec_cmd("hyprctl setcursor Adwaita 24")
 end)
 
@@ -111,7 +108,7 @@ hl.animation({ leaf = "workspaces", enabled = true, speed = 6, bezier = "default
 ----------------------------------------------------------------
 
 -- Which-key cheatsheet
-hl.bind(mainMod .. " + slash", hl.dsp.exec_cmd("wlr-which-key"))
+hl.bind(mainMod .. " + slash", hl.dsp.exec_cmd(uwsmApp .. "wlr-which-key"))
 
 -- Move focus with mainMod + arrow keys / hjkl
 for _, m in ipairs({
@@ -176,8 +173,8 @@ hl.bind("XF86AudioPlay", hl.dsp.exec_cmd("playerctl play-pause"))
 hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"))
 hl.bind("XF86AudioNext", hl.dsp.exec_cmd("playerctl next"))
 hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"))
-hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("brightnessctl s 5%+"))
-hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("brightnessctl s 5%-"))
+hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("display-brightness up"))
+hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("display-brightness down"))
 
 ----------------------------------------------------------------
 -- Window rules
@@ -255,4 +252,3 @@ hl.window_rule({ match = { class = "^(steam_app).*" }, idle_inhibit = "focus" })
 
 -- Tearing for games
 hl.window_rule({ match = { class = "^(gamescope|steam_app).*" }, immediate = true })
-

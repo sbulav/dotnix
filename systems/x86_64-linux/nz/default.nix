@@ -87,6 +87,8 @@ in
   suites.develop.enable = true;
 
   custom = {
+    desktop.addons.system-polish.clamshell.enable = true;
+
     security.sops = {
       enable = true;
       sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];

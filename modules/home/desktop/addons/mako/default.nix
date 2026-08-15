@@ -51,5 +51,20 @@ in
         };
       };
     };
+
+    systemd.user.services.mako = {
+      Unit = {
+        Description = "Mako notification daemon";
+        After = [ "graphical-session.target" ];
+        PartOf = [ "graphical-session.target" ];
+        ConditionEnvironment = "WAYLAND_DISPLAY";
+      };
+      Service = {
+        ExecStart = "${lib.getExe' config.services.mako.package "mako"}";
+        Restart = "on-failure";
+        Slice = "session.slice";
+      };
+      Install.WantedBy = [ "graphical-session.target" ];
+    };
   };
 }
