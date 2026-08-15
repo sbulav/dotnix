@@ -25,16 +25,7 @@ in
     package = mkOption {
       type = types.package;
       default = pkgs.${namespace}.ktalk;
-      example = "pkgs.${namespace}.ktalk-nvidia";
-      description = ''
-        The Ktalk package to install.
-
-        You can override this to use a custom or NVIDIA‑enabled version,
-        for example:
-        ```
-        custom.apps.ktalk.package = pkgs.${namespace}.ktalk-nvidia;
-        ```
-      '';
+      description = "The Ktalk package to install.";
     };
   };
 

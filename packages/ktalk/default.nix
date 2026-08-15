@@ -5,20 +5,26 @@
 }:
 let
   pname = "ktalk";
-  version = "3.3.0";
 
-  # Platform-specific sources
-  src =
-    if pkgs.stdenv.isLinux then
-      builtins.fetchurl {
-        url = "https://st.ktalk.host/ktalk-app/linux/${pname}${version}x86_64.AppImage";
-        sha256 = "1lmqpx6kg6ih49jfs5y0nmac7n8xix9ax45ca1bx96cdbwzfryyn";
-      }
-    else
-      builtins.fetchurl {
-        url = "https://st.ktalk.host/ktalk-app/mac/ktalk.${version}-mac.dmg";
-        sha256 = "1lk0ssbkjx3wg7ygwgagkm33c2c99yv1psb86i8dawk0bd3ymjzk";
-      };
+  # Versions diverge per platform; hashes come straight from the
+  # electron-updater manifests (sha512 is already SRI base64):
+  #   https://st.ktalk.host/ktalk-app/linux/latest-linux.yml
+  #   https://st.ktalk.host/ktalk-app/mac/latest-mac.yml
+  linux = rec {
+    version = "3.6.0";
+    src = pkgs.fetchurl {
+      url = "https://st.ktalk.host/ktalk-app/linux/${pname}${version}x86_64.AppImage";
+      hash = "sha512-0olnUkf+j1grGEw1XV+47m47klLoRIejFgyfiy3Pp0+L0nPiy+27MA6RHnubfUEKsCeyMNa/rnK4Mf+IlK9myg==";
+    };
+  };
+
+  darwin = rec {
+    version = "3.6.1";
+    src = pkgs.fetchurl {
+      url = "https://st.ktalk.host/ktalk-app/mac/ktalk.${version}-mac.dmg";
+      hash = "sha512-wGeUTGGDo70bcR2PM7YmOrU53kMt7+AaFrmNkWksq6kqjLglhFcCyY7+Vi0GdhQ3AUIe5j1vCMBlCLDZx0nr6w==";
+    };
+  };
 
   meta = with lib; {
     description = ''
@@ -34,12 +40,14 @@ let
     homepage = "https://kontur.ru/talk";
     license = licenses.unfree;
     maintainers = with maintainers; [ sbulav ];
+    mainProgram = "ktalk";
     platforms = [
       "x86_64-linux"
       "x86_64-darwin"
       "aarch64-darwin"
     ];
   };
+
   # Linux-specific: Desktop item for AppImage
   desktopItem = pkgs.makeDesktopItem {
     name = "ktalk";
@@ -53,52 +61,31 @@ let
 
   # Linux-specific: Extract AppImage contents
   appimageContents = pkgs.appimageTools.extractType2 {
-    inherit
-      pname
-      version
-      src
-      meta
-      ;
+    inherit pname;
+    inherit (linux) version src;
   };
 in
 if pkgs.stdenv.isLinux then
-  pkgs.appimageTools.wrapType2 rec {
-    inherit
-      pname
-      version
-      src
-      desktopItem
-      ;
+  pkgs.appimageTools.wrapType2 {
+    inherit pname meta desktopItem;
+    inherit (linux) version src;
 
     extraInstallCommands = ''
-      source "${pkgs.makeWrapper}/nix-support/setup-hook"
-
-      # Create a wrapper that runs the binary in a detached session
-      wrapProgram $out/bin/${pname} \
-        --run "setsid $out/bin/.${pname}-wrapped \"\$@\" >/dev/null 2>&1 </dev/null &" \
-        --run "exit 0"
-
       mkdir -p $out/share/applications/
       cp ${desktopItem}/share/applications/*.desktop $out/share/applications/
       cp -r ${appimageContents}/usr/share/icons/ $out/share/icons/
-
-      runHook postInstall
     '';
   }
 else
-  pkgs.stdenv.mkDerivation rec {
-    inherit
-      pname
-      version
-      meta
-      src
-      ;
+  pkgs.stdenv.mkDerivation {
+    inherit pname meta;
+    inherit (darwin) version src;
 
     sourceRoot = "Толк.app"; # Matches the .dmg volume name
 
     unpackPhase = ''
       tmp=$(mktemp -d)
-      /usr/bin/hdiutil attach "${src}" -mountpoint "$tmp" -nobrowse -quiet
+      /usr/bin/hdiutil attach "$src" -mountpoint "$tmp" -nobrowse -quiet
       cp -R "$tmp"/* ./
 
       /usr/bin/hdiutil detach "$tmp" -quiet

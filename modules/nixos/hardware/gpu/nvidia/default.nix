@@ -38,8 +38,6 @@ in
       GBM_BACKEND = "nvidia-drm";
       __GLX_VENDOR_LIBRARY_NAME = "nvidia";
       NVD_BACKEND = "direct";
-      # Fix screen sharing in ktalk on nvidia
-      __EGL_VENDOR_LIBRARY_FILENAMES = "/run/opengl-driver/share/glvnd/egl_vendor.d/10_nvidia.json";
     };
 
     environment.systemPackages = with pkgs; [

@@ -100,10 +100,7 @@ in
         enable = true;
         useWebdavSyncFork = true;
       };
-      ktalk = {
-        enable = true;
-        package = pkgs.custom.ktalk-nvidia;
-      };
+      ktalk = enabled;
       libreoffice = enabled;
     };
 
