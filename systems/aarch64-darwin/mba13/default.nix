@@ -13,6 +13,24 @@
   # hand out 192.168.92.136 or the older 192.168.92.143) while it is online.
   services.openssh.enable = true;
 
+  # Reap SSH sessions whose peer vanished without a FIN. macOS launchd caps
+  # concurrent sshd instances at 42 (inetdCompatibility.Instances in
+  # /System/Library/LaunchDaemons/ssh.plist); past that it accepts each new
+  # connection and closes it before the banner, so the laptop goes completely
+  # unreachable — even from localhost. Every relay poll that dies with the lid
+  # (sleep, Wi-Fi change, VPN flap) strands one session, and sshd defaults to
+  # ClientAliveInterval 0, i.e. it never notices. A day of that fills all 42.
+  #
+  # 300 x 6 = 30 minutes of an unanswered probe before a session is dropped.
+  # This never touches a working session, however long it runs: the probe is
+  # answered by the SSH layer itself, so a busy or idle-but-connected agent
+  # replies without doing anything. Only a genuinely dead peer stays silent.
+  # 30 minutes still clears strays far faster than they can accumulate to 42.
+  services.openssh.extraConfig = ''
+    ClientAliveInterval 300
+    ClientAliveCountMax 6
+  '';
+
   # Always resolve the home lab (beez, zanoza, *.sbulav.ru) via AdGuard,
   # on and off the corporate VPN — macOS equivalent of the Linux split DNS.
   custom.networking.split-dns = {
