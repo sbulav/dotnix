@@ -50,29 +50,34 @@ let
   hostsFile = pkgs.writeText "herdr-hosts.json" (
     builtins.toJSON {
       schema_version = 1;
-      hosts = map (host: {
-        inherit (host) id;
-        display_name = host.displayName;
-        project_roots = host.projectRoots;
-        herdr = {
-          wrapper = host.herdrWrapper;
-        } // optionalAttrs (host.herdrBinary != null) { binary = host.herdrBinary; };
-        harnesses = map (harness: {
-          inherit (harness) id;
-          display_name = harness.displayName;
-          inherit (harness) enabled;
-          command = if harness.command == [ ] then [ harness.id ] else harness.command;
-          model_aliases = map (alias: {
-            inherit (alias) id;
-            display_name = if alias.displayName == "" then alias.id else alias.displayName;
-          }) harness.modelAliases;
-        }) host.harnesses;
-        power = {
-          wake = if host.wakeMac == null then null else { mac = host.wakeMac; };
-          inherit (host) shutdown;
-        };
-        readiness_timeout_seconds = host.readinessTimeoutSeconds;
-      } // optionalAttrs (host.target != null) { ssh.target = host.target; }) cfg.hosts;
+      hosts = map (
+        host:
+        {
+          inherit (host) id;
+          display_name = host.displayName;
+          project_roots = host.projectRoots;
+          herdr = {
+            wrapper = host.herdrWrapper;
+          }
+          // optionalAttrs (host.herdrBinary != null) { binary = host.herdrBinary; };
+          harnesses = map (harness: {
+            inherit (harness) id;
+            display_name = harness.displayName;
+            inherit (harness) enabled;
+            command = if harness.command == [ ] then [ harness.id ] else harness.command;
+            model_aliases = map (alias: {
+              inherit (alias) id;
+              display_name = if alias.displayName == "" then alias.id else alias.displayName;
+            }) harness.modelAliases;
+          }) host.harnesses;
+          power = {
+            wake = if host.wakeMac == null then null else { mac = host.wakeMac; };
+            inherit (host) shutdown;
+          };
+          readiness_timeout_seconds = host.readinessTimeoutSeconds;
+        }
+        // optionalAttrs (host.target != null) { ssh.target = host.target; }
+      ) cfg.hosts;
     }
   );
   # HERDR_REMOTES is the relay's fallback topology and is read only when no
@@ -117,7 +122,9 @@ in
           projectRoots =
             mkOpt (types.listOf types.str) [ ]
               "Absolute directories a client may browse for projects. A root is itself selectable.";
-          herdrBinary = mkOpt (types.nullOr types.str) null "Absolute herdr path on this host, or null for HERDR_BIN.";
+          herdrBinary =
+            mkOpt (types.nullOr types.str) null
+              "Absolute herdr path on this host, or null for HERDR_BIN.";
           herdrWrapper = mkOpt (types.listOf types.str) [ ] "Argv prefix placed before the herdr binary.";
           harnesses = mkOpt (types.listOf (
             types.submodule {
@@ -139,7 +146,9 @@ in
               };
             }
           )) [ ] "Coding agents installed on this host.";
-          wakeMac = mkOpt (types.nullOr types.str) null "MAC to wake this host with, or null for no wake capability.";
+          wakeMac =
+            mkOpt (types.nullOr types.str) null
+              "MAC to wake this host with, or null for no wake capability.";
           shutdown = mkBoolOpt false "Whether clients may shut this host down (requires an SSH target).";
           readinessTimeoutSeconds =
             mkOpt types.int 180
