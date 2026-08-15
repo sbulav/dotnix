@@ -283,8 +283,8 @@ in
       package = waybar;
 
       systemd = {
-        enable = false;
-        targets = [ "hyprland-session.target" ];
+        enable = true;
+        targets = [ "graphical-session.target" ];
       };
 
       style = builtins.readFile (./styles + "/${config.custom.theme.name}.css");
@@ -515,6 +515,8 @@ in
       };
     };
 
+    systemd.user.services.waybar.Service.Slice = "session.slice";
+
     # Cross-cutting bits that exist because waybar now owns the bluetooth and
     # network indicators — co-located here to keep the "waybar is the single
     # status surface" decision in one place.
@@ -556,6 +558,7 @@ in
         ExecStart = "${akgVuMeter}/bin/akg-vu-meter";
         Restart = "on-failure";
         RestartSec = 3;
+        Slice = "session.slice";
       };
       Install.WantedBy = [ "graphical-session.target" ];
     };

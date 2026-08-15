@@ -26,6 +26,12 @@ let
   # "foo" → "\"foo\""
   luaStr = s: "\"" + lib.replaceStrings [ "\\" "\"" ] [ "\\\\" "\\\"" ] s + "\"";
 
+  # Give every compositor-launched application its own UWSM-managed app scope.
+  # bash -lc preserves compound commands used by search and screenshot binds.
+  uwsmExec =
+    command:
+    "/run/current-system/sw/bin/uwsm-app -- ${pkgs.bash}/bin/bash -lc ${lib.escapeShellArg command}";
+
   # Parse "title:something" or "initialClass:foo" → { field, pattern }
   parseMatch =
     app:
@@ -116,7 +122,7 @@ let
       argTrim = lib.trim arg;
     in
     if verb == "exec" then
-      "hl.dsp.exec_cmd(${luaStr argTrim})"
+      "hl.dsp.exec_cmd(${luaStr (uwsmExec argTrim)})"
     else if verb == "killactive" then
       "hl.dsp.window.close()"
     else if verb == "exit" then
@@ -211,7 +217,7 @@ let
       screenshotCfg = config.custom.desktop.addons.screenshot;
       sc = screenshotCfg.commands;
       hasAnnotate = screenshotCfg.enable && screenshotCfg.annotator != "none";
-      mkPrintBind = modKey: cmd: "hl.bind(${luaStr modKey}, hl.dsp.exec_cmd(${luaStr cmd}))";
+      mkPrintBind = modKey: cmd: "hl.bind(${luaStr modKey}, hl.dsp.exec_cmd(${luaStr (uwsmExec cmd)}))";
       screenshotBindings =
         if !screenshotCfg.enable then
           ""

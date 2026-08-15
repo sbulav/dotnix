@@ -44,11 +44,12 @@ in
           extra = [
             # ALT+Print is now region->annotate (screenshot addon).
             # Move record-screen toggle to SUPER+ALT+Print.
-            ''hl.bind("SUPER + ALT + Print", hl.dsp.exec_cmd("record-screen toggle"))''
+            ''hl.bind("SUPER + ALT + Print", hl.dsp.exec_cmd("/run/current-system/sw/bin/uwsm-app -- record-screen toggle"))''
           ];
         };
       };
       addons = {
+        system-polish = enabled;
         hyprpaper = enabled;
         mako = enabled;
         rofi = enabled;

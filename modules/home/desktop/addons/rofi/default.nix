@@ -38,6 +38,7 @@ in
         display-run = "   Run ";
         display-window = " 﩯  Window";
         display-vpn = " VPN ";
+        drun-command = "/run/current-system/sw/bin/uwsm-app -- {cmd}";
         drun-display-format = "{icon} {name}";
         icon-theme = "Fluent";
         location = 0;
@@ -48,7 +49,8 @@ in
         sidebar-mode = true;
         sorting-method = "fzf";
         sort = true;
-        terminal = "wezterm";
+        run-command = "/run/current-system/sw/bin/uwsm-app -- {cmd}";
+        terminal = "/run/current-system/sw/bin/uwsm-app -- wezterm";
         font = "FiraCode Nerd Font Regular 12";
         kb-accept-custom = "Control+Return";
         kb-cancel = "Escape,Control+g,Control+bracketleft,Control+space";
@@ -207,6 +209,21 @@ in
         EOF
         cliphist list | gawk "$prog"
       '';
+    };
+
+    systemd.user.services.cliphist-watcher = {
+      Unit = {
+        Description = "Store Wayland clipboard history";
+        After = [ "graphical-session.target" ];
+        PartOf = [ "graphical-session.target" ];
+        ConditionEnvironment = "WAYLAND_DISPLAY";
+      };
+      Service = {
+        ExecStart = "${pkgs.wl-clipboard}/bin/wl-paste --watch ${pkgs.cliphist}/bin/cliphist store";
+        Restart = "on-failure";
+        Slice = "session.slice";
+      };
+      Install.WantedBy = [ "graphical-session.target" ];
     };
   };
 }
