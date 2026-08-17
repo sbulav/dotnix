@@ -20,6 +20,12 @@ let
   splitDnsServers = escapeShellArgs cfg.splitDns.servers;
   splitDnsDomains = escapeShellArgs cfg.splitDns.domains;
 
+  # Ownership marker written into every /etc/resolver file myvpn creates, so
+  # cleanup can recognise its own entries without depending on state under
+  # /var/run (which macOS clears on boot) and can refuse to clobber resolver
+  # files owned by someone else (e.g. custom.networking.split-dns).
+  resolverMarker = "# managed by myvpn (openconnect split DNS)";
+
   linuxNetworkFunctions = ''
     tunnel_ready() {
       ${pkgs.iproute2}/bin/ip link show "$INTERFACE" >/dev/null 2>&1
@@ -57,6 +63,12 @@ let
         "$SUDO_BIN" ${pkgs.systemd}/bin/resolvectl flush-caches >/dev/null 2>&1 || true
       fi
     }
+
+    # resolvectl state is per-interface and does not survive a reboot, so there
+    # is never stale split DNS to report on Linux.
+    dns_is_configured() {
+      return 1
+    }
   '';
 
   darwinNetworkFunctions = ''
@@ -74,56 +86,71 @@ let
       "$SUDO_BIN" "$ROUTE_BIN" delete -net "$VPN_HOST_ROUTE" "$LAN_GATEWAY" >/dev/null 2>&1 || true
     }
 
+    resolver_is_ours() {
+      ${pkgs.gnugrep}/bin/grep -qxF "$RESOLVER_MARKER" "''${1}" 2>/dev/null
+    }
+
+    flush_dns() {
+      "$SUDO_BIN" /usr/bin/dscacheutil -flushcache || return 1
+      "$SUDO_BIN" /usr/bin/killall -HUP mDNSResponder || return 1
+    }
+
     dns_up() {
       "$SUDO_BIN" ${pkgs.coreutils}/bin/mkdir -p /etc/resolver || return 1
 
       local domain
       local server
       local resolver_file
-      local backup_file
-      local absent_file
       for domain in "''${SPLIT_DNS_DOMAINS[@]}"; do
         resolver_file="/etc/resolver/$domain"
-        backup_file="$STATE_DIR/resolver.$domain"
-        absent_file="$backup_file.absent"
 
-        "$SUDO_BIN" ${pkgs.coreutils}/bin/rm -f "$backup_file" "$absent_file" || return 1
-        if [[ -f "$resolver_file" ]]; then
-          "$SUDO_BIN" ${pkgs.coreutils}/bin/cp "$resolver_file" "$backup_file" || return 1
-        else
-          "$SUDO_BIN" ${pkgs.coreutils}/bin/touch "$absent_file" || return 1
+        if [[ -e "$resolver_file" ]] && ! resolver_is_ours "$resolver_file"; then
+          echo "ERROR: $resolver_file is not managed by myvpn; refusing to overwrite it" >&2
+          return 1
         fi
 
-        for server in "''${SPLIT_DNS_SERVERS[@]}"; do
-          printf 'nameserver %s\n' "$server"
-        done | "$SUDO_BIN" ${pkgs.coreutils}/bin/tee "$resolver_file" >/dev/null || return 1
+        {
+          printf '%s\n' "$RESOLVER_MARKER"
+          for server in "''${SPLIT_DNS_SERVERS[@]}"; do
+            printf 'nameserver %s\n' "$server"
+          done
+        } | "$SUDO_BIN" ${pkgs.coreutils}/bin/tee "$resolver_file" >/dev/null || return 1
       done
 
-      "$SUDO_BIN" /usr/bin/dscacheutil -flushcache || return 1
-      "$SUDO_BIN" /usr/bin/killall -HUP mDNSResponder || return 1
+      flush_dns
     }
 
+    # Removes our own resolver entries wherever they are found. This must not
+    # depend on $STATE_DIR: /etc/resolver survives a reboot but /var/run does
+    # not, so a state-dir-gated cleanup leaked corp-only nameservers into every
+    # later boot and made the split DNS domains resolve nowhere.
     dns_down() {
       local failed=0
       local domain
       local resolver_file
-      local backup_file
-      local absent_file
       for domain in "''${SPLIT_DNS_DOMAINS[@]}"; do
         resolver_file="/etc/resolver/$domain"
-        backup_file="$STATE_DIR/resolver.$domain"
-        absent_file="$backup_file.absent"
+        [[ -e "$resolver_file" ]] || continue
 
-        if [[ -f "$backup_file" ]]; then
-          "$SUDO_BIN" ${pkgs.coreutils}/bin/cp "$backup_file" "$resolver_file" || failed=1
-        elif [[ -f "$absent_file" ]]; then
+        if resolver_is_ours "$resolver_file"; then
           "$SUDO_BIN" ${pkgs.coreutils}/bin/rm -f "$resolver_file" || failed=1
+        else
+          echo "WARNING: $resolver_file is not managed by myvpn; leaving it in place" >&2
         fi
       done
 
-      "$SUDO_BIN" /usr/bin/dscacheutil -flushcache >/dev/null 2>&1 || true
-      "$SUDO_BIN" /usr/bin/killall -HUP mDNSResponder >/dev/null 2>&1 || true
+      flush_dns >/dev/null 2>&1 || true
       return "$failed"
+    }
+
+    dns_is_configured() {
+      local domain
+      for domain in "''${SPLIT_DNS_DOMAINS[@]}"; do
+        if resolver_is_ours "/etc/resolver/$domain"; then
+          return 0
+        fi
+      done
+      return 1
     }
   '';
 
@@ -154,6 +181,7 @@ let
       PID_FILE="$STATE_DIR/openconnect.pid"
       SPLIT_DNS_SERVERS=( ${splitDnsServers} )
       SPLIT_DNS_DOMAINS=( ${splitDnsDomains} )
+      ${optionalString (!isLinux) "RESOLVER_MARKER=${escapeShellArg resolverMarker}"}
 
       ${networkFunctions}
 
@@ -311,9 +339,9 @@ let
         local failed=0
         pid="$(read_pid)"
 
-        if [[ -d "$STATE_DIR" ]]; then
-          network_down || failed=1
-        fi
+        # Always reconcile routes and DNS, even with no state dir: openconnect
+        # dying on suspend or a reboot wiping /var/run must still be cleanable.
+        network_down || failed=1
         stop_process "$pid" || failed=1
 
         if [[ -d "$STATE_DIR" ]]; then
@@ -337,6 +365,16 @@ let
         fi
 
         echo "myvpn is down"
+        ${
+          if cfg.splitDns.enable then
+            ''
+              if dns_is_configured; then
+                echo "WARNING: stale myvpn split DNS is still active in /etc/resolver;" >&2
+                echo "         those domains resolve only through the VPN. Run 'myvpn down' to clear it." >&2
+              fi''
+          else
+            ":"
+        }
         return 1
       }
 
