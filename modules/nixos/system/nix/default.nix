@@ -70,6 +70,9 @@ in
             # Add custom cache servers first (checked before public caches)
             (optionals (cfg.cache-servers != [ ]) (map withPriority cfg.cache-servers)) ++ [
               "https://dotnix.cachix.org?priority=10"
+              # SJTU mirror of cache.nixos.org (same cache.nixos.org-1 signatures);
+              # direct Fastly access to cache.nixos.org times out on some networks.
+              "https://mirror.sjtu.edu.cn/nix-channels/store?priority=15"
               "https://cache.nixos.org?priority=20"
               # "https://nix-community.cachix.org"
               # "https://nixpkgs-unfree.cachix.org"
