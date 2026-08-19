@@ -13,10 +13,10 @@ let
 
   # Staged takeover of the old seven-tool stack (issue #37). Surfaces the
   # shell does NOT own yet are pinned off here and flipped slice by slice:
-  #   slice 1: bar + notifications + OSD   (waybar/mako off)      — done
-  #   slice 2: launcher + session/power    (rofi/wlogout off)     — done
-  #   slice 3: wallpaper engine + palette  (hyprpaper/waypaper off)
-  #   slice 5: lock + idle                 (swaylock/hypridle off) — PAM risk, LAST
+  #   slice 1: bar + notifications + OSD   (waybar/mako off)        — done
+  #   slice 2: launcher + session/power    (rofi/wlogout off)       — done
+  #   slice 3: wallpaper engine + palette  (hyprpaper/waypaper off) — done
+  #   slice 5: lock + idle                 (swaylock/hypridle off)  — PAM risk, LAST
   defaultSettings = {
     shell = {
       telemetry_enabled = false;
@@ -36,7 +36,14 @@ let
       builtin = "Tokyo-Night";
     };
 
-    wallpaper.enabled = false; # slice 3 — hyprpaper still owns wallpaper
+    # Slice 3: the shell owns the wallpaper engine. Seeded from the repo-wide
+    # addons.wallpaper option exactly like hyprpaper was (swaylock/hypridle
+    # keep reading that option for the lock image until slice 5); the picker
+    # directory is host-specific and comes in via cfg.settings.
+    wallpaper = {
+      enabled = true;
+      default.path = toString config.custom.desktop.addons.wallpaper;
+    };
     lockscreen.enabled = false; # slice 5 — swaylock still owns locking
     idle.behavior = {
       # slice 5 — hypridle still owns idle; never enable idle-lock before the
@@ -58,10 +65,10 @@ let
 
     bar.main = {
       position = "top";
-      # Desktop machine: no battery/brightness widgets. The wallpaper widget
-      # arrives with slice 3 (hyprpaper still owns wallpaper until then).
+      # Desktop machine: no battery/brightness widgets.
       start = [
         "launcher"
+        "wallpaper"
         "workspaces"
       ];
       center = [ "clock" ];
