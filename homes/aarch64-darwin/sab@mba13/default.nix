@@ -14,7 +14,6 @@ with lib.custom;
     ai = {
       claude = enabled;
       mcp-k8s-go = enabled;
-      # mcp-grafana is intentionally not enabled on mba13.
 
       opencode = {
         enable = true;
