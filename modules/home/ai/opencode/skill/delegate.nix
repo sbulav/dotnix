@@ -1,6 +1,6 @@
 {
   name = "delegate";
-  version = "1.3.0";
+  version = "1.4.0";
   description = "Split a task or a batch of issues into subtasks and route each to the cheapest-capable model via opencode run. Use for multi-model orchestration, delegating grunt work to cheap models, issue-batch swarms with git worktrees, parallel investigations, and cross-model reviews.";
   "argument-hint" = "[task, issue number(s), or repo issue list]";
   "user-invocable" = true;
@@ -165,7 +165,16 @@
        dispatchable issue, classify complexity (-> routing weight) and conflict domain
        (which files it will touch). Issues touching disjoint files run in parallel;
        overlapping issues run sequentially.
-    2. **Dispatch in waves**: one git worktree per issue to isolate parallel workers:
+       The dispatchable set is the **frontier**: open, unblocked, **unclaimed**. The
+       assignee is the claim — skip any issue that already has one, whoever it is;
+       another orchestrator or a human may be working the same tracker concurrently.
+    2. **Dispatch in waves** — each wave is a snapshot of the frontier. **Claim before
+       any work**: assign the issue to yourself via `tea issues edit` *before* creating
+       its worktree, so concurrent sessions skip it; where the tea version cannot edit
+       assignees, post a one-line claim comment and treat that as the claim. If you
+       permanently drop an issue (worker failed out, escalation abandoned), release the
+       claim the same way so it does not go stale. One git worktree per issue to isolate
+       parallel workers:
 
        ```bash
        git worktree add ../<repo>-issue-<N> -b issue-<N>
