@@ -1,0 +1,38 @@
+# Mic VU meter for the noctalia bar (issue #37, slice 4). Ships as a
+# Nix-managed path source: the module substitutes @SOURCE_MATCH@ and the
+# tool paths in service.luau at build time, so this directory is a
+# template, not the runtime copy.
+
+id          = "sab/mic_vu"
+name        = "Mic VU Meter"
+version     = "1.0.0"
+plugin_api  = 3
+author      = "sab"
+license     = "MIT"
+icon        = "microphone"
+description = "Analog-ballistics VU meter for a microphone input, fed by pw-cat."
+tags        = ["audio"]
+
+# Plugin-level setting: shared by the capture service and the widget.
+[[setting]]
+key             = "source_match"
+type            = "string"
+label_key       = "settings.source_match.label"
+description_key = "settings.source_match.description"
+default         = "@SOURCE_MATCH@"
+
+[[widget]]
+id    = "meter"
+entry = "widget.luau"
+
+  [[widget.setting]]
+  key       = "meter_width"
+  type      = "int"
+  label_key = "settings.meter_width.label"
+  default   = 46
+  min       = 16
+  max       = 200
+
+[[service]]
+id    = "capture"
+entry = "service.luau"
