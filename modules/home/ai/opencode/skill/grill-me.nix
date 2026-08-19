@@ -2,10 +2,9 @@
 # frontier/rounds interview loop, kept as a single user-invoked skill.
 {
   name = "grill-me";
-  version = "2.1.0";
-  description = "Grill the user relentlessly about a plan, decision, or idea until every branch of the design tree is resolved. Use when the user wants to stress-test their thinking, or uses any 'grill' trigger phrases.";
+  version = "2.2.0";
+  description = "Grill the user relentlessly about a plan, decision, or idea until every branch of the design tree is resolved. Use when the user wants to stress-test their thinking, uses any 'grill' trigger phrases, or when mid-task you hit an under-specified decision only the user can own — interview instead of guessing. Requires the user present: never self-invoke in an AFK or delegated worker session.";
   "argument-hint" = "[topic]";
-  "disable-model-invocation" = true;
   "user-invocable" = true;
   allowed-tools = [
     "Read"
@@ -62,7 +61,9 @@
 
     ## Input
 
-    Topic to grill on:
+    Topic to grill on (may be empty when self-invoked mid-task — then grill
+    the under-specified decision that triggered this skill, scoped to that
+    decision's subtree, not the whole plan):
     $ARGUMENTS
   '';
 }
