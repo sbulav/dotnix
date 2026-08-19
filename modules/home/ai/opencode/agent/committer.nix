@@ -13,25 +13,7 @@
     patch = false;
   };
 
-  permission = {
-    edit = "deny";
-    webfetch = "deny";
-    bash = {
-      "*" = "allow";
-      "git status" = "allow";
-      "git diff *" = "allow";
-      "git log *" = "allow";
-      "git add *" = "ask";
-      "git restore --staged *" = "allow";
-      "git commit -m *" = "allow";
-      "git commit --amend *" = "ask";
-      "git tag -a * -m *" = "ask";
-      "git push *" = "ask";
-      "git rebase *" = "deny";
-      "git reset *" = "deny";
-      "rm -rf *" = "deny";
-    };
-  };
+  permission = (import ../../shared/permissions.nix).opencodeAgents.gitCareful;
 
   system_prompt = ''
     # Role

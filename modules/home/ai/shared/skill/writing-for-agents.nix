@@ -22,7 +22,7 @@
 
     Skills are Nix attrsets, rendered to SKILL.md for both Claude Code
     (`~/.claude/skills/`) and opencode (`~/.config/opencode/skills/`):
-    - General skills: `modules/home/ai/opencode/skill/<name>.nix`
+    - General skills: `modules/home/ai/shared/skill/<name>.nix`
     - Workflow skills: `modules/home/ai/shared/workflow/skill/<name>.nix` (also imported by opencode orchestrator agents)
     - Shared fragments (single source of truth, e.g. `teaConventions`): `modules/home/ai/shared/workflow/templates.nix` — interpolate, never copy.
     - Model-invoked: omit `"disable-model-invocation"`. User-invoked: set it `true`.

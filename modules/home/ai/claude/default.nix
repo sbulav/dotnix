@@ -10,55 +10,13 @@ let
     mkIf
     mkEnableOption
     nameValuePair
-    filterAttrs
     ;
 
   cfg = config.custom.ai.claude;
 
-  localSkillDir = ../opencode/skill;
-  workflowSkillDir = ../shared/workflow/skill;
-
-  # Reuse the opencode skill renderer - both tools share the same SKILL.md format
-  optionalYamlField =
-    key: value: if value != null && value != "" then "${key}: ${builtins.toJSON value}" else "";
-
-  toSkillMarkdown = _name: skill: ''
-    ---
-    name: ${builtins.toJSON skill.name}
-    description: ${builtins.toJSON skill.description}
-    ${optionalYamlField "version" (skill.version or null)}
-    ${optionalYamlField "argument-hint" (skill."argument-hint" or null)}
-    ${optionalYamlField "disable-model-invocation" (skill."disable-model-invocation" or null)}
-    ${optionalYamlField "user-invocable" (skill."user-invocable" or null)}
-    ${optionalYamlField "model" (skill.model or null)}
-    ${optionalYamlField "context" (skill.context or null)}
-    ${optionalYamlField "agent" (skill.agent or null)}
-    ${
-      if (skill ? allowed-tools && skill.allowed-tools != [ ]) then
-        "allowed-tools:\n" + lib.concatStringsSep "\n" (map (tool: "  - ${tool}") skill.allowed-tools)
-      else
-        ""
-    }
-    ---
-    ${skill.content or ""}
-  '';
-
-  processSkillDir =
-    dir:
-    let
-      files = builtins.readDir dir;
-      nixFiles = filterAttrs (name: _: lib.hasSuffix ".nix" name) files;
-    in
-    lib.mapAttrs' (
-      name: _:
-      let
-        fileName = lib.removeSuffix ".nix" name;
-        skill = import (dir + "/${name}");
-      in
-      nameValuePair fileName skill
-    ) nixFiles;
-
-  skills = (processSkillDir localSkillDir) // (processSkillDir workflowSkillDir);
+  registry = import ../shared/registry.nix { inherit lib; };
+  inherit (registry) skills toSkillMarkdown;
+  patterns = registry.securityPatterns;
 
   dataHome = config.xdg.dataHome;
 
@@ -104,21 +62,7 @@ let
               cmd=$(echo "$input" | jq -r '.tool_input.command // ""')
 
               dangerous_patterns=(
-                'curl.*\|.*sh'
-                'curl.*\|.*bash'
-                'wget.*\|.*sh'
-                'wget.*\|.*bash'
-                'eval.*\$\(curl'
-                'eval.*\$\(wget'
-                ':\(\)\{.*:\|:.*\};:'
-                '\.ssh(/|$| )'
-                '\.kube(/|$| )'
-                'kubeconfig'
-                '(source|\.)\s+.*\.env($|\s)'
-                '\bprintenv\b'
-                '\bdeclare\s+-p\b'
-                '\bexport\s+-p\b'
-                '\$KUBECONFIG'
+                ${lib.concatMapStringsSep "\n  " (p: "'${p}'") (lib.concatMap (e: e.bash) patterns)}
               )
 
               for pattern in "''${dangerous_patterns[@]}"; do
@@ -291,77 +235,7 @@ let
   };
 
   settings = {
-    permissions = {
-      defaultMode = "auto";
-      allow = [
-        "Glob"
-        "Grep"
-        "Read"
-        "Task"
-        "TodoWrite"
-        # Git — safe read-only ops
-        "Bash(git status)"
-        "Bash(git log *)"
-        "Bash(git diff *)"
-        "Bash(git show *)"
-        "Bash(git branch *)"
-        "Bash(git remote *)"
-        # Forgejo via tea
-        "Bash(tea issues *)"
-        "Bash(tea pulls *)"
-        "Bash(tea comment *)"
-        "Bash(tea issues create *)"
-        "Bash(tea pr create *)"
-        # Basic filesystem
-        "Bash(ls *)"
-        "Bash(mkdir *)"
-        # Nix tooling
-        "Bash(nix *)"
-        "Bash(nixos-option *)"
-        "Bash(systemctl list-units *)"
-        "Bash(systemctl list-timers *)"
-        "Bash(systemctl status *)"
-        "Bash(journalctl *)"
-        "Bash(claude --version)"
-        "WebFetch(domain:github.com)"
-        "WebFetch(domain:raw.githubusercontent.com)"
-      ];
-      ask = [
-        # Git — mutating ops
-        "Bash(git add *)"
-        "Bash(git checkout *)"
-        "Bash(git commit *)"
-        "Bash(git merge *)"
-        "Bash(git pull *)"
-        "Bash(git push *)"
-        "Bash(git rebase *)"
-        "Bash(git reset *)"
-        "Bash(git restore *)"
-        "Bash(git stash *)"
-        "Bash(git switch *)"
-        # File ops
-        "Bash(cp *)"
-        "Bash(mv *)"
-        "Bash(rm *)"
-        "Bash(chmod *)"
-        "Bash(curl *)"
-        "Bash(sudo *)"
-        "Bash(nixos-rebuild *)"
-      ];
-      deny = [
-        "Bash(rm -rf /*)"
-        "Bash(dd *)"
-        "Bash(mkfs *)"
-        # Environment variable exposure
-        "Bash(env)"
-        "Bash(env *)"
-        "Bash(printenv)"
-        "Bash(printenv *)"
-        "Bash(set)"
-        "Bash(declare -p *)"
-        "Bash(export -p)"
-      ];
-    };
+    permissions = registry.permissions.claude;
     skipAutoPermissionPrompt = true;
     skipDangerousModePermissionPrompt = true;
     vim = true;
@@ -377,31 +251,7 @@ let
     };
     inherit hooks;
 
-    mcpServers = {
-      kubernetes = {
-        command = "mcp-k8s-go";
-        args = [ "--readonly" ];
-      };
-      nixos = {
-        command = "nix";
-        args = [
-          "run"
-          "github:utensils/mcp-nixos"
-          "--"
-        ];
-      };
-      context7 = {
-        type = "http";
-        url = "https://mcp.context7.com/mcp";
-      };
-      sequential-thinking = {
-        command = "npx";
-        args = [
-          "-y"
-          "@modelcontextprotocol/server-sequential-thinking"
-        ];
-      };
-    };
+    mcpServers = registry.mcp.claude;
   };
 
   settingsFile = pkgs.writeText "claude-settings.json" (builtins.toJSON settings);
@@ -439,31 +289,7 @@ in
       enable = true;
       package = claudeWithProxy;
       # settings intentionally omitted - keep settings.json mutable for plugin installs
-      mcpServers = {
-        kubernetes = {
-          command = "mcp-k8s-go";
-          args = [ "--readonly" ];
-        };
-        nixos = {
-          command = "nix";
-          args = [
-            "run"
-            "github:utensils/mcp-nixos"
-            "--"
-          ];
-        };
-        context7 = {
-          type = "http";
-          url = "https://mcp.context7.com/mcp";
-        };
-        sequential-thinking = {
-          command = "npx";
-          args = [
-            "-y"
-            "@modelcontextprotocol/server-sequential-thinking"
-          ];
-        };
-      };
+      mcpServers = registry.mcp.claude;
     };
 
     home.activation.claudeSettings = {
@@ -499,7 +325,7 @@ in
         source = ./statusline.sh;
       };
     }
-    # Shared skills from opencode - same SKILL.md format, zero duplication
+    # Shared skills from the central registry - same SKILL.md format for both harnesses
     // lib.mapAttrs' (
       name: skill:
       nameValuePair ".claude/skills/${skill.name}/SKILL.md" {

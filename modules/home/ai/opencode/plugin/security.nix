@@ -1,3 +1,7 @@
+let
+  patterns = import ../../shared/security-patterns.nix;
+  jsPatterns = builtins.concatStringsSep ",\n    " (builtins.concatLists (map (e: e.js) patterns));
+in
 ''
   import { isAbsolute, resolve } from "node:path"
 
@@ -50,19 +54,7 @@
   export const SecurityPlugin = async ({ directory, worktree }) => {
     const workspace = worktree || directory
     const dangerousPatterns = [
-      /\b(curl|wget)\b[^|]*\|\s*\b(sh|bash)\b/i,
-      /\beval\b.*\$\(/,
-      /:\(\)\{.*:\|:.*\};:/,
-      // Reading SSH/Kubernetes credentials via bash (mirrors the Claude hook)
-      /\.ssh(?:\/|$|\s)/i,
-      /\.kube(?:\/|$|\s)/i,
-      /kubeconfig/i,
-      /\$KUBECONFIG/,
-      // Dumping the environment (which carries injected secrets)
-      /(?:source|\.)\s+.*\.env(?:$|\s)/,
-      /\bprintenv\b/,
-      /\bdeclare\s+-p\b/,
-      /\bexport\s+-p\b/
+      ${jsPatterns}
     ]
 
     return {

@@ -20,15 +20,13 @@ let
   # Constants for paths and settings
   agentDir = ./agent;
   commandDir = ./command;
-  skillDir = ./skill;
-  workflowSkillDir = ../shared/workflow/skill;
   pluginDir = ./plugin;
   utilsDir = ./utils;
   providersPath = ./providers.nix;
-  mcpServersPath = ./mcp-servers.nix;
   configSchema = "https://opencode.ai/config.json";
 
   proxy = import ../shared/proxy.nix;
+  registry = import ../shared/registry.nix { inherit lib; };
 
   # On Linux bake the proxy topology into the binary (same as the Claude
   # wrapper): openai/* API traffic goes via fwdproxy, the LLM gateways
@@ -63,7 +61,6 @@ let
 
   # Import separate configuration files
   providers = import providersPath;
-  mcpServers = import mcpServersPath;
 
   # Helper function to process config directories
   # dirPath: path to directory containing .nix files
@@ -93,7 +90,7 @@ let
   # Import configurations from directories
   agents = processConfigDir agentDir;
   commands = processConfigDir commandDir;
-  skills = (processConfigDir skillDir) // (processConfigDir workflowSkillDir);
+  skills = registry.skills;
   plugins = processConfigDir pluginDir;
 
   # Process physical utility scripts from utils directory
@@ -189,29 +186,6 @@ let
     ${config.task or ""}
   '';
 
-  # Generate skill markdown file (SKILL.md format)
-  # name: string, config: attrset -> string
-  toSkillMarkdown = name: config: ''
-    ---
-    name: ${builtins.toJSON config.name}
-    description: ${builtins.toJSON config.description}
-    ${optionalYamlField "version" (config.version or null)}
-    ${optionalYamlField "argument-hint" (config."argument-hint" or null)}
-    ${optionalYamlField "disable-model-invocation" (config."disable-model-invocation" or null)}
-    ${optionalYamlField "user-invocable" (config."user-invocable" or null)}
-    ${optionalYamlField "model" (config.model or null)}
-    ${optionalYamlField "context" (config.context or null)}
-    ${optionalYamlField "agent" (config.agent or null)}
-    ${
-      if (config ? allowed-tools && config.allowed-tools != [ ]) then
-        "allowed-tools:\n" + lib.concatStringsSep "\n" (map (tool: "  - ${tool}") config.allowed-tools)
-      else
-        ""
-    }
-    ---
-    ${config.content or ""}
-  '';
-
   # Default configuration settings
   defaultSettings = {
     model = "hhdev-glm5-fp8/zai-org/GLM-5.2-FP8";
@@ -219,31 +193,7 @@ let
     # self-hosted model instead of occupying GLM.
     small_model = "hhdev-gemma4-26b/google/gemma-4-26B-A4B-it";
 
-    permission = {
-      edit = "allow";
-      bash = {
-        "*" = "allow";
-        "chmod *" = "ask";
-        "chown *" = "ask";
-        "dd *" = "deny";
-        "env" = "deny";
-        "env *" = "deny";
-        "export -p" = "deny";
-        "git push *" = "ask";
-        "git rebase *" = "ask";
-        "git reset *" = "ask";
-        "mkfs *" = "deny";
-        "nixos-rebuild *" = "ask";
-        "printenv" = "deny";
-        "printenv *" = "deny";
-        "rm *" = "ask";
-        "rm -rf /*" = "deny";
-        "set" = "deny";
-        "sudo *" = "ask";
-      };
-      webfetch = "allow";
-      external_directory = "ask";
-    };
+    permission = registry.permissions.opencode;
 
     disabled_providers = [
       # "openai"
@@ -252,7 +202,7 @@ let
     ];
 
     provider = providers;
-    mcp = mcpServers;
+    mcp = registry.mcp.opencode;
 
     "$schema" = configSchema;
   }
@@ -312,7 +262,7 @@ in
     // lib.mapAttrs' (
       name: value:
       nameValuePair "opencode/skills/${value.name}/SKILL.md" {
-        text = toSkillMarkdown name value;
+        text = registry.toSkillMarkdown name value;
       }
     ) skills
     # Utility scripts (from both options and physical files)
