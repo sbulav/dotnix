@@ -3,7 +3,7 @@ let
 in
 {
   name = "plan-to-issues";
-  version = "1.2.0";
+  version = "1.3.0";
   description = "Break a planned Forgejo issue into sub-issues — vertical slices for features, expand-contract phases for wide refactors. Use with a parent issue number.";
   "argument-hint" = "[parent-issue-number]";
   "disable-model-invocation" = true;
@@ -65,6 +65,7 @@ in
        - Small enough to implement in one focused session
        - Independently mergeable (complete vertical path, or a CI-green expand-contract phase)
        - Has its own acceptance criteria expressed as `- [ ]` checkboxes
+       - For feature slices, pins the **seams under test** — the public interfaces the acceptance criteria are verified through — so an AFK worker running the `tdd` skill inherits them instead of inventing test surfaces
        - Declares blockers: which other slices must land first, or none
        - Tagged with an execution mode: HITL (needs human review or decisions mid-flight) or AFK (safe to run autonomously end-to-end)
     7. Present all slices to the user in a numbered list with:

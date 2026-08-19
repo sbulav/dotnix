@@ -3,7 +3,7 @@ let
 in
 {
   name = "workon";
-  version = "1.1.0";
+  version = "1.2.0";
   description = "Resume and work on a Forgejo issue — read state, then implement. Use with an issue number, or infer from the current issue branch when unambiguous.";
   "argument-hint" = "[issue-number|TPL-key]";
   "disable-model-invocation" = true;
@@ -15,6 +15,7 @@ in
     "Task"
     "Write"
     "Edit"
+    "Skill"
   ];
   content = ''
     Resume and implement work using only the current repo and its Forgejo issue tracker.
@@ -62,6 +63,8 @@ in
 
      During implementation:
      - Follow the acceptance criteria from the issue as your checklist.
+     - For feature work or bug fixes with testable behaviour, load the `tdd` skill and work its red → green loop over the seams the issue pins (or agree them with the user first).
+     - When designing or reshaping a module's interface, consult the `codebase-design` skill for the vocabulary and principles.
      - Stop at natural checkpoints (feature complete, tests passing, etc.) and post AI-HANDOFF updates.
      - Keep commits granular; do not bundle unrelated changes.
      - When implementation is complete and tests pass, suggest `/ship`.

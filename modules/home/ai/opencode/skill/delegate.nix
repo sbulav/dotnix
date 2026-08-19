@@ -1,6 +1,6 @@
 {
   name = "delegate";
-  version = "1.4.0";
+  version = "1.5.0";
   description = "Split a task or a batch of issues into subtasks and route each to the cheapest-capable model via opencode run. Use for multi-model orchestration, delegating grunt work to cheap models, issue-batch swarms with git worktrees, parallel investigations, and cross-model reviews.";
   "argument-hint" = "[task, issue number(s), or repo issue list]";
   "user-invocable" = true;
@@ -147,7 +147,10 @@
     1. **Context**: repo, directory, relevant files, what the parent task is.
     2. **Scoped task**: exactly what to do and what NOT to touch.
     3. **Constraints**: repo conventions, tools to prefer, skills to load
-       (`workon` for issue work, `diagnosing-bugs` for debugging).
+       (`workon` for issue work, `diagnosing-bugs` for debugging, `tdd` for
+       feature implementation with testable behaviour — its seams come pinned
+       in the issue, `codebase-design` when the subtask designs or reshapes an
+       interface).
     4. **Expected output**: format of the report back (changed files, commands run,
        test results).
     5. **Evidence requirement**: "include the actual command output proving your claims —
@@ -180,8 +183,9 @@
        git worktree add ../<repo>-issue-<N> -b issue-<N>
        opencode run --dir ../<repo>-issue-<N> -m <routed-model> --variant <effort> \
          --title "issue-<N>" \
-         "Load the workon skill. Work issue #<N>: implement and run tests. Stop before
-          commit. Report changed files, commands run, and test evidence."
+         "Load the workon skill (plus tdd for feature work). Work issue #<N>: implement
+          test-first against the seams the issue pins, run tests. Stop before commit.
+          Report changed files, commands run, and test evidence."
        ```
 
        Capture each worker's session id for iteration. When a wave finishes and its
