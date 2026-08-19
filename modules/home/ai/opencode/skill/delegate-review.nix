@@ -1,6 +1,6 @@
 {
   name = "delegate-review";
-  version = "1.4.0";
+  version = "1.5.0";
   description = "Multi-model PR review orchestrator. Use when reviewing a pull request or a list of PRs: classify PR complexity, route reasoning/spec work to GPT-5.6 Sol, code/correctness work to GPT-5.6 Terra, use cheap Grok 4.5 for independent-family passes, degrade on API limits, pack a context brief, spawn parallel opencode sessions, reconcile findings, and plan fixes. Triggers: delegate-review, review PR, review pull request, multi-model review, PR review swarm.";
   "argument-hint" = "[PR number(s), or 'open' for open PRs]";
   "user-invocable" = true;
@@ -381,7 +381,10 @@
        - `correctness` — bugs, edge cases, races, error paths, missing tests for
          changed behavior
        - `spec` — AC / stated intent vs diff; scope creep; incomplete delivery
-       - `standards` — repo conventions, module boundaries, API hygiene in touched code
+       - `standards` — repo conventions, module boundaries, API hygiene in
+         touched code. Always carries the **Fowler smell baseline** below —
+         paste it into the reviewer prompt in full, the reviewer session has no
+         other access to it
        - `security` — authz, authn, secrets, injection, SSRF, path traversal,
          multi-tenant leaks, unsafe defaults in the diff
     4. **Method:** read diff + surrounding code (`git`, Read, Grep). Prefer
@@ -413,22 +416,60 @@
        then discard that reviewer's output and either re-dispatch once at the
        next ranked candidate or cover the lens yourself.
 
+    ### Standards lens: Fowler smell baseline
+
+    A fixed set of Fowler code smells (*Refactoring*, ch. 3) the `standards`
+    lens applies even when the repo documents no conventions — this is what
+    gives the lens teeth in undocumented repos. Two rules bind it:
+
+    - **The repo overrides.** A documented repo standard always wins; where it
+      endorses something the baseline would flag, suppress the smell.
+    - **Always a judgement call.** Each smell is a labelled heuristic
+      ("possible Feature Envy"), never a hard violation — documented-standard
+      breaches can be hard P1s, baseline smells are P2 unless the evidence is
+      damning. Skip anything tooling (linter, formatter, typechecker) already
+      enforces.
+
+    Each smell reads *what it is* → *how to fix*; match against the diff only:
+
+    - **Mysterious Name** — a name that doesn't reveal what it does or holds. → rename; if no honest name comes, the design's murky.
+    - **Duplicated Code** — the same logic shape in more than one hunk or file of the change. → extract the shared shape, call it from both.
+    - **Feature Envy** — a method reaching into another object's data more than its own. → move the method onto the data it envies.
+    - **Data Clumps** — the same few fields or params travelling together. → bundle them into one type, pass that.
+    - **Primitive Obsession** — a primitive standing in for a domain concept. → give the concept its own small type.
+    - **Repeated Switches** — the same `switch`/`if`-cascade on the same type recurring across the change. → polymorphism, or one shared map.
+    - **Shotgun Surgery** — one logical change forcing scattered edits across many files in the diff. → gather what changes together into one module.
+    - **Divergent Change** — one file edited for several unrelated reasons. → split so each module changes for one reason.
+    - **Speculative Generality** — abstraction or hooks added for needs the spec doesn't have. → delete it; inline back until a real need shows.
+    - **Message Chains** — long `a.b().c().d()` navigation the caller shouldn't depend on. → hide the walk behind one method on the first object.
+    - **Middle Man** — a class or function that mostly delegates onward. → cut it, call the real target direct.
+    - **Refused Bequest** — an implementer ignoring most of what it inherits. → drop the inheritance, use composition.
+
     ## Reconcile + fix plan
 
     After all slots return:
 
     1. **Verify** each report against the evidence rule.
-    2. **Union** findings; merge same root cause; keep worst severity.
-    3. **Dismiss** claims you can falsify from the diff — list them as
+    2. **Union within each lens**; merge same root cause across lenses but keep
+       every source lens tagged; keep worst severity.
+    3. **No reranking across axes.** Never collapse `spec` findings and
+       `standards`/`correctness` findings into one ranked list, and never pick
+       a single worst finding across axes — that masking is exactly what the
+       separation prevents. A change can follow every standard but implement
+       the wrong thing (standards pass, spec fail) or do exactly what the issue
+       asked while breaking conventions (spec pass, standards fail); both must
+       stay visible, each axis reported with its own worst finding on top.
+       Ordering the fix plan afterwards is execution sequencing, not a verdict.
+    4. **Dismiss** claims you can falsify from the diff — list them as
        `dismissed: …` (never silent drop).
-    4. **Disagreement on P0/P1:** either decide with your own evidence, or open a
+    5. **Disagreement on P0/P1:** either decide with your own evidence, or open a
        `contested` tie-break slot:
        - bar R≥9 C≥9, profile different from both prior reviewers and lineage
          different when possible
        - prompt includes both arguments + the brief
        - pick the cheapest role-suitable clearer; prefer an unused lineage for
          a genuine independent tie-break
-    5. **Orchestrator synthesis** (you write this — do not delegate):
+    6. **Orchestrator synthesis** (you write this — do not delegate):
 
        ```
        ## Review summary — PR #<N>
@@ -438,9 +479,13 @@
          slot2: …
 
        Verdict: approve | request-changes | comment-only
+       Per axis: correctness <verdict> | spec <verdict> | standards <verdict> | …
+       (overall verdict = worst axis; never average axes against each other)
 
-       ## Findings (merged)
+       ## Findings (per axis — do not rerank across axes)
+       ### <lens> — worst: <sev|none>
        | Sev | Finding | Sources (models) | Suggested fix |
+       (one block per lens that ran; empty axis says "no findings")
 
        ## Fix plan (ordered)
        1. [P0] … — files: … — verify: <command or check>
@@ -457,7 +502,7 @@
        models used; any profile/lineage-diversity-compromised or override flags
        ```
 
-    6. **Stop.** Ask: implement here, hand to `delegate` / `workon`, post as PR
+    7. **Stop.** Ask: implement here, hand to `delegate` / `workon`, post as PR
        comment, or stop. Do not implement unprompted.
 
     ## Batch mode (multiple PRs)
