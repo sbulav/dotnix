@@ -777,11 +777,11 @@
         "nixpkgs": "nixpkgs_3"
       },
       "locked": {
-        "lastModified": 1786348843,
-        "narHash": "sha256-u7EB3rv/ns931enQeUSdGrpGYdyuBIYbZEFraBJstvU=",
+        "lastModified": 1787056921,
+        "narHash": "sha256-5Vo7XiB8jhTi4EAtrWZ4r3ICkHIipOOApZx2L/PscUo=",
         "owner": "sbulav",
         "repo": "woomer",
-        "rev": "208c8c7765c49099614d82edccd13fae613e4973",
+        "rev": "4a73a8571bb4c1d6595e0964af65fefe3268cf66",
         "type": "github"
       },
       "original": {
