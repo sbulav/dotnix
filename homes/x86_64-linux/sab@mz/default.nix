@@ -52,7 +52,8 @@ in
         system-polish = enabled;
         hyprpaper = enabled;
         # Noctalia shell trial (issue #37), slice 1: bar + notifications + OSD.
-        # mako/waybar stay installed-but-disabled below for one-line rollback.
+        # mako/waybar configs are kept below with enable flipped off — rollback
+        # is a one-line re-enable + rebuild (packages leave the closure).
         noctalia = enabled;
         mako = disabled;
         rofi = enabled;
