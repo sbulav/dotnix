@@ -1,6 +1,7 @@
 {
   lib,
   config,
+  pkgs,
   namespace,
   osConfig ? { },
   ...
@@ -22,6 +23,7 @@ in
       enableBashIntegration = true;
       enableFishIntegration = true;
       enableZshIntegration = true;
+      daemon.enable = true;
       settings = {
         auto_sync = true;
         #FIXME:(atuin) move to private server
@@ -42,6 +44,16 @@ in
         ];
       };
     };
+
+    # The daemon reads the sync key at startup — wait for sops to place it.
+    systemd.user.services.atuin-daemon =
+      lib.mkIf (pkgs.stdenv.isLinux && config.custom.security.sops.enable)
+        {
+          Unit = {
+            After = [ "sops-nix.service" ];
+            Wants = [ "sops-nix.service" ];
+          };
+        };
 
     # Use shared SOPS module for secrets
     custom.security.sops = lib.mkIf config.custom.security.sops.enable {

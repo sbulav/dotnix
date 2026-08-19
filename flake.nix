@@ -38,6 +38,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Pre-built nix-index database (weekly) for comma + command-not-found
+    nix-index-database = {
+      url = "github:nix-community/nix-index-database";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     wallpapers-nix = {
       url = "github:sbulav/wallpapers-nix";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -136,6 +142,7 @@
           nixos = with inputs; [
             sops-nix.nixosModules.sops
             determinate.nixosModules.default
+            nix-index-database.nixosModules.nix-index
           ];
         };
       };

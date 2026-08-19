@@ -114,6 +114,9 @@ in
     fingerprint.enable = false;
     cpu.amd.enable = true;
     openglmy.enable = true;
+
+    # sda-sdd are ZFS tank vdevs — ZFS schedules its own I/O, bypass bfq.
+    block.scheduler."sd[a-z]" = "none";
   };
 
   system = {

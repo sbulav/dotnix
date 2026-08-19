@@ -162,14 +162,6 @@ in
     systemd-resolved.postStart = "${homeLabSplitDnsScript}";
   };
 
-  # limit systemd journal size
-  # https://wiki.archlinux.org/title/Systemd/Journal#Persistent_journals
-  services.journald.extraConfig = ''
-    SystemMaxUse=100M
-    RuntimeMaxUse=50M
-    SystemMaxFileSize=50M
-  '';
-
   # ======================== DO NOT CHANGE THIS ========================
   system.stateVersion = "25.11";
   # ======================== DO NOT CHANGE THIS ========================

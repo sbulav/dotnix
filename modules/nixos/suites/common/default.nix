@@ -24,6 +24,10 @@ in
       time.enable = true;
       xkb.enable = true;
 
+      memory.enable = true;
+      journald.enable = true;
+      network-tuning.enable = true;
+
       security.doas.enable = false;
       security.sudo.enable = true;
       security.gpg.enable = true;
@@ -31,8 +35,10 @@ in
 
     hardware.audio.enable = true;
     hardware.networking.enable = true;
+    hardware.storage.enable = true;
 
     services.ssh.enable = true;
+    services.irqbalance.enable = true;
     programs.dconf.enable = true;
 
     # add sys custom build package

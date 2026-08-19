@@ -202,13 +202,6 @@ in
   # Disable gnome keyring own agents, as we use SSH via GPG-agent
   systemd.user.sockets."gcr-ssh-agent".enable = false;
   systemd.user.services."gcr-ssh-agent".enable = false;
-  # limit systemd journal size
-  # https://wiki.archlinux.org/title/Systemd/Journal#Persistent_journals
-  services.journald.extraConfig = ''
-    SystemMaxUse=100M
-    RuntimeMaxUse=50M
-    SystemMaxFileSize=50M
-  '';
   # Allow control of lian li galahad II
   services.udev.extraRules = ''
     SUBSYSTEM=="usb", ATTR{idVendor}=="0416", ATTR{idProduct}=="7395", MODE="0666", GROUP="users"

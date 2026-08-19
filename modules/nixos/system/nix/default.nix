@@ -36,7 +36,6 @@ in
       cachix
       deploy-rs
       gcc
-      nix-index
       nix-prefetch-git
       nixfmt
       nvd
@@ -98,6 +97,11 @@ in
           dates = "weekly";
           options = "--delete-older-than 7d";
         };
+
+        # Keep builds from starving interactive work.
+        daemonCPUSchedPolicy = mkDefault "batch";
+        daemonIOSchedClass = mkDefault "best-effort";
+        daemonIOSchedPriority = mkDefault 7;
 
         # flake-utils-plus
         generateRegistryFromInputs = true;

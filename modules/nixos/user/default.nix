@@ -63,12 +63,17 @@ in
     };
 
     programs = {
+      # nh self-elevates via sudo, so the aliases need none.
+      nh = {
+        enable = true;
+        flake = "/home/${cfg.name}/dotnix";
+      };
       fish = {
         enable = true;
         shellAliases = {
-          nixup = "sudo nixos-rebuild switch --flake ~/dotnix";
-          nixt = "sudo nixos-rebuild test --flake ~/dotnix";
-          nixclean = "sudo nix-collect-garbage -d && sudo nix-store --gc && sudo nix-store --repair --verify --check-contents && sudo nix-store --optimise -vvv";
+          nixup = "nh os switch ~/dotnix";
+          nixt = "nh os test ~/dotnix";
+          nixclean = "nh clean all --keep 5 --keep-since 7d";
         };
         # interactiveShellInit = "source ~/dotfiles/fish/functions/l.fish";
       };

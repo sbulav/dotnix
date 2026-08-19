@@ -22,6 +22,10 @@ in
       time.enable = true;
       xkb.enable = false;
 
+      memory.enable = true;
+      journald.enable = true;
+      network-tuning.enable = true;
+
       security.doas.enable = false;
       security.sudo.enable = true;
       security.gpg.enable = true;
@@ -29,8 +33,10 @@ in
 
     hardware.audio.enable = false;
     hardware.networking.enable = false;
+    hardware.storage.enable = true;
 
     services.ssh.enable = true;
+    services.irqbalance.enable = true;
 
     custom.tools = {
       http.enable = true;

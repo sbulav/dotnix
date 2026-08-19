@@ -17,27 +17,10 @@ in
   };
 
   config = mkIf cfg.enable {
-    zramSwap = {
-      enable = true;
-      algorithm = "zstd";
-      memoryPercent = 100;
-      priority = 100;
-    };
-
     systemd = {
-      oomd = {
-        enable = true;
-        enableRootSlice = false;
-        enableSystemSlice = false;
-        enableUserSlices = false;
-        settings.OOM = {
-          DefaultMemoryPressureDurationSec = "20s";
-          SwapUsedLimit = "90%";
-        };
-      };
-
-      # UWSM places graphical applications in app.slice. Limit oomd to that
-      # slice so the compositor and the rest of the session stay protected.
+      # UWSM places graphical applications in app.slice. Limit oomd (enabled
+      # fleet-wide via system.memory) to that slice so the compositor and the
+      # rest of the session stay protected.
       user.slices.app.sliceConfig = {
         ManagedOOMMemoryPressure = "kill";
         ManagedOOMMemoryPressureLimit = "80%";
