@@ -50,14 +50,20 @@ in
       };
       addons = {
         system-polish = enabled;
-        hyprpaper = enabled;
-        # Noctalia shell trial (issue #37), slices 1+2: bar, notifications,
-        # OSD, launcher, session menu. mako/waybar/rofi/wlogout configs are
-        # kept below with enable flipped off — rollback is a re-enable +
-        # rebuild (packages leave the closure). NB: disabling rofi also parks
-        # its extras (rofi-rbw, web-search bind, VPN picker, cliphist watcher);
+        hyprpaper = disabled;
+        # Noctalia shell trial (issue #37), slices 1-3: bar, notifications,
+        # OSD, launcher, session menu, wallpaper engine. The disabled configs
+        # below (mako/waybar/rofi/wlogout/hyprpaper/waypaper) are kept with
+        # enable flipped off — rollback is a re-enable + rebuild (packages
+        # leave the closure). NB: disabling rofi also parks its extras
+        # (rofi-rbw, web-search bind, VPN picker, cliphist watcher);
         # noctalia's clipboard history is native and does not need cliphist.
-        noctalia = enabled;
+        noctalia = {
+          enable = true;
+          # Same picker directory waypaper used; the default wallpaper still
+          # flows through the shared addons.wallpaper option below.
+          settings.wallpaper.directory = "${wallpapers}/share/wallpapers";
+        };
         mako = disabled;
         rofi = disabled;
         woomer = enabled;
@@ -90,7 +96,7 @@ in
         wallpaper = "${wallpapers}/share/wallpapers/unorganized/vu_meter_code_neon.png";
 
         waypaper = {
-          enable = true;
+          enable = false;
           wallpaperDirectory = "${wallpapers}/share/wallpapers";
         };
       };
