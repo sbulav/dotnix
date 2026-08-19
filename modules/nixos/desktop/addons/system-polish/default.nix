@@ -70,7 +70,6 @@ in
 
     hardware = {
       i2c.enable = true;
-      bluetooth.powerOnBoot = mkIf config.hardware.bluetooth.enable false;
     };
 
     environment.systemPackages = with pkgs; [
