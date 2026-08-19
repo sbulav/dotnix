@@ -70,6 +70,13 @@ in
         key = "beez.sbulav.ru:g3AGSm7ZgXhEvJCO/z7TPsykfj/F+aHGO4h7QcUGTD8=";
         priority = 10;
       }
+      # Official noctalia cache (issue #37 shell trial) — the flake input pins
+      # the upstream `cachix` branch, so builds should always hit this.
+      {
+        url = "https://noctalia.cachix.org";
+        key = "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4=";
+        priority = 12;
+      }
     ];
   };
   hardware = {

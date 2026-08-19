@@ -51,7 +51,10 @@ in
       addons = {
         system-polish = enabled;
         hyprpaper = enabled;
-        mako = enabled;
+        # Noctalia shell trial (issue #37), slice 1: bar + notifications + OSD.
+        # mako/waybar stay installed-but-disabled below for one-line rollback.
+        noctalia = enabled;
+        mako = disabled;
         rofi = enabled;
         woomer = enabled;
         kitty = disabled;
@@ -61,7 +64,7 @@ in
           profile = "pc";
         };
         waybar = {
-          enable = true;
+          enable = false;
           keyboardName = "kinesis-advantage2-keyboard-1";
           temperature = {
             enable = true;
