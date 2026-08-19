@@ -17,7 +17,8 @@ let
   #   slice 2: launcher + session/power    (rofi/wlogout off)       — done
   #   slice 3: wallpaper engine + palette  (hyprpaper/waypaper off) — done
   #   slice 4: sysmon widgets + mic VU plugin                       — done
-  #   slice 5: lock + idle                 (swaylock/hypridle off)  — PAM risk, LAST
+  #   slice 5a: manual lock                (old stack kept as fallback)
+  #   slice 5b: idle behaviors             (swaylock/hypridle off)  — after 10x lock/unlock
 
   # Nix-managed plugin source (a read-only "path" source in noctalia terms,
   # scanned one level deep — every child dir is a plugin). plugins/mic_vu/
@@ -65,10 +66,16 @@ let
       enabled = true;
       default.path = toString config.custom.desktop.addons.wallpaper;
     };
-    lockscreen.enabled = false; # slice 5 — swaylock still owns locking
+    # Slice 5 step A: the shell owns manual locking (PAM stack "login" —
+    # ships with NixOS, no pam.d registration needed). swaylock + hypridle
+    # stay enabled on the host as the fallback until 10x manual lock/unlock
+    # survived: hypridle's idle-lock still launches swaylock via a pinned
+    # store path, and whichever locker grabs ext-session-lock first wins.
+    lockscreen.enabled = true;
     idle.behavior = {
-      # slice 5 — hypridle still owns idle; never enable idle-lock before the
-      # lock screen survived 10x manual lock/unlock (fails closed via PAM).
+      # slice 5 step B — hypridle still owns idle; never enable idle-lock
+      # before the lock screen survived 10x manual lock/unlock (fails
+      # closed via PAM).
       lock.enabled = false;
       screen-off.enabled = false;
     };

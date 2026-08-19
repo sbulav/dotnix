@@ -193,7 +193,9 @@ let
           ${mkBind mainMod kb.woomer "exec, woomer"}
         ''
         + optionalString (kb.lock != null) ''
-          ${mkBind mainMod "SHIFT ${kb.lock}" "exec, swaylock"}
+          ${mkBind mainMod "SHIFT ${kb.lock}" (
+            if noctaliaOwned then "exec, noctalia msg session lock" else "exec, swaylock"
+          )}
         ''
         + optionalString (kb.logout != null) ''
           ${mkBind mainMod "SHIFT ${kb.logout}" (
