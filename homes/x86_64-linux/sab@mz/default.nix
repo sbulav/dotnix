@@ -51,12 +51,15 @@ in
       addons = {
         system-polish = enabled;
         hyprpaper = enabled;
-        # Noctalia shell trial (issue #37), slice 1: bar + notifications + OSD.
-        # mako/waybar configs are kept below with enable flipped off — rollback
-        # is a one-line re-enable + rebuild (packages leave the closure).
+        # Noctalia shell trial (issue #37), slices 1+2: bar, notifications,
+        # OSD, launcher, session menu. mako/waybar/rofi/wlogout configs are
+        # kept below with enable flipped off — rollback is a re-enable +
+        # rebuild (packages leave the closure). NB: disabling rofi also parks
+        # its extras (rofi-rbw, web-search bind, VPN picker, cliphist watcher);
+        # noctalia's clipboard history is native and does not need cliphist.
         noctalia = enabled;
         mako = disabled;
-        rofi = enabled;
+        rofi = disabled;
         woomer = enabled;
         kitty = disabled;
         swaylock = enabled;
@@ -79,7 +82,7 @@ in
             enable = true;
           };
         };
-        wlogout = enabled;
+        wlogout = disabled;
         hyprlock = disabled;
         wezterm = enabled;
         "wlr-which-key" = enabled;
