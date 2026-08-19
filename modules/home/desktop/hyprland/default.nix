@@ -154,6 +154,13 @@ let
     let
       mainMod = kb.mainMod;
 
+      # When the noctalia addon owns launcher/clipboard/session (issue #37),
+      # the binds dispatch to its IPC instead of rofi/wlogout — same pattern
+      # as the screenshot addon read below. The passwords and search binds
+      # have no noctalia analogue and ride with the rofi addon.
+      noctaliaOwned = config.custom.desktop.addons.noctalia.enable;
+      rofiEnabled = config.custom.desktop.addons.rofi.enable;
+
       appBindings =
         optionalString (kb.terminal != null) ''
           ${mkBind mainMod kb.terminal "exec, wezterm"}
@@ -162,17 +169,22 @@ let
           ${mkBind mainMod kb.browser "exec, firefox"}
         ''
         + optionalString (kb.launcher != null) ''
-          ${mkBind mainMod kb.launcher "exec, rofi -show drun"}
+          ${mkBind mainMod kb.launcher (
+            if noctaliaOwned then "exec, noctalia msg panel-toggle launcher" else "exec, rofi -show drun"
+          )}
         ''
         + optionalString (kb.clipboard != null) ''
-          ${mkBind mainMod kb.clipboard
-            "exec, rofi -show clip -theme-str 'listview { columns: 1; fixed-columns: true; }'"
-          }
+          ${mkBind mainMod kb.clipboard (
+            if noctaliaOwned then
+              "exec, noctalia msg panel-toggle clipboard"
+            else
+              "exec, rofi -show clip -theme-str 'listview { columns: 1; fixed-columns: true; }'"
+          )}
         ''
-        + optionalString (kb.passwords != null) ''
+        + optionalString (kb.passwords != null && rofiEnabled) ''
           ${mkBind mainMod kb.passwords "exec, rofi-rbw"}
         ''
-        + optionalString (kb.search != null) ''
+        + optionalString (kb.search != null && rofiEnabled) ''
           ${mkBind mainMod kb.search
             ''exec, rofi -dmenu -p "Search" | xargs -I{} xdg-open "https://www.google.com/search?q={}" && hyprctl dispatch focuswindow firefox''
           }
@@ -184,7 +196,9 @@ let
           ${mkBind mainMod "SHIFT ${kb.lock}" "exec, swaylock"}
         ''
         + optionalString (kb.logout != null) ''
-          ${mkBind mainMod "SHIFT ${kb.logout}" "exec, wlogout"}
+          ${mkBind mainMod "SHIFT ${kb.logout}" (
+            if noctaliaOwned then "exec, noctalia msg panel-toggle session" else "exec, wlogout"
+          )}
         '';
 
       windowBindings =

@@ -14,6 +14,12 @@ let
   hasScreenshotAddon = screenshotCfg.enable;
   hasAnnotate = hasScreenshotAddon && screenshotCfg.annotator != "none";
 
+  # When the noctalia addon owns launcher/clipboard/session (issue #37), the
+  # menu dispatches to its IPC; passwords and web search have no noctalia
+  # analogue and ride with the rofi addon.
+  noctaliaOwned = config.custom.desktop.addons.noctalia.enable;
+  rofiEnabled = config.custom.desktop.addons.rofi.enable;
+
   # Fallback commands for when the screenshot addon is disabled (legacy
   # grim+slurp behavior). Keeps the menu working out of the box.
   fallbackCommands = {
@@ -107,13 +113,19 @@ let
         {
           key = "r";
           desc = "App Launcher";
-          cmd = "rofi -show drun";
+          cmd = if noctaliaOwned then "noctalia msg panel-toggle launcher" else "rofi -show drun";
         }
         {
           key = "c";
           desc = "Clipboard";
-          cmd = "rofi -show clip -theme-str 'listview { columns: 1; fixed-columns: true; }'";
+          cmd =
+            if noctaliaOwned then
+              "noctalia msg panel-toggle clipboard"
+            else
+              "rofi -show clip -theme-str 'listview { columns: 1; fixed-columns: true; }'";
         }
+      ]
+      ++ optionals rofiEnabled [
         {
           key = "p";
           desc = "Passwords";
@@ -328,7 +340,7 @@ let
         {
           key = "e";
           desc = "Logout";
-          cmd = "wlogout";
+          cmd = if noctaliaOwned then "noctalia msg panel-toggle session" else "wlogout";
         }
         {
           key = "s";

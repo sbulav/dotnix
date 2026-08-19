@@ -13,8 +13,8 @@ let
 
   # Staged takeover of the old seven-tool stack (issue #37). Surfaces the
   # shell does NOT own yet are pinned off here and flipped slice by slice:
-  #   slice 1: bar + notifications + OSD   (waybar/mako off)
-  #   slice 2: launcher + session/power    (rofi/wlogout off)
+  #   slice 1: bar + notifications + OSD   (waybar/mako off)      — done
+  #   slice 2: launcher + session/power    (rofi/wlogout off)     — done
   #   slice 3: wallpaper engine + palette  (hyprpaper/waypaper off)
   #   slice 5: lock + idle                 (swaylock/hypridle off) — PAM risk, LAST
   defaultSettings = {
@@ -23,6 +23,10 @@ let
       # Trial runs on NVIDIA: keep the shared GL context (default); flip to
       # false if shell restarts kill Chromium/Electron GPU procs (noctalia#3926).
       shared_gl_context = true;
+      # Launch apps through uwsm like every other launch path in this repo
+      # (Hyprland binds, the old rofi drun-command) so they land in their own
+      # uwsm-managed app scope instead of noctalia's cgroup.
+      launch_apps_custom_command = "/run/current-system/sw/bin/uwsm-app -- $CMD";
     };
 
     # Fixed palette from day one — no wallpaper-derived color by decision.
@@ -54,10 +58,12 @@ let
 
     bar.main = {
       position = "top";
-      # Desktop machine: no battery/brightness widgets. Widgets for surfaces
-      # the shell does not own yet arrive with their slice: launcher + session
-      # in slice 2 (rofi/wlogout still active), wallpaper in slice 3.
-      start = [ "workspaces" ];
+      # Desktop machine: no battery/brightness widgets. The wallpaper widget
+      # arrives with slice 3 (hyprpaper still owns wallpaper until then).
+      start = [
+        "launcher"
+        "workspaces"
+      ];
       center = [ "clock" ];
       end = [
         "media"
@@ -69,6 +75,7 @@ let
         "bluetooth"
         "volume"
         "control-center"
+        "session"
       ];
     };
   };
