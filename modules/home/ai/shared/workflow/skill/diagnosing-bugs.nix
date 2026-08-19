@@ -3,7 +3,7 @@
 # able to reach for this discipline mid-flight.
 {
   name = "diagnosing-bugs";
-  version = "1.0.0";
+  version = "1.1.0";
   description = "Diagnosis loop for hard bugs, flaky failures, and performance regressions. Use when the user says diagnose/debug/root-cause, reports something broken, throwing, failing, flaky, or slow, or when a previous fix did not hold.";
   allowed-tools = [
     "Read"
@@ -18,6 +18,12 @@
     A discipline for hard bugs. Skip phases only when explicitly justified.
 
     Before diving in, check ADRs and runbooks in the area you're touching, if the repo keeps them.
+
+    ## Redact
+
+    This skill has you show commands, outputs, and captured artifacts — and in this setup those may be forwarded to worker sessions on other model gateways. **Redact every secret first** — write `<REDACTED>` in its place. Build loops against env vars, so the credential stays in the environment rather than in what you show. Captured artifacts (HAR files, request dumps, pod logs) carry auth headers and tokens: quote only the lines that carry the signal.
+
+    If the redacted output is not enough to diagnose the bug, say so and ask the user.
 
     ## Phase 1 — Build a feedback loop
 
@@ -43,7 +49,7 @@
 
     Environment limits: if the loop needs network or cluster access this runtime cannot reach, hand the exact command to the user to run in their shell **once you have written and dry-checked it** — a human-executed loop is still a loop. State clearly which part is blocked.
 
-    **Completion criterion — a tight loop that goes red.** You can name one command that you have already run at least once (paste the invocation and output), and that is:
+    **Completion criterion — a tight loop that goes red.** You can name one command that you have already run at least once (paste the invocation and its redacted output), and that is:
     - [ ] **Red-capable** — asserts the user's exact symptom; can go red on this bug and green once fixed.
     - [ ] **Deterministic** — same verdict every run (or a pinned, high reproduction rate).
     - [ ] **Fast** — seconds, not minutes.
