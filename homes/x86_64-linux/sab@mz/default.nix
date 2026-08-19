@@ -51,8 +51,9 @@ in
       addons = {
         system-polish = enabled;
         hyprpaper = disabled;
-        # Noctalia shell trial (issue #37), slices 1-3: bar, notifications,
-        # OSD, launcher, session menu, wallpaper engine. The disabled configs
+        # Noctalia shell trial (issue #37), slices 1-4: bar, notifications,
+        # OSD, launcher, session menu, wallpaper engine, sysmon widgets and
+        # the mic VU meter plugin. The disabled configs
         # below (mako/waybar/rofi/wlogout/hyprpaper/waypaper) are kept with
         # enable flipped off — rollback is a re-enable + rebuild (packages
         # leave the closure). NB: disabling rofi also parks its extras
@@ -63,6 +64,8 @@ in
           # Same picker directory waypaper used; the default wallpaper still
           # flows through the shared addons.wallpaper option below.
           settings.wallpaper.directory = "${wallpapers}/share/wallpapers";
+          # Port of the old waybar akg-vu-meter (default sourceMatch AKG_C44).
+          micVuMeter.enable = true;
         };
         mako = disabled;
         rofi = disabled;
