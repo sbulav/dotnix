@@ -54,12 +54,10 @@ let
 
     bar.main = {
       position = "top";
-      # Desktop machine: no battery/brightness widgets; wallpaper widget joins
-      # in slice 3 with the wallpaper engine.
-      start = [
-        "launcher"
-        "workspaces"
-      ];
+      # Desktop machine: no battery/brightness widgets. Widgets for surfaces
+      # the shell does not own yet arrive with their slice: launcher + session
+      # in slice 2 (rofi/wlogout still active), wallpaper in slice 3.
+      start = [ "workspaces" ];
       center = [ "clock" ];
       end = [
         "media"
@@ -71,7 +69,6 @@ let
         "bluetooth"
         "volume"
         "control-center"
-        "session"
       ];
     };
   };
