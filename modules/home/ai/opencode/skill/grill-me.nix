@@ -2,7 +2,7 @@
 # frontier/rounds interview loop, kept as a single user-invoked skill.
 {
   name = "grill-me";
-  version = "2.0.0";
+  version = "2.1.0";
   description = "Grill the user relentlessly about a plan, decision, or idea until every branch of the design tree is resolved. Use when the user wants to stress-test their thinking, or uses any 'grill' trigger phrases.";
   "argument-hint" = "[topic]";
   "disable-model-invocation" = true;
@@ -13,6 +13,7 @@
     "Glob"
     "Bash"
     "Task"
+    "Skill"
   ];
   content = ''
     Interview the user relentlessly until you reach a shared understanding. Map
@@ -48,6 +49,10 @@
 
     Be direct and skeptical, never sycophantic. Push back when an answer is
     vague, contradictory, or under-specified.
+
+    When the grilling touches domain terms that are ambiguous or whose code
+    name clashes with the business name, call the Skill tool with
+    `domain-modeling` and fold its definition questions into the frontier.
 
     The session is done when the frontier is empty: every branch of the design
     tree visited, nothing left silently assumed. Then produce a

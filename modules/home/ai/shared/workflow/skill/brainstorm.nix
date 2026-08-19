@@ -3,7 +3,7 @@ let
 in
 {
   name = "brainstorm";
-  version = "2.1.0";
+  version = "2.2.0";
   description = "Start a Forgejo-first workflow for new work. Two-phase process: grill the idea with questions, then plan the issue — or map the fog with investigation issues.";
   "argument-hint" = "[initial idea]";
   "disable-model-invocation" = true;
@@ -45,7 +45,7 @@ in
        - Scope boundaries: what's v1 vs later?
        - Architecture trade-offs: what are the alternatives? why this approach?
        - Integration points: what does this connect to?
-       - Data model / core entities: what are the key objects?
+       - Data model / core entities: what are the key objects? When a term is ambiguous or its code name clashes with the business name, invoke the `domain-modeling` skill and fold its definition questions into the grill.
        - Failure modes and recovery: what can go wrong?
        - Testing strategy: how do we verify it works?
        - Deployment: how does it ship?
@@ -112,7 +112,7 @@ in
      - Use append-only comments; latest handoff wins.
      - Prefer delegating comment creation to the handoff helper when available; otherwise use `tea comment` directly.
      - Planning mode alone is no reason to avoid `tea comment` — skip it only when the runtime explicitly blocks that command.
-     - Include a **Decision log** in handoffs summarizing key decisions and their rationale from the grill phase.
+     - Include a **Decision log** in handoffs summarizing key decisions and their rationale from the grill phase. Mark entries that pass the `domain-modeling` bar (hard to reverse, surprising, real trade-off) with `[promote]` — `/ship` reads these to update AGENTS.md.
 
      If the user supplied initial context, treat it as the starting idea:
      $ARGUMENTS
