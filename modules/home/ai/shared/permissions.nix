@@ -72,6 +72,7 @@ in
       "Glob"
       "Grep"
       "Read"
+      "Read(~/.ssh/config)"
       "Task"
       "TodoWrite"
       # Git — safe read-only ops
@@ -113,7 +114,10 @@ in
     // toPermissionMap "ask" (gitDangerousAsk ++ systemMutationAsk ++ opencodeAsk)
     // toPermissionMap "deny" (destructiveDeny ++ envExposureDeny);
     webfetch = "allow";
-    external_directory = "ask";
+    external_directory = {
+      "*" = "ask";
+      "~/.ssh/config" = "allow";
+    };
   };
 
   # Reusable per-agent fragments for opencode agent definitions.

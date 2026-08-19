@@ -51,6 +51,12 @@ in
     )
   }
 
+  const isSshConfig = (value) => {
+    if (typeof value !== "string" || !process.env.HOME) return false
+    const expanded = expandHome(value)
+    return isAbsolute(expanded) && resolve(expanded) === resolve(process.env.HOME, ".ssh/config")
+  }
+
   export const SecurityPlugin = async ({ directory, worktree }) => {
     const workspace = worktree || directory
     const dangerousPatterns = [
@@ -85,7 +91,7 @@ in
           if (isProtectedEnvFile(output.args.filePath)) {
             throw new Error(".env files are protected")
           }
-          if (isProtectedPath(output.args.filePath)) {
+          if (isProtectedPath(output.args.filePath) && !(input.tool === "read" && isSshConfig(output.args.filePath))) {
             throw new Error("~/.ssh, ~/.kube, and kubeconfig files are protected")
           }
         }

@@ -94,6 +94,11 @@ let
               tool_name=$(echo "$input" | jq -r '.tool_name // ""')
               target=$(echo "$input" | jq -r '.tool_input.file_path // .tool_input.filePath // .tool_input.path // .tool_input.pattern // ""')
 
+              ssh_config_read=false
+              if [[ "$tool_name" == "Read" ]] && [[ "$target" == "~/.ssh/config" || "$target" == "$HOME/.ssh/config" ]]; then
+                ssh_config_read=true
+              fi
+
               if echo "$input" | jq -r '.tool_input | to_entries[] | .value' 2>/dev/null | grep -qE '\.\./' ; then
                 echo '{"hookSpecificOutput":{"permissionDecision":"deny","permissionDecisionReason":"Path traversal attempt detected"}}'
                 exit 2
@@ -104,7 +109,7 @@ let
                 exit 2
               fi
 
-              if [[ -n "$target" ]] && echo "$target" | grep -qiE '(^|/)(\.ssh|\.kube)(/|$)'; then
+              if [[ "$ssh_config_read" != true ]] && [[ -n "$target" ]] && echo "$target" | grep -qiE '(^|/)(\.ssh|\.kube)(/|$)'; then
                 echo '{"hookSpecificOutput":{"permissionDecision":"deny","permissionDecisionReason":"~/.ssh and ~/.kube are protected"}}'
                 exit 2
               fi
