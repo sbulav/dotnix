@@ -88,7 +88,7 @@ while :; do
   @PW_CAT@ --record --raw --target "$src" \
     --rate 8000 --channels 1 --format s16 - 2>/dev/null \
     | @OD@ -An -td2 -w2 -v \
-    | LC_ALL=C @GAWK@ -v pactl=@PACTL@ '
+    | LC_ALL=C @GAWK@ -v pactl=@PACTL@ -v src="$src" '
       BEGIN {
         window   = 800    # 100 ms at 8 kHz
         count    = 0
@@ -109,7 +109,8 @@ while :; do
           poll++
           if (poll >= 10) {
             poll = 0
-            cmd = pactl " get-source-mute @DEFAULT_SOURCE@ 2>/dev/null"
+            # poll the matched source, not @DEFAULT_SOURCE@ - they can differ
+            cmd = pactl " get-source-mute '\''" src "'\'' 2>/dev/null"
             line = ""
             cmd | getline line
             close(cmd)

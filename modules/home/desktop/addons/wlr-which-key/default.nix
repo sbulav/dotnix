@@ -335,7 +335,7 @@ let
         {
           key = "l";
           desc = "Lock Screen";
-          cmd = "swaylock";
+          cmd = if noctaliaOwned then "noctalia msg session lock" else "swaylock";
         }
         {
           key = "e";
