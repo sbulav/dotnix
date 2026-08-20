@@ -72,8 +72,13 @@ in
         woomer = enabled;
         kitty = disabled;
         # Slice 5b: noctalia owns lock + idle (lock@600, screen off@900 —
-        # same numbers as the hypridle "pc" profile). Flip these two back
-        # on (and noctalia's lockscreen/idle off) to roll back.
+        # same numbers as the hypridle "pc" profile). Rollback needs BOTH
+        # sides flipped: re-enable these two AND turn noctalia's off via
+        #   noctalia.settings.lockscreen.enabled = false;
+        #   noctalia.settings.idle.behavior.lock.enabled = false;
+        #   noctalia.settings.idle.behavior.screen-off.enabled = false;
+        # (recursiveUpdate can't delete keys) — otherwise two lockers race
+        # on ext-session-lock and both idle timers fire.
         swaylock = disabled;
         hypridle = {
           enable = false;
