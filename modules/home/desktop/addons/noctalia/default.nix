@@ -236,28 +236,41 @@ let
 
     bar.main = {
       position = "top";
+      # Waybar-parity geometry (vu-neon look the shell replaced): a slim
+      # translucent square bar floating 10px off the screen edges, no
+      # shadow. Widget capsules stay — vu-neon drew 8px-rounded module
+      # boxes too.
+      thickness = 30;
+      background_opacity = 0.85;
+      radius = 0;
+      margin_ends = 10;
+      margin_edge = 10;
+      padding = 8;
+      shadow = false;
+      # Waybar-parity layout: workspaces + window title on the left, and
+      # the old modules-right order (language, stats cpu/ram/temp, mic VU,
+      # volume, bluetooth, network, tray, power). Launcher / wallpaper /
+      # media / notifications / clipboard widgets are dropped from the
+      # bar like they were absent from waybar; those panels stay reachable
+      # via keybinds, IPC, and the control-center kept before session.
       # Desktop machine: no battery/brightness widgets.
       start = [
-        "launcher"
-        "wallpaper"
         "workspaces"
+        "active_window"
       ];
       center = [ "clock" ];
       end = [
-        "sysmon-cpu"
-        "sysmon-temp"
-        "sysmon-ram"
-        "media"
-        "tray"
-        "notifications"
-        "clipboard"
         "keyboard_layout"
-        "network"
-        "bluetooth"
+        "sysmon-cpu"
+        "sysmon-ram"
+        "sysmon-temp"
       ]
       ++ optional cfg.micVuMeter.enable "mic-vu"
       ++ [
         "volume"
+        "bluetooth"
+        "network"
+        "tray"
         "control-center"
         "session"
       ];
