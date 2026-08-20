@@ -128,6 +128,157 @@ let
     '';
   };
 
+  c = config.custom.theme.colors;
+  hex = name: "#${c.${name}}";
+
+  wallpaperMode = cfg.colorSource == "wallpaper";
+
+  # Per-widget accents. In "theme" mode every module gets its own vu-neon
+  # hue as a literal, exactly like the old waybar CSS (#workspaces mint,
+  # #cpu cyan, #memory pink, …). In "wallpaper" mode literals would fight
+  # the derived palette, and M3 only exposes three accent roles plus error —
+  # so there the accent moves from the widget to the capsule group below and
+  # only the two widgets that sit outside a group keep an individual role.
+  widgetAccents =
+    if wallpaperMode then
+      {
+        keyboard_layout.color = "tertiary";
+        session.color = "error";
+      }
+    else
+      {
+        keyboard_layout.color = hex "mint";
+        sysmon-cpu.color = hex "cyan";
+        sysmon-ram.color = hex "pink";
+        sysmon-temp.color = hex "amber";
+        bluetooth.color = hex "cyan";
+        network.color = hex "blue";
+        session.color = hex "pink";
+      };
+
+  # The group box itself: a hairline outline around a fully transparent fill
+  # (bar.cpp applies capsule opacity to the fill only, border is drawn
+  # independently) — the waybar `group/stats` and `group/network` boxes.
+  groupBorder = if wallpaperMode then "outline" else hex "separator";
+
+  mkCapsuleGroup =
+    id: foreground: members:
+    {
+      inherit id members;
+      opacity = 0.0;
+      radius = 8.0;
+      padding = 6;
+      widget_spacing = 6;
+      border = groupBorder;
+    }
+    // optionalAttrs wallpaperMode { inherit foreground; };
+
+  hiddenAutostart = ''
+    [Desktop Entry]
+    Hidden=true
+  '';
+
+  # settings.toml (state dir) is deep-merged OVER the read-only config.toml
+  # this module writes, so a runtime tweak to a table Nix declares wins
+  # forever and makes later rebuilds look like no-ops. Drop exactly the
+  # tables Nix owns on every activation and leave the rest — theme,
+  # wallpaper.*, lockscreen_widgets and location are GUI-owned by decision,
+  # as is the one key carved out of a Nix-owned table below (KEEP).
+  prunePython = pkgs.python3.withPackages (ps: [ ps.tomli-w ]);
+  pruneScript = pkgs.writeText "noctalia-prune-sidecar.py" ''
+    import copy
+    import os
+    import sys
+    import tomllib
+
+    import tomli_w
+
+    PRUNE = ("bar", "widget")
+
+    # Dotted keys inside a PRUNE table that the settings GUI owns anyway.
+    # BarConfig has no background *colour* — only one background_opacity, and
+    # the fill is always the theme surface role, so a value that reads as
+    # "tastefully transparent" over a dark surface is an unreadable white film
+    # in light mode. There is no light/dark variant of [bar.main] and
+    # BarMonitorOverride does not carry the key, so Nix has exactly one number
+    # to give for both modes. The GUI knows which mode is live; Nix does not.
+    KEEP = ("bar.main.background_opacity",)
+
+
+    def take(data, path):
+        node = data
+        for part in path[:-1]:
+            node = node.get(part)
+            if not isinstance(node, dict):
+                return None
+        return node.get(path[-1])
+
+
+    def put(data, path, value):
+        node = data
+        for part in path[:-1]:
+            node = node.setdefault(part, {})
+        node[path[-1]] = value
+
+
+    def state_dir():
+        for var, suffix in (("NOCTALIA_STATE_HOME", "noctalia"),
+                            ("XDG_STATE_HOME", "noctalia"),
+                            ("HOME", ".local/state/noctalia")):
+            root = os.environ.get(var)
+            if root:
+                return os.path.join(root, suffix)
+        return None
+
+
+    root = state_dir()
+    if root is None:
+        sys.exit(0)
+    path = os.path.join(root, "settings.toml")
+
+    try:
+        with open(path, "rb") as fh:
+            data = tomllib.load(fh)
+    except FileNotFoundError:
+        sys.exit(0)
+    except (OSError, tomllib.TOMLDecodeError) as err:
+        print("noctalia: leaving %s alone (%s)" % (path, err), file=sys.stderr)
+        sys.exit(0)
+
+    removed = [key for key in PRUNE if key in data]
+    if not removed:
+        sys.exit(0)
+
+    original = copy.deepcopy(data)
+
+    kept = {}
+    for dotted in KEEP:
+        key = tuple(dotted.split("."))
+        value = take(data, key)
+        # TOML has no null, so a miss is unambiguous: leave the key absent and
+        # let Nix's config.toml supply it until the GUI writes one.
+        if value is not None:
+            kept[key] = value
+
+    for key in removed:
+        del data[key]
+
+    for key, value in kept.items():
+        put(data, key, value)
+
+    # A sidecar holding nothing but kept keys is already correct — don't
+    # rewrite the file (or claim a prune) on every activation for no change.
+    if data == original:
+        sys.exit(0)
+
+    tmp = path + ".nix-prune"
+    with open(tmp, "wb") as fh:
+        tomli_w.dump(data, fh)
+    os.replace(tmp, path)
+    print("noctalia: dropped Nix-owned table(s) from settings.toml: "
+          + ", ".join(removed))
+  '';
+
   defaultSettings = {
     shell = {
       telemetry_enabled = false;
@@ -140,11 +291,16 @@ let
       launch_apps_custom_command = "/run/current-system/sw/bin/uwsm-app -- $CMD";
     };
 
-    # Fixed palette from day one — no wallpaper-derived color by decision.
+    # Seed only, and inert on any host that has already used the theme
+    # picker: [theme] is GUI-owned (the sidecar wins, and the prune below
+    # deliberately spares it), so this is what a fresh install starts from.
+    # colorSource is the build-time half of the same choice — it also picks
+    # the accent strategy above, which the GUI cannot reach.
     theme = {
       mode = "dark";
-      source = "builtin";
+      source = if wallpaperMode then "wallpaper" else "builtin";
       builtin = "Tokyo-Night";
+      wallpaper_scheme = "vibrant";
     };
 
     # Slice 3: the shell owns the wallpaper engine. Seeded from the repo-wide
@@ -205,26 +361,75 @@ let
     # it always lists all 16 stats. The plugin reads the same sampler
     # (noctalia.systemStats(), k10temp autodetected) and shows only its own
     # stat's rows.
-    widget = {
-      sysmon-cpu = {
-        type = "sab/sysmon:meter";
-        stat = "cpu";
-      };
-      sysmon-temp = {
-        type = "sab/sysmon:meter";
-        stat = "temp";
-      };
-      sysmon-ram = {
-        type = "sab/sysmon:meter";
-        stat = "ram";
-      };
-    }
-    # mic-vu click/scroll gestures (mute, pavucontrol, gain steps) are
-    # declared as manifest defaults in plugins/mic_vu/plugin.toml — the
-    # widget-settings schema warns on a config-level actions table.
-    // optionalAttrs cfg.micVuMeter.enable {
-      mic-vu.type = "sab/mic_vu:meter";
-    };
+    widget = recursiveUpdate (
+      {
+        # Waybar's hyprland/workspaces had `active-only = false` plus a
+        # window-rewrite glyph per app — every workspace visible at once, each
+        # showing what is running in it. noctalia's `workspaces` widget cannot
+        # do that (icons exist only on the focused pill), so the left lane uses
+        # `taskbar` in grouped mode instead: one capsule per workspace holding
+        # that workspace's app icons, with the workspace number inside it.
+        # Clicking a workspace badge still activates the workspace.
+        #
+        # Empty workspaces only appear if Hyprland keeps reporting them, hence
+        # desktop.hyprland.workspaces.persistent on the host.
+        taskbar = {
+          group_by_workspace = true;
+          workspace_group_content = "icons";
+          workspace_group_capsule = true;
+          show_workspace_label = true;
+          workspace_label_placement = "inside";
+          # Label as bare text, not a filled disc: taskbar_widget.cpp draws the
+          # workspace tag on a `workspaceFillColor` disc unless minimal, which
+          # swaps the fill for clearColorSpec(). Keeps number + app icons and
+          # drops the coloured puck behind the number. Mode-safe — the minimal
+          # branch of workspaceTextColor() is role-based, so the label still
+          # flips with a light/dark theme.
+          minimal = true;
+          hide_empty_workspaces = false;
+          # Per-output bar: show only this monitor's workspaces, like waybar did.
+          show_all_outputs = false;
+          icon_scale = 0.85;
+          item_spacing = 3;
+          # Default taskbar scroll cycles *windows*; waybar's workspace module
+          # scrolled between workspaces. Left/middle stay reserved by the widget
+          # (activate / close a task).
+          actions = {
+            scroll_up = "workspace-switch prev";
+            scroll_down = "workspace-switch next";
+          };
+        };
+
+        # "Time and clock": date and time in one line (the bar is a single
+        # 22px row), full date on hover. No calendar grid — tooltip_format is
+        # a plain strftime string with no {calendar} token and no markup; the
+        # calendar itself is one click away in the control center.
+        clock = {
+          format = "{:%b %d  %H:%M}";
+          tooltip_format = "{:%A, %d %B %Y}";
+        };
+
+        sysmon-cpu = {
+          type = "sab/sysmon:meter";
+          stat = "cpu";
+        };
+        sysmon-temp = {
+          type = "sab/sysmon:meter";
+          stat = "temp";
+        };
+        sysmon-ram = {
+          type = "sab/sysmon:meter";
+          stat = "ram";
+        };
+      }
+      # mic-vu click/scroll gestures (mute, pavucontrol, gain steps) are
+      # declared as manifest defaults in plugins/mic_vu/plugin.toml — the
+      # widget-settings schema warns on a config-level actions table. It also
+      # renders a pre-coloured SVG face, so it takes no `color` either.
+      // optionalAttrs cfg.micVuMeter.enable {
+        mic-vu.type = "sab/mic_vu:meter";
+      }
+    ) widgetAccents;
 
     # Declarative plugin state: no git sources, no background updates — the
     # only source is the Nix store path built above.
@@ -243,40 +448,67 @@ let
 
     bar.main = {
       position = "top";
-      # Waybar-parity geometry (vu-neon look the shell replaced): a slim
-      # translucent square bar floating 10px off the screen edges, no
-      # shadow. Widget capsules stay — vu-neon drew 8px-rounded module
-      # boxes too.
-      thickness = 30;
-      background_opacity = 0.85;
+      # Geometry is deliberately NOT waybar-parity — waybar was a 30px bar at
+      # rgba(11,15,26,0.85) floating 10px off every edge (`margin 10 10 0 10`
+      # + @bar-op in vu-neon.css) and that got rejected in favour of these,
+      # tuned live in the settings GUI: thinner, near-transparent so the
+      # wallpaper reads through, full-width and nearly flush with the top
+      # edge. They live here now because the activation prune below makes Nix
+      # authoritative over [bar.main] — left in the sidecar they'd be dropped.
+      # Everything else in this file still chases the waybar look.
+      thickness = 22;
+      background_opacity = 0.29;
       radius = 0;
-      margin_ends = 10;
-      margin_edge = 10;
+      margin_ends = 0;
+      margin_edge = 3;
       padding = 8;
       shadow = false;
-      # Waybar-parity layout: workspaces + window title on the left, and
-      # the old modules-right order (language, stats cpu/ram/temp, mic VU,
-      # volume, bluetooth, network, tray, power). Launcher / wallpaper /
-      # media / notifications / clipboard widgets are dropped from the
-      # bar like they were absent from waybar; those panels stay reachable
-      # via keybinds, IPC, and the control-center kept before session.
-      # Desktop machine: no battery/brightness widgets.
+      # The old waybar CSS boxed related modules together — `group/stats`
+      # (cpu/memory/temperature) and `group/network` (bluetooth/network) each
+      # drew one outlined container. capsule_group is the direct analogue: a
+      # `group:<id>` token in a lane renders its members inside one box.
+      # Members give up their own capsule_* (bar.cpp hands them the group's),
+      # but per-widget `color` survives — so theme mode keeps a neon hue per
+      # module over a neutral box, and wallpaper mode tints the whole box.
+      capsule_group = [
+        (mkCapsuleGroup "stats" "primary" [
+          "sysmon-cpu"
+          "sysmon-ram"
+          "sysmon-temp"
+        ])
+        (mkCapsuleGroup "net" "secondary" [
+          "bluetooth"
+          "network"
+        ])
+      ];
+      # Near-waybar layout: workspaces + window title on the left, and the
+      # old modules-right set (language, mic VU, volume, stats cpu/ram/temp,
+      # bluetooth, network, tray, power). Launcher / wallpaper / media /
+      # notifications / clipboard widgets are dropped from the bar like they
+      # were absent from waybar; those panels stay reachable via keybinds,
+      # IPC, and the control-center kept before session. Desktop machine: no
+      # battery/brightness widgets.
       start = [
-        "workspaces"
+        "taskbar"
         "active_window"
       ];
       center = [ "clock" ];
+      # One deliberate departure from waybar's order: it ran
+      # language, [stats], mic-vu, volume, [network] — loose widgets wedged
+      # between the two boxes, which reads as orphaned rather than as a
+      # third group. Ungrouped widgets come first here, boxes after, so the
+      # absence of a box means "standalone" instead of "left over". mic-vu and
+      # volume are not boxed together: the meter draws a pre-coloured SVG and
+      # cannot take a group foreground, and in wallpaper mode a third group
+      # would have to reuse `tertiary` — the keyboard_layout hue.
       end = [
         "keyboard_layout"
-        "sysmon-cpu"
-        "sysmon-ram"
-        "sysmon-temp"
       ]
       ++ optional cfg.micVuMeter.enable "mic-vu"
       ++ [
         "volume"
-        "bluetooth"
-        "network"
+        "group:stats"
+        "group:net"
         "tray"
         "control-center"
         "session"
@@ -300,6 +532,25 @@ in
       module defaults (host values win; lists replace, not concatenate).
       Validated at build time by `noctalia config validate`.
     '';
+
+    colorSource =
+      mkOpt
+        (enum [
+          "theme"
+          "wallpaper"
+        ])
+        "theme"
+        ''
+          Where bar accents come from. "theme" paints each widget a literal hue
+          from custom.theme.colors (waybar-parity, seven fixed neons). "wallpaper"
+          hands colour to the wallpaper-derived M3 palette, which has only three
+          accent roles plus error — so accents move from the widget to the capsule
+          group and follow the wallpaper as it changes.
+
+          This also seeds theme.source, but only seeds it: [theme] is left to the
+          settings GUI, so switching the runtime palette there and leaving this at
+          its default is expected, not a mismatch to fix.
+        '';
 
     customPalettes = mkOpt (attrsOf anything) { } ''
       Custom JSON palettes, keyed by palette name; passed through to
@@ -335,6 +586,31 @@ in
     systemd.user.services.noctalia = {
       Unit.StartLimitIntervalSec = 0;
       Service.RestartSec = 2;
+    };
+
+    # Give the declaration above authority over the tables it declares: the
+    # app's sidecar outranks config.toml, so without this a single drag of
+    # the bar thickness in the settings GUI silently pins it forever. Runs
+    # before the shell restarts, and never touches the GUI-owned tables.
+    home.activation.noctaliaPruneSidecar = config.lib.dag.entryAfter [ "writeBoundary" ] ''
+      run ${prunePython}/bin/python3 ${pruneScript}
+    '';
+
+    # Mask the GTK tray applets whose job noctalia's own widgets took over.
+    # Both ship an /etc/xdg/autostart entry (networkmanagerapplet and blueman
+    # are in systemPackages for their CLI/editor halves), uwsm's XDG-autostart
+    # generator turns those into app-<name>@autostart.service, and the result
+    # is a second NM/BT indicator inside the `tray` widget duplicating the
+    # `network` and `bluetooth` capsules. XDG spec: Hidden=true in the
+    # higher-priority ~/.config/autostart means "treat as absent".
+    xdg.configFile = {
+      "autostart/nm-applet.desktop".text = hiddenAutostart;
+    }
+    # waybar's module carries the same blueman mask, and xdg.configFile.<n>.text
+    # merges by concatenation rather than erroring — so only claim it while
+    # waybar is off, which is the normal state whenever noctalia owns the bar.
+    // optionalAttrs (!config.custom.desktop.addons.waybar.enable) {
+      "autostart/blueman.desktop".text = hiddenAutostart;
     };
 
     # notify-send for the modules that shell out to it; the daemon side used

@@ -26,6 +26,10 @@ in
           "DP-1,3840x2560@60,1920x0,2"
           ",preferred,auto,auto"
         ];
+        # Keep the nine bound workspaces alive while empty: noctalia's
+        # taskbar only draws a workspace Hyprland still reports, and the
+        # waybar look this replaces showed all of them at once.
+        workspaces.persistent = true;
         workspaces.monitorBindings = {
           "1" = "DP-1";
           "2" = "DP-1";
@@ -61,6 +65,11 @@ in
         # noctalia's clipboard history is native and does not need cliphist.
         noctalia = {
           enable = true;
+          # This host runs the wallpaper-derived palette (picked in the
+          # settings GUI, which owns [theme]), so bar accents come from the
+          # M3 roles rather than vu-neon literals — literal neons over a
+          # wallpaper palette clash. Flip to "theme" together with the GUI.
+          colorSource = "wallpaper";
           # Same picker directory waypaper used; the default wallpaper still
           # flows through the shared addons.wallpaper option below.
           settings.wallpaper.directory = "${wallpapers}/share/wallpapers";
