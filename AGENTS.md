@@ -27,6 +27,10 @@ the flake root.
 - `modules/_darwin-disabled/` and `.disabled/` are preserved-but-dead trees: editing them has no effect on any build. The live Darwin host is `mba13`.
 - CI (`.github/workflows/cachix.yaml`) builds the flake on every push; Renovate bumps inputs in PRs.
 
+## Decisions
+
+- **Flake-provided home-manager modules are imported unconditionally, never gated on platform** — `pkgs` in HM `imports` (or shaping config attr names, e.g. `optionalAttrs pkgs.stdenv.isLinux` around a config block) is infinite recursion, so `isLinux`-gating an upstream import cannot work. Inertness on other platforms comes from the module's lazy option defaults instead — verify by evaluating the Darwin host's drvPath. (#37)
+
 ## Commands
 
 Daily driver is the `sys` wrapper (`packages/sys/default.nix`):
