@@ -82,8 +82,11 @@ writeFace(NOSRC_FACE)
 -- LC_ALL=C keeps gawk's printf decimal point a dot regardless of locale.
 local cmd = "MATCH=" .. quotedMatch .. "\n" .. [[
 while :; do
+  # Node-name column only, and never a monitor source: a USB mic contributes
+  # both alsa_input.* and alsa_output.*.monitor, the monitor sorts first, and
+  # matching $0 would meter (and mute-poll) the playback loopback instead.
   src=$(@PACTL@ list sources short 2>/dev/null \
-    | @GAWK@ -v m="$MATCH" '$0 ~ m { print $2; exit }')
+    | @GAWK@ -v m="$MATCH" '$2 !~ /[.]monitor$/ && $2 ~ m { print $2; exit }')
   if [ -z "$src" ]; then echo NOSRC; sleep 3; continue; fi
   @PW_CAT@ --record --raw --target "$src" \
     --rate 8000 --channels 1 --format s16 - 2>/dev/null \

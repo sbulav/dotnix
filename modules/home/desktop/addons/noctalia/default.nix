@@ -64,8 +64,16 @@ let
 
       # writeShellApplication runs under errexit: every pactl that may fail
       # (mic unplugged) needs an explicit fallback or the click dies silently.
+      #
+      # Match the node-name column only, and never a monitor source. A USB mic
+      # contributes BOTH an alsa_input.* and an alsa_output.*.monitor node, and
+      # the monitor sorts first, so matching a bare substring against the whole
+      # line ($0) resolves "AKG_C44" to the playback loopback — every
+      # set-source-mute/set-source-volume below then lands on the wrong node
+      # while the needle keeps working (PipeWire re-routes pw-cat's --target).
       src=$(pactl list sources short 2>/dev/null \
-        | gawk -v m=${escapeShellArg cfg.micVuMeter.sourceMatch} '$0 ~ m { print $2; exit }' \
+        | gawk -v m=${escapeShellArg cfg.micVuMeter.sourceMatch} \
+            '$2 !~ /[.]monitor$/ && $2 ~ m { print $2; exit }' \
         || true)
       if [ -z "$src" ]; then src="@DEFAULT_SOURCE@"; fi
 
@@ -289,7 +297,30 @@ let
       # (Hyprland binds, the old rofi drun-command) so they land in their own
       # uwsm-managed app scope instead of noctalia's cgroup.
       launch_apps_custom_command = "/run/current-system/sw/bin/uwsm-app -- $CMD";
+      # The launcher's currency converter fetches ECB reference rates and a
+      # Coinbase spot price at every start. Unused here, and both time out
+      # after the full 10 s curl budget on this host, so it is pure startup
+      # latency: `[http] download failed url=…eurofxref-daily.xml curl=28`.
+      launcher.fetch_exchange_rates = false;
     };
+
+    # Neither upower nor power-profiles-daemon exists on this host, and the
+    # power_profile tile has no availability predicate upstream — only
+    # weather / system-monitor / screen-time / clipboard are config-gated in
+    # shortcut_registry.cpp — so the default tile renders and does nothing.
+    # Declaring the list drops it and keeps upstream's order for the rest.
+    # Wi-Fi stays: wlp8s0 exists, its radio is merely soft-blocked.
+    #
+    # This table is NOT pruned from the sidecar, so it is a seed: reordering
+    # the tiles in the settings GUI pins them there and this list stops
+    # mattering. That is the intended split, not a bug to chase.
+    control_center.shortcuts = map (type: { inherit type; }) [
+      "wifi"
+      "bluetooth"
+      "caffeine"
+      "nightlight"
+      "notification"
+    ];
 
     # Seed only, and inert on any host that has already used the theme
     # picker: [theme] is GUI-owned (the sidecar wins, and the prune below
@@ -301,6 +332,26 @@ let
       source = if wallpaperMode then "wallpaper" else "builtin";
       builtin = "Tokyo-Night";
       wallpaper_scheme = "vibrant";
+      # Nothing is selected in either template set, and while
+      # enable_community_templates is true every start downloads the community
+      # catalog and re-syncs all ~47 cached manifests — CommunityTemplateService
+      # ::sync() returns early only on this flag, the empty communityIds list
+      # does not spare the catalog fetch. Off until a template is selected.
+      #
+      # enable_builtin_templates is deliberately left at its default: with
+      # builtin_ids empty the apply pass is already skipped, so turning it off
+      # buys nothing. In particular it does NOT stop the undo sweep — on the
+      # first apply after each start noctalia runs the undo hook of every
+      # builtin template absent from builtin_ids, and with the flag false the
+      # enabled set is merely empty, so the sweep still covers all of them
+      # (template_apply_service.cpp: undoDisabledBuiltinTemplates, reached via
+      # reconcileDisabledBuiltinIds whenever there is no previous request).
+      # Those hooks are no-ops that fail loudly against home-manager's
+      # read-only symlinks (`touch: cannot touch
+      # '~/.config/wezterm/wezterm.lua': Permission denied`). There is no
+      # config lever for it; see the unit Environment below for the one hook
+      # that cost real time rather than just a log line.
+      templates.enable_community_templates = false;
     };
 
     # Slice 3: the shell owns the wallpaper engine. Seeded from the repo-wide
@@ -566,7 +617,9 @@ in
 
       sourceMatch = mkOpt str "AKG_C44" ''
         Substring (awk regex) matched against `pactl list sources short`
-        names to pick the microphone to meter.
+        node names to pick the microphone to meter. Monitor sources are
+        excluded before the match, so a device name is enough — it will not
+        resolve to that device's own playback loopback.
       '';
     };
   };
@@ -586,6 +639,19 @@ in
     systemd.user.services.noctalia = {
       Unit.StartLimitIntervalSec = 0;
       Service.RestartSec = 2;
+      # Blunt the one builtin-template undo hook that costs more than a log
+      # line (see [theme.templates] above for why the sweep cannot be turned
+      # off). starship's hook discovers its config by checking $STARSHIP_CONFIG,
+      # then `systemctl --user show-environment`, and only then by reading
+      # /proc/<pid>/environ for *every* process owned by the user — which has
+      # already been killed on the hook timeout here (exit code 143). Handing
+      # it the path it would have defaulted to anyway makes it return on the
+      # first branch. Scoped to this unit, so fish and starship itself are
+      # untouched; harmless even if the file is absent, since the hook then
+      # simply finds nothing to undo.
+      Service.Environment = [
+        "STARSHIP_CONFIG=${config.home.homeDirectory}/.config/starship.toml"
+      ];
     };
 
     # Give the declaration above authority over the tables it declares: the
