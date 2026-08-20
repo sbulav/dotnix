@@ -71,9 +71,12 @@ in
         rofi = disabled;
         woomer = enabled;
         kitty = disabled;
-        swaylock = enabled;
+        # Slice 5b: noctalia owns lock + idle (lock@600, screen off@900 —
+        # same numbers as the hypridle "pc" profile). Flip these two back
+        # on (and noctalia's lockscreen/idle off) to roll back.
+        swaylock = disabled;
         hypridle = {
-          enable = true;
+          enable = false;
           profile = "pc";
         };
         waybar = {
