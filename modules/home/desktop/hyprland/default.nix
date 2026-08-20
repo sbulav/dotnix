@@ -99,9 +99,10 @@ let
     "hl.monitor({ output = ${luaStr (get 0)}, mode = ${luaStr (get 1)}, position = ${luaStr (get 2)}, scale = ${scaleLua} })";
 
   mkWorkspaceMonitorBindings =
-    bindings:
+    persistent: bindings:
     mapAttrsToList (
-      ws: mon: "hl.workspace_rule({ workspace = ${luaStr ws}, monitor = ${luaStr mon} })"
+      ws: mon:
+      "hl.workspace_rule({ workspace = ${luaStr ws}, monitor = ${luaStr mon}${optionalString persistent ", persistent = true"} })"
     ) bindings;
 
   # Translate a hyprlang-style action into a Lua dispatcher expression.
@@ -289,6 +290,13 @@ in
       monitorBindings =
         mkOpt (types.attrsOf types.str) { }
           "Workspace to monitor bindings (workspace ID -> monitor name)";
+
+      persistent = mkBoolOpt false ''
+        Whether monitor-bound workspaces stay alive while empty. Opt-in
+        because it changes what every bar/taskbar sees: noctalia's taskbar
+        only renders a workspace Hyprland still reports, so showing all of
+        them at once (waybar's `active-only = false`) needs this on.
+      '';
     };
 
     keybindings = {
@@ -369,7 +377,9 @@ in
             })
           '';
           monitors = concatStringsSep "\n" (map mkMonitor cfg.monitors);
-          monitorBindings = concatStringsSep "\n" (mkWorkspaceMonitorBindings cfg.workspaces.monitorBindings);
+          monitorBindings = concatStringsSep "\n" (
+            mkWorkspaceMonitorBindings cfg.workspaces.persistent cfg.workspaces.monitorBindings
+          );
         in
         ''
           ${builtins.readFile ./hyprland.lua}
