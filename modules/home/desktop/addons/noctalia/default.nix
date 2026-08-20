@@ -39,6 +39,83 @@ let
       --replace-fail '@GAWK@' '${pkgs.gawk}/bin/gawk'
   '';
 
+  # Port of the old waybar akg-mic-ctl: mute toggle / 5% gain steps with a
+  # replaceable notification. Unlike the waybar copy (wpctl on
+  # @DEFAULT_AUDIO_SOURCE@) this acts on the source the meter matches, so
+  # click-to-mute always hits the mic the needle is showing.
+  micCtl = pkgs.writeShellApplication {
+    name = "akg-mic-ctl";
+    runtimeInputs = with pkgs; [
+      pulseaudio
+      libnotify
+      gawk
+      coreutils
+    ];
+    text = ''
+      set -uo pipefail
+
+      action="''${1:-status}"
+      hint="string:x-canonical-private-synchronous:akg-mic"
+      timeout=1500
+
+      src=$(pactl list sources short 2>/dev/null \
+        | gawk -v m=${escapeShellArg cfg.micVuMeter.sourceMatch} '$0 ~ m { print $2; exit }')
+      if [ -z "$src" ]; then src="@DEFAULT_SOURCE@"; fi
+
+      read_state() {
+        local vol muted
+        vol=$(pactl get-source-volume "$src" 2>/dev/null \
+          | gawk -F/ 'NR == 1 { gsub(/[ %]/, "", $2); print $2; exit }')
+        case "$(pactl get-source-mute "$src" 2>/dev/null)" in
+          *yes*) muted=1 ;;
+          *) muted=0 ;;
+        esac
+        printf '%s %s\n' "''${vol:-0}" "$muted"
+      }
+
+      notify_state() {
+        local title body icon vol muted
+        read -r vol muted < <(read_state)
+        if [[ "$muted" == "1" ]]; then
+          icon="microphone-sensitivity-muted"
+          title="🎤 Mic muted"
+          body="gain ''${vol}% (no signal)"
+        else
+          icon="microphone-sensitivity-high"
+          title="🎤 Mic active"
+          body="gain ''${vol}%"
+        fi
+        notify-send -t "$timeout" -h "$hint" -i "$icon" "$title" "$body" || true
+      }
+
+      case "$action" in
+        mute)
+          pactl set-source-mute "$src" toggle
+          notify_state
+          ;;
+        vol-up)
+          pactl set-source-volume "$src" +5%
+          read -r vol _ < <(read_state)
+          if [ "''${vol:-0}" -gt 100 ]; then
+            pactl set-source-volume "$src" 100%
+          fi
+          notify_state
+          ;;
+        vol-down)
+          pactl set-source-volume "$src" -5%
+          notify_state
+          ;;
+        status)
+          notify_state
+          ;;
+        *)
+          echo "usage: $0 {mute|vol-up|vol-down|status}" >&2
+          exit 2
+          ;;
+      esac
+    '';
+  };
+
   defaultSettings = {
     shell = {
       telemetry_enabled = false;
@@ -128,7 +205,18 @@ let
       };
     }
     // optionalAttrs cfg.micVuMeter.enable {
-      mic-vu.type = "sab/mic_vu:meter";
+      mic-vu = {
+        type = "sab/mic_vu:meter";
+        # Same interactions the waybar meter had. Luau bar widgets expose no
+        # click/scroll callbacks; the declarative gesture map is the only
+        # interaction mechanism for plugin widgets.
+        actions = {
+          left = "exec ${micCtl}/bin/akg-mic-ctl mute";
+          right = "exec ${pkgs.pavucontrol}/bin/pavucontrol -t 3";
+          scroll_up = "exec ${micCtl}/bin/akg-mic-ctl vol-up";
+          scroll_down = "exec ${micCtl}/bin/akg-mic-ctl vol-down";
+        };
+      };
     };
 
     # Declarative plugin state: no git sources, no background updates — the
