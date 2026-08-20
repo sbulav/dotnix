@@ -79,12 +79,20 @@ let
       allow_empty_password = true;
     };
     # Parity with the old hypridle "pc" profile: lock at 10 min, DPMS off
-    # at 15 min, no suspend (lock-and-suspend keeps its disabled default).
+    # at 15 min, no suspend. Every field must be spelled out: [idle.behavior.*]
+    # in the config REPLACES noctalia's named defaults (namedMap parses each
+    # entry from bare struct defaults — timeout 0, action "" — so a partial
+    # entry is silently dropped or warned "needs an action").
     idle.behavior = {
-      lock.enabled = true; # default timeout 600
+      lock = {
+        enabled = true;
+        timeout = 600;
+        action = "lock";
+      };
       screen-off = {
         enabled = true;
-        timeout = 900; # noctalia default is 660; hypridle pc used 900
+        timeout = 900;
+        action = "screen_off";
       };
     };
 
