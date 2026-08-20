@@ -1,5 +1,4 @@
 {
-  options,
   config,
   lib,
   pkgs,
@@ -31,7 +30,9 @@ let
     cp -r ${./plugins/sysmon} $out/sysmon
     chmod -R u+w $out
     substituteInPlace $out/mic_vu/plugin.toml \
-      --replace-fail '@SOURCE_MATCH@' ${escapeShellArg cfg.micVuMeter.sourceMatch}
+      --replace-fail '@SOURCE_MATCH@' ${escapeShellArg cfg.micVuMeter.sourceMatch} \
+      --replace-fail '@MIC_CTL@' '${micCtl}/bin/akg-mic-ctl' \
+      --replace-fail '@PAVUCONTROL@' '${pkgs.pavucontrol}/bin/pavucontrol'
     substituteInPlace $out/mic_vu/service.luau \
       --replace-fail '@PW_CAT@' '${pkgs.pipewire}/bin/pw-cat' \
       --replace-fail '@PACTL@' '${pkgs.pulseaudio}/bin/pactl' \
@@ -55,18 +56,25 @@ let
       set -uo pipefail
 
       action="''${1:-status}"
-      hint="string:x-canonical-private-synchronous:akg-mic"
       timeout=1500
+      # noctalia's daemon only implements replaces_id (no synchronous hint
+      # like mako), so keep the printed notification id around and replace
+      # the previous toast instead of stacking one per scroll notch.
+      idfile="''${XDG_RUNTIME_DIR:-/tmp}/akg-mic-ctl.notify-id"
 
+      # writeShellApplication runs under errexit: every pactl that may fail
+      # (mic unplugged) needs an explicit fallback or the click dies silently.
       src=$(pactl list sources short 2>/dev/null \
-        | gawk -v m=${escapeShellArg cfg.micVuMeter.sourceMatch} '$0 ~ m { print $2; exit }')
+        | gawk -v m=${escapeShellArg cfg.micVuMeter.sourceMatch} '$0 ~ m { print $2; exit }' \
+        || true)
       if [ -z "$src" ]; then src="@DEFAULT_SOURCE@"; fi
 
       read_state() {
         local vol muted
         vol=$(pactl get-source-volume "$src" 2>/dev/null \
-          | gawk -F/ 'NR == 1 { gsub(/[ %]/, "", $2); print $2; exit }')
-        case "$(pactl get-source-mute "$src" 2>/dev/null)" in
+          | gawk -F/ 'NR == 1 { gsub(/[ %]/, "", $2); print $2; exit }' \
+          || true)
+        case "$(pactl get-source-mute "$src" 2>/dev/null || true)" in
           *yes*) muted=1 ;;
           *) muted=0 ;;
         esac
@@ -74,7 +82,8 @@ let
       }
 
       notify_state() {
-        local title body icon vol muted
+        local title body icon vol muted prev
+        local -a args
         read -r vol muted < <(read_state)
         if [[ "$muted" == "1" ]]; then
           icon="microphone-sensitivity-muted"
@@ -85,7 +94,10 @@ let
           title="🎤 Mic active"
           body="gain ''${vol}%"
         fi
-        notify-send -t "$timeout" -h "$hint" -i "$icon" "$title" "$body" || true
+        prev=$(cat "$idfile" 2>/dev/null || true)
+        args=(-t "$timeout" -i "$icon" -p)
+        if [[ -n "$prev" ]]; then args+=(-r "$prev"); fi
+        notify-send "''${args[@]}" "$title" "$body" > "$idfile" || true
       }
 
       case "$action" in
@@ -154,6 +166,9 @@ let
       # empty password unless this is set, which would force typing a
       # password on every unlock. Empty submit + touch = the swaylock flow.
       allow_empty_password = true;
+      # Parity with swaylock --image: the lock background is the same
+      # wallpaper, not noctalia's default plain scrim.
+      wallpaper = toString config.custom.desktop.addons.wallpaper;
     };
     # Parity with the old hypridle "pc" profile: lock at 10 min, DPMS off
     # at 15 min, no suspend. Every field must be spelled out: [idle.behavior.*]
@@ -204,19 +219,11 @@ let
         stat = "ram";
       };
     }
+    # mic-vu click/scroll gestures (mute, pavucontrol, gain steps) are
+    # declared as manifest defaults in plugins/mic_vu/plugin.toml — the
+    # widget-settings schema warns on a config-level actions table.
     // optionalAttrs cfg.micVuMeter.enable {
-      mic-vu = {
-        type = "sab/mic_vu:meter";
-        # Same interactions the waybar meter had. Luau bar widgets expose no
-        # click/scroll callbacks; the declarative gesture map is the only
-        # interaction mechanism for plugin widgets.
-        actions = {
-          left = "exec ${micCtl}/bin/akg-mic-ctl mute";
-          right = "exec ${pkgs.pavucontrol}/bin/pavucontrol -t 3";
-          scroll_up = "exec ${micCtl}/bin/akg-mic-ctl vol-up";
-          scroll_down = "exec ${micCtl}/bin/akg-mic-ctl vol-down";
-        };
-      };
+      mic-vu.type = "sab/mic_vu:meter";
     };
 
     # Declarative plugin state: no git sources, no background updates — the
@@ -278,6 +285,11 @@ let
   };
 in
 {
+  # Deliberately NOT gated on isLinux: `pkgs` is config-dependent in
+  # home-manager, so using it in `imports` is infinite recursion. Upstream
+  # defaults `programs.noctalia.package` to a Linux-only flake package, but
+  # option defaults are lazy — mba13 evaluates as long as nothing forces
+  # every option value (verified: its toplevel drvPath evaluates).
   imports = [ inputs.noctalia.homeModules.default ];
 
   options.custom.desktop.addons.noctalia = with types; {
@@ -308,7 +320,7 @@ in
     };
   };
 
-  config = mkIf cfg.enable {
+  config = mkIf cfg.enable ({
     programs.noctalia = {
       enable = true;
       systemd.enable = true;
@@ -317,8 +329,16 @@ in
       customPalettes = cfg.customPalettes;
     };
 
+    # The shell is the only locker on the host: keep systemd retrying
+    # instead of giving up after the default 5-crash burst, which would
+    # silently leave the workstation without idle-lock.
+    systemd.user.services.noctalia = {
+      Unit.StartLimitIntervalSec = 0;
+      Service.RestartSec = 2;
+    };
+
     # notify-send for the modules that shell out to it; the daemon side used
     # to come from mako, which is disabled while noctalia owns notifications.
     home.packages = with pkgs; [ libnotify ];
-  };
+  });
 }

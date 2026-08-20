@@ -6,7 +6,10 @@
 id          = "sab/mic_vu"
 name        = "Mic VU Meter"
 version     = "1.0.0"
-plugin_api  = 3
+# Written against the pinned rev's current API (28). Declaring the floor (3)
+# instead would make the first upstream floor bump silently drop the plugin;
+# manifest widget actions below additionally require >= 14.
+plugin_api  = 28
 author      = "sab"
 license     = "MIT"
 icon        = "microphone"
@@ -24,6 +27,16 @@ default         = "@SOURCE_MATCH@"
 [[widget]]
 id    = "meter"
 entry = "widget.luau"
+
+  # Same interactions the old waybar meter had. Declared here (not as
+  # `[widget.<name>.actions]` in config.toml, which the widget-settings
+  # schema flags as an unknown setting) — these are gesture *defaults*,
+  # so a config-level actions table still overrides them.
+  [widget.actions]
+  left        = "exec @MIC_CTL@ mute"
+  right       = "exec @PAVUCONTROL@ -t 3"
+  scroll_up   = "exec @MIC_CTL@ vol-up"
+  scroll_down = "exec @MIC_CTL@ vol-down"
 
   [[widget.setting]]
   key       = "meter_width"

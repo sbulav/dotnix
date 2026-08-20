@@ -7,7 +7,9 @@
 id          = "sab/sysmon"
 name        = "Sysmon"
 version     = "1.0.0"
-plugin_api  = 3
+# Written against the pinned rev's current API (28); declaring the floor (3)
+# would make the first upstream floor bump silently drop the plugin.
+plugin_api  = 28
 author      = "sab"
 license     = "MIT"
 icon        = "cpu-usage"

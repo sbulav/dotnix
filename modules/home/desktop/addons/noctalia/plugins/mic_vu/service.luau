@@ -130,6 +130,11 @@ while :; do
           if (target > needle) needle += (target - needle) * 0.35
           else                 needle += (target - needle) * 0.10
 
+          # snap the decay tail to rest: below ~0.02 the per-window delta
+          # drops under the emit threshold, which would freeze the needle
+          # visibly off zero after speech stops
+          if (target <= 0 && needle < 0.02) needle = 0
+
           changed = (is_muted != was_muted)
           moved   = ((needle - last) ^ 2 > 0.00002)
           if (changed || (!is_muted && moved)) {
