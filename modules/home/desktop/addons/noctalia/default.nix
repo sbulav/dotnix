@@ -17,8 +17,8 @@ let
   #   slice 2: launcher + session/power    (rofi/wlogout off)       — done
   #   slice 3: wallpaper engine + palette  (hyprpaper/waypaper off) — done
   #   slice 4: sysmon widgets + mic VU plugin                       — done
-  #   slice 5a: manual lock                (old stack kept as fallback)
-  #   slice 5b: idle behaviors             (swaylock/hypridle off)  — after 10x lock/unlock
+  #   slice 5a: manual lock                (old stack kept as fallback) — done
+  #   slice 5b: idle behaviors             (swaylock/hypridle off)  — done
 
   # Nix-managed plugin source (a read-only "path" source in noctalia terms,
   # scanned one level deep — every child dir is a plugin). plugins/mic_vu/
@@ -66,11 +66,10 @@ let
       enabled = true;
       default.path = toString config.custom.desktop.addons.wallpaper;
     };
-    # Slice 5 step A: the shell owns manual locking (PAM stack "login" —
-    # ships with NixOS, no pam.d registration needed). swaylock + hypridle
-    # stay enabled on the host as the fallback until 10x manual lock/unlock
-    # survived: hypridle's idle-lock still launches swaylock via a pinned
-    # store path, and whichever locker grabs ext-session-lock first wins.
+    # Slice 5: the shell owns locking and idle (PAM stack "login" — ships
+    # with NixOS, no pam.d registration needed). Survived the 10x manual
+    # lock/unlock gate; swaylock + hypridle are now disabled on the host
+    # (one flip re-enables them for rollback).
     lockscreen = {
       enabled = true;
       # The login PAM stack runs pam_u2f as `auth sufficient` first, so a
@@ -79,12 +78,14 @@ let
       # password on every unlock. Empty submit + touch = the swaylock flow.
       allow_empty_password = true;
     };
+    # Parity with the old hypridle "pc" profile: lock at 10 min, DPMS off
+    # at 15 min, no suspend (lock-and-suspend keeps its disabled default).
     idle.behavior = {
-      # slice 5 step B — hypridle still owns idle; never enable idle-lock
-      # before the lock screen survived 10x manual lock/unlock (fails
-      # closed via PAM).
-      lock.enabled = false;
-      screen-off.enabled = false;
+      lock.enabled = true; # default timeout 600
+      screen-off = {
+        enabled = true;
+        timeout = 900; # noctalia default is 660; hypridle pc used 900
+      };
     };
 
     notification = {
