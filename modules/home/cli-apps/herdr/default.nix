@@ -63,6 +63,11 @@ in
 
         [experimental]
         pane_history = true
+        # Kitty graphics is herdr's only image protocol; without it, image
+        # previews inside a pane render nothing. Upstream keeps it off by
+        # default. custom.cli-apps.yazi steers yazi onto this adapter by
+        # clearing the WezTerm env leak in herdr panes — see the comment there.
+        kitty_graphics = true
       '';
     };
   };
