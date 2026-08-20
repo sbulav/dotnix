@@ -71,7 +71,14 @@ let
     # stay enabled on the host as the fallback until 10x manual lock/unlock
     # survived: hypridle's idle-lock still launches swaylock via a pinned
     # store path, and whichever locker grabs ext-session-lock first wins.
-    lockscreen.enabled = true;
+    lockscreen = {
+      enabled = true;
+      # The login PAM stack runs pam_u2f as `auth sufficient` first, so a
+      # YubiKey touch alone unlocks — but noctalia refuses to submit an
+      # empty password unless this is set, which would force typing a
+      # password on every unlock. Empty submit + touch = the swaylock flow.
+      allow_empty_password = true;
+    };
     idle.behavior = {
       # slice 5 step B — hypridle still owns idle; never enable idle-lock
       # before the lock screen survived 10x manual lock/unlock (fails
