@@ -214,6 +214,14 @@ in
     SUBSYSTEM=="usb", ATTR{idVendor}=="0416", ATTR{idProduct}=="7395", MODE="0666", GROUP="users"
   '';
 
+  # The noctalia lockscreen authenticates against the `login` PAM stack,
+  # which NixOS ships with nullok on pam_unix. sab's password is imperative
+  # state (mutableUsers), so if it were ever cleared a bare Enter would
+  # unlock the screen with no YubiKey. The old swaylock stack had no nullok;
+  # keep that property. TTY logins with a set password are unaffected.
+  # (mkForce: nixpkgs' pam module sets true for login unconditionally.)
+  security.pam.services.login.allowNullPassword = lib.mkForce false;
+
   # Authorize zanoza's herdr-relay key so the relay can poll herdr on mz over
   # SSH non-interactively (BatchMode, no agent → uses zanoza:~/.ssh/id_ed25519).
   users.users.sab.openssh.authorizedKeys.keys = [
