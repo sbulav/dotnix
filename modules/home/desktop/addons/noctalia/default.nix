@@ -501,7 +501,7 @@ let
       # well below the opacity the plain default needs. Effective only while
       # the GUI has never written [notification] into the sidecar (it hasn't;
       # this table is deliberately not pruned).
-      background_opacity = 0.65;
+      background_opacity = 0.35;
     };
 
     osd = {
