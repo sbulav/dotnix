@@ -430,13 +430,27 @@ let
           workspace_group_capsule = true;
           show_workspace_label = true;
           workspace_label_placement = "inside";
-          # Label as bare text, not a filled disc: taskbar_widget.cpp draws the
-          # workspace tag on a `workspaceFillColor` disc unless minimal, which
-          # swaps the fill for clearColorSpec(). Keeps number + app icons and
-          # drops the coloured puck behind the number. Mode-safe — the minimal
-          # branch of workspaceTextColor() is role-based, so the label still
-          # flips with a light/dark theme.
-          minimal = true;
+          # Waybar's active workspace was unmissable — `button.active` drew a
+          # filled pill while the rest stayed plain text. minimal = true was
+          # tried first (bare tinted numbers, no disc) and at 22px the tints
+          # are too close to tell active from occupied from empty. minimal
+          # off restores the filled disc: taskbar_widget.cpp fills each badge
+          # with workspaceFillColor() and picks the number's colour via
+          # readableColorForFill(), so the active number sits on a solid
+          # focused_color puck with guaranteed-contrast text.
+          minimal = false;
+          # Only the active badge should pop, waybar-style. The upstream
+          # occupied/empty default is the secondary role — a bright pastel in
+          # both palette modes, which turns nine persistent workspaces into a
+          # row of loud pucks. Muted fills instead: readableColorForFill pairs
+          # a role fill with its on_* role, so surface_variant still yields a
+          # legible on_surface_variant number; empty badges are additionally
+          # faded to 55% alpha by the widget itself. Theme mode mirrors
+          # vu-neon waybar: cyan active, elevated (the old button.active
+          # background) for occupied, overlay0 (the old empty text) for empty.
+          focused_color = if wallpaperMode then "primary" else hex "cyan";
+          occupied_color = if wallpaperMode then "surface_variant" else hex "elevated";
+          empty_color = if wallpaperMode then "surface_variant" else hex "overlay0";
           hide_empty_workspaces = false;
           # Per-output bar: show only this monitor's workspaces, like waybar did.
           show_all_outputs = false;
