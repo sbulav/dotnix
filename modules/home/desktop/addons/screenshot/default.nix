@@ -79,7 +79,7 @@ let
       ''
     )}";
 
-  # Public command attrset consumed by other modules (hyprland, wlr-which-key).
+  # Public command attrset consumed by other modules (hyprland and command menus).
   commands = {
     region = {
       clipboard = gbCopy "area";
@@ -132,7 +132,7 @@ in
 
     commands = mkOpt (attrsOf (attrsOf str)) { } ''
       Read-only map of generated screenshot commands. Consumed by other
-      modules (hyprland binds, wlr-which-key). Structure:
+      modules (hyprland binds and command menus). Structure:
         commands.<region|window|screen>.<clipboard|file|annotate>
       The `annotate` keys are omitted when `annotator = "none"`.
     '';

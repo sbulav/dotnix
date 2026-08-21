@@ -99,9 +99,10 @@ let
     "hl.monitor({ output = ${luaStr (get 0)}, mode = ${luaStr (get 1)}, position = ${luaStr (get 2)}, scale = ${scaleLua} })";
 
   mkWorkspaceMonitorBindings =
-    bindings:
+    persistent: bindings:
     mapAttrsToList (
-      ws: mon: "hl.workspace_rule({ workspace = ${luaStr ws}, monitor = ${luaStr mon} })"
+      ws: mon:
+      "hl.workspace_rule({ workspace = ${luaStr ws}, monitor = ${luaStr mon}${optionalString persistent ", persistent = true"} })"
     ) bindings;
 
   # Translate a hyprlang-style action into a Lua dispatcher expression.
@@ -154,25 +155,41 @@ let
     let
       mainMod = kb.mainMod;
 
+      # When the noctalia addon owns launcher/clipboard/session (issue #37),
+      # the binds dispatch to its IPC instead of rofi/wlogout — same pattern
+      # as the screenshot addon read below. The passwords and search binds
+      # have no noctalia analogue and ride with the rofi addon.
+      noctaliaOwned = config.custom.desktop.addons.noctalia.enable;
+      rofiEnabled = config.custom.desktop.addons.rofi.enable;
+      wlrWhichKeyEnabled = config.custom.desktop.addons."wlr-which-key".enable;
+
       appBindings =
-        optionalString (kb.terminal != null) ''
+        optionalString (kb.menu != null && (noctaliaOwned || wlrWhichKeyEnabled)) ''
+          ${mkBind mainMod kb.menu (if noctaliaOwned then "exec, noctalia-menu" else "exec, wlr-which-key")}
+        ''
+        + optionalString (kb.terminal != null) ''
           ${mkBind mainMod kb.terminal "exec, wezterm"}
         ''
         + optionalString (kb.browser != null) ''
           ${mkBind mainMod kb.browser "exec, firefox"}
         ''
         + optionalString (kb.launcher != null) ''
-          ${mkBind mainMod kb.launcher "exec, rofi -show drun"}
+          ${mkBind mainMod kb.launcher (
+            if noctaliaOwned then "exec, noctalia msg panel-toggle launcher" else "exec, rofi -show drun"
+          )}
         ''
         + optionalString (kb.clipboard != null) ''
-          ${mkBind mainMod kb.clipboard
-            "exec, rofi -show clip -theme-str 'listview { columns: 1; fixed-columns: true; }'"
-          }
+          ${mkBind mainMod kb.clipboard (
+            if noctaliaOwned then
+              "exec, noctalia msg panel-toggle clipboard"
+            else
+              "exec, rofi -show clip -theme-str 'listview { columns: 1; fixed-columns: true; }'"
+          )}
         ''
-        + optionalString (kb.passwords != null) ''
+        + optionalString (kb.passwords != null && rofiEnabled) ''
           ${mkBind mainMod kb.passwords "exec, rofi-rbw"}
         ''
-        + optionalString (kb.search != null) ''
+        + optionalString (kb.search != null && rofiEnabled) ''
           ${mkBind mainMod kb.search
             ''exec, rofi -dmenu -p "Search" | xargs -I{} xdg-open "https://www.google.com/search?q={}" && hyprctl dispatch focuswindow firefox''
           }
@@ -181,10 +198,14 @@ let
           ${mkBind mainMod kb.woomer "exec, woomer"}
         ''
         + optionalString (kb.lock != null) ''
-          ${mkBind mainMod "SHIFT ${kb.lock}" "exec, swaylock"}
+          ${mkBind mainMod "SHIFT ${kb.lock}" (
+            if noctaliaOwned then "exec, noctalia msg session lock" else "exec, swaylock"
+          )}
         ''
         + optionalString (kb.logout != null) ''
-          ${mkBind mainMod "SHIFT ${kb.logout}" "exec, wlogout"}
+          ${mkBind mainMod "SHIFT ${kb.logout}" (
+            if noctaliaOwned then "exec, noctalia msg panel-toggle session" else "exec, wlogout"
+          )}
         '';
 
       windowBindings =
@@ -273,6 +294,13 @@ in
       monitorBindings =
         mkOpt (types.attrsOf types.str) { }
           "Workspace to monitor bindings (workspace ID -> monitor name)";
+
+      persistent = mkBoolOpt false ''
+        Whether monitor-bound workspaces stay alive while empty. Opt-in
+        because it changes what every bar/taskbar sees: noctalia's taskbar
+        only renders a workspace Hyprland still reports, so showing all of
+        them at once (waybar's `active-only = false`) needs this on.
+      '';
     };
 
     keybindings = {
@@ -280,6 +308,7 @@ in
 
       terminal = mkOpt (types.nullOr types.str) "X" "Launch terminal keybinding";
       browser = mkOpt (types.nullOr types.str) "B" "Launch browser keybinding";
+      menu = mkOpt (types.nullOr types.str) "slash" "Command menu keybinding";
       launcher = mkOpt (types.nullOr types.str) "R" "App launcher keybinding";
       clipboard = mkOpt (types.nullOr types.str) "C" "Clipboard manager keybinding";
       passwords = mkOpt (types.nullOr types.str) "P" "Password manager keybinding";
@@ -353,7 +382,9 @@ in
             })
           '';
           monitors = concatStringsSep "\n" (map mkMonitor cfg.monitors);
-          monitorBindings = concatStringsSep "\n" (mkWorkspaceMonitorBindings cfg.workspaces.monitorBindings);
+          monitorBindings = concatStringsSep "\n" (
+            mkWorkspaceMonitorBindings cfg.workspaces.persistent cfg.workspaces.monitorBindings
+          );
         in
         ''
           ${builtins.readFile ./hyprland.lua}

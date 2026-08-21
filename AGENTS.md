@@ -27,6 +27,12 @@ the flake root.
 - `modules/_darwin-disabled/` and `.disabled/` are preserved-but-dead trees: editing them has no effect on any build. The live Darwin host is `mba13`.
 - CI (`.github/workflows/cachix.yaml`) builds the flake on every push; Renovate bumps inputs in PRs.
 
+## Decisions
+
+- **Flake-provided home-manager modules are imported unconditionally, never gated on platform** — `pkgs` in HM `imports` (or shaping config attr names, e.g. `optionalAttrs pkgs.stdenv.isLinux` around a config block) is infinite recursion, so `isLinux`-gating an upstream import cannot work. Inertness on other platforms comes from the module's lazy option defaults instead — verify by evaluating the Darwin host's drvPath. (#37)
+
+- **noctalia's sidecar outranks the Nix config, so Nix-owned tables are pruned on activation** — `~/.config/noctalia/config.toml` (read-only store symlink) is deep-merged *under* `~/.local/state/noctalia/settings.toml`, which the settings GUI writes and which survives reboots. Editing a table in Nix that has ever been touched in the GUI therefore looks like a no-op. The split: Nix owns `bar` and `widget` (an activation script drops just those two from the sidecar every rebuild); the GUI owns `theme`, `wallpaper.*`, `lockscreen_widgets`, `location` — never prune those, `wallpaper.last`/`wallpaper.monitors.*` are the seed the wallpaper-derived palette is computed from. One key is carved back out of a Nix-owned table by the script's `KEEP` list: `bar.main.background_opacity`, because `BarConfig` has no background *colour* (the fill is always the theme surface role) and there is no light/dark variant of `[bar.main]` — so one Nix value cannot be legible in both theme modes, and only the GUI knows which mode is live. (#37)
+
 ## Commands
 
 Daily driver is the `sys` wrapper (`packages/sys/default.nix`):

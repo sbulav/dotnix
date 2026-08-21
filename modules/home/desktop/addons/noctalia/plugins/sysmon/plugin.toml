@@ -1,0 +1,36 @@
+# System-monitor bar widget with per-type tooltips (issue #37, slice 4).
+# The builtin sysmon widget's hover tooltip unconditionally lists every
+# available stat; this plugin shows only the rows matching its own type.
+# One widget entry serves all instances — the bar config sets `stat` per
+# named instance ("cpu" | "temp" | "ram").
+
+id          = "sab/sysmon"
+name        = "Sysmon"
+version     = "1.0.0"
+# Written against the pinned rev's current API (28); declaring the floor (3)
+# would make the first upstream floor bump silently drop the plugin.
+plugin_api  = 28
+author      = "sab"
+license     = "MIT"
+icon        = "cpu-usage"
+description = "CPU usage / CPU temperature / RAM bar widgets with curated tooltips."
+tags        = ["system"]
+
+[[widget]]
+id    = "meter"
+entry = "widget.luau"
+
+  # A select, not a free string: the settings schema validates the value
+  # against the option list, so a typo'd stat fails loudly instead of
+  # silently rendering cpu under the wrong label.
+  [[widget.setting]]
+  key             = "stat"
+  type            = "select"
+  label_key       = "settings.stat.label"
+  description_key = "settings.stat.description"
+  default         = "cpu"
+  options = [
+    { value = "cpu", label_key = "settings.stat.option.cpu" },
+    { value = "temp", label_key = "settings.stat.option.temp" },
+    { value = "ram", label_key = "settings.stat.option.ram" },
+  ]

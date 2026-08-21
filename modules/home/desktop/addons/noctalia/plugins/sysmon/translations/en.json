@@ -1,0 +1,4 @@
+{
+  "settings.stat.label": "Stat",
+  "settings.stat.description": "Which stat this widget instance shows: cpu, temp or ram."
+}

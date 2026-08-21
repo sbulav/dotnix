@@ -1,0 +1,5 @@
+{
+  "settings.source_match.label": "Source match",
+  "settings.source_match.description": "Substring matched against pactl source names to pick the microphone.",
+  "settings.meter_width.label": "Meter width (px)"
+}

@@ -26,6 +26,10 @@ in
           "DP-1,3840x2560@60,1920x0,2"
           ",preferred,auto,auto"
         ];
+        # Keep the nine bound workspaces alive while empty: noctalia's
+        # taskbar only draws a workspace Hyprland still reports, and the
+        # waybar look this replaces showed all of them at once.
+        workspaces.persistent = true;
         workspaces.monitorBindings = {
           "1" = "DP-1";
           "2" = "DP-1";
@@ -50,18 +54,47 @@ in
       };
       addons = {
         system-polish = enabled;
-        hyprpaper = enabled;
-        mako = enabled;
-        rofi = enabled;
+        hyprpaper = disabled;
+        # Noctalia shell trial (issue #37), slices 1-4: bar, notifications,
+        # OSD, launcher, session menu, wallpaper engine, sysmon widgets and
+        # the mic VU meter plugin. The disabled configs
+        # below (mako/waybar/rofi/wlogout/hyprpaper/waypaper) are kept with
+        # enable flipped off — rollback is a re-enable + rebuild (packages
+        # leave the closure). NB: disabling rofi also parks its extras
+        # (rofi-rbw, web-search bind, VPN picker, cliphist watcher);
+        # noctalia's clipboard history is native and does not need cliphist.
+        noctalia = {
+          enable = true;
+          # This host runs the wallpaper-derived palette (picked in the
+          # settings GUI, which owns [theme]), so bar accents come from the
+          # M3 roles rather than vu-neon literals — literal neons over a
+          # wallpaper palette clash. Flip to "theme" together with the GUI.
+          colorSource = "wallpaper";
+          # Same picker directory waypaper used; the default wallpaper still
+          # flows through the shared addons.wallpaper option below.
+          settings.wallpaper.directory = "${wallpapers}/share/wallpapers";
+          # Port of the old waybar akg-vu-meter (default sourceMatch AKG_C44).
+          micVuMeter.enable = true;
+        };
+        mako = disabled;
+        rofi = disabled;
         woomer = enabled;
         kitty = disabled;
-        swaylock = enabled;
+        # Slice 5b: noctalia owns lock + idle (lock@600, screen off@900 —
+        # same numbers as the hypridle "pc" profile). Rollback needs BOTH
+        # sides flipped: re-enable these two AND turn noctalia's off via
+        #   noctalia.settings.lockscreen.enabled = false;
+        #   noctalia.settings.idle.behavior.lock.enabled = false;
+        #   noctalia.settings.idle.behavior.screen-off.enabled = false;
+        # (recursiveUpdate can't delete keys) — otherwise two lockers race
+        # on ext-session-lock and both idle timers fire.
+        swaylock = disabled;
         hypridle = {
-          enable = true;
+          enable = false;
           profile = "pc";
         };
         waybar = {
-          enable = true;
+          enable = false;
           keyboardName = "kinesis-advantage2-keyboard-1";
           temperature = {
             enable = true;
@@ -75,15 +108,15 @@ in
             enable = true;
           };
         };
-        wlogout = enabled;
+        wlogout = disabled;
         hyprlock = disabled;
         wezterm = enabled;
-        "wlr-which-key" = enabled;
+        "wlr-which-key" = disabled;
         screenshot = enabled;
         wallpaper = "${wallpapers}/share/wallpapers/unorganized/vu_meter_code_neon.png";
 
         waypaper = {
-          enable = true;
+          enable = false;
           wallpaperDirectory = "${wallpapers}/share/wallpapers";
         };
       };
@@ -98,10 +131,11 @@ in
     apps = {
       obsidian = {
         enable = true;
-        useWebdavSyncFork = true;
+        syncEngine = enabled;
       };
       ktalk = enabled;
       libreoffice = enabled;
+      thunderbird = enabled;
     };
 
     cli-apps = {

@@ -72,6 +72,13 @@
       flake = false;
     };
 
+    # Noctalia v5 desktop shell (issue #37, mz trial). Pinned to the `cachix`
+    # branch: CI pushes main there only after the build is in the official
+    # cachix, so every pin has cache hits. Intentionally NOT following our
+    # nixpkgs — a follows override changes every derivation hash and kills
+    # those cache hits (nixpkgs' own noctalia-shell is the dead quickshell v4).
+    noctalia.url = "github:noctalia-dev/noctalia/cachix";
+
     # Sops (Secrets)
     sops-nix = {
       url = "github:Mic92/sops-nix";

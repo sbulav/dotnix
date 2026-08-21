@@ -70,6 +70,13 @@ in
         key = "beez.sbulav.ru:g3AGSm7ZgXhEvJCO/z7TPsykfj/F+aHGO4h7QcUGTD8=";
         priority = 10;
       }
+      # Official noctalia cache (issue #37 shell trial) — the flake input pins
+      # the upstream `cachix` branch, so builds should always hit this.
+      {
+        url = "https://noctalia.cachix.org";
+        key = "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4=";
+        priority = 12;
+      }
     ];
   };
   hardware = {
@@ -206,6 +213,14 @@ in
   services.udev.extraRules = ''
     SUBSYSTEM=="usb", ATTR{idVendor}=="0416", ATTR{idProduct}=="7395", MODE="0666", GROUP="users"
   '';
+
+  # The noctalia lockscreen authenticates against the `login` PAM stack,
+  # which NixOS ships with nullok on pam_unix. sab's password is imperative
+  # state (mutableUsers), so if it were ever cleared a bare Enter would
+  # unlock the screen with no YubiKey. The old swaylock stack had no nullok;
+  # keep that property. TTY logins with a set password are unaffected.
+  # (mkForce: nixpkgs' pam module sets true for login unconditionally.)
+  security.pam.services.login.allowNullPassword = lib.mkForce false;
 
   # Authorize zanoza's herdr-relay key so the relay can poll herdr on mz over
   # SSH non-interactively (BatchMode, no agent → uses zanoza:~/.ssh/id_ed25519).
