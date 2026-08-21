@@ -260,6 +260,11 @@ must self-log.
 Upstream docs are not a source here: `docs.noctalia.dev/…/configuration/hooks/`
 is HTTP 404 and the IPC page documents no environment variables.
 
+*(Adopted 2026-08-21: a `wallpaper_changed` hook — the one event that both
+fires reliably and carries env vars — maintains stable
+`~/.local/state/noctalia/wallpaper-<connector>` / `wallpaper-current` symlinks
+for consumers outside the shell.)*
+
 ## 6. Cheap wins not yet taken
 
 **`custom_button` bar widgets.** A real widget type
@@ -325,6 +330,9 @@ writes `config.toml` (`nix/home-module.nix:118`), so a plain
 `[include].files` pulls in more, with the including file winning
 (`config_merge.cpp:124-127`), and `[include].autoload = false` in any root turns
 the directory opt-in — a profile switch, which fits the `colorSource` A/B.
+*(Adopted 2026-08-21: the module grew an `overrides` option writing a
+build-validated `zz-overrides.toml`, with its own X-Restart-Trigger; hand-
+dropped `zz-*.toml` files still layer with no rebuild.)*
 
 **`wallpaper.transition` defaults to all six** (`fade wipe disc stripes zoom
 honeycomb`, one picked per change) at `transition_duration = 1500`. Correction:

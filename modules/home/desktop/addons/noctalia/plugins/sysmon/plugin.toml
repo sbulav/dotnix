@@ -20,9 +20,17 @@ tags        = ["system"]
 id    = "meter"
 entry = "widget.luau"
 
+  # A select, not a free string: the settings schema validates the value
+  # against the option list, so a typo'd stat fails loudly instead of
+  # silently rendering cpu under the wrong label.
   [[widget.setting]]
   key             = "stat"
-  type            = "string"
+  type            = "select"
   label_key       = "settings.stat.label"
   description_key = "settings.stat.description"
   default         = "cpu"
+  options = [
+    { value = "cpu", label_key = "settings.stat.option.cpu" },
+    { value = "temp", label_key = "settings.stat.option.temp" },
+    { value = "ram", label_key = "settings.stat.option.ram" },
+  ]

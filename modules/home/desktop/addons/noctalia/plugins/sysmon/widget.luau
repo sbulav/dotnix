@@ -11,8 +11,19 @@ local GLYPH = {
   temp = "cpu-temperature",
   ram = "memory",
 }
+local NAME = {
+  cpu = "CPU usage",
+  temp = "CPU temperature",
+  ram = "RAM used",
+}
 
-barWidget.setGlyph(GLYPH[stat] or GLYPH.cpu)
+-- The stat setting is a select in plugin.toml, so the settings schema
+-- constrains it — this catches a hand-edited config, loudly instead of
+-- silently rendering cpu under the wrong label.
+local valid = GLYPH[stat] ~= nil
+barWidget.setGlyph(valid and GLYPH[stat] or "alert-triangle")
+
+noctalia.setUpdateInterval(2000)
 
 local function round(x)
   return math.floor(x + 0.5)
@@ -23,9 +34,16 @@ local function gib(mb)
 end
 
 function update()
-  noctalia.setUpdateInterval(2000)
+  if not valid then
+    barWidget.setText("?")
+    barWidget.setTooltip({ { key = "sysmon", value = "unknown stat '" .. stat .. "'" } })
+    return
+  end
   local stats = noctalia.systemStats()
   if stats == nil then
+    -- render the outage instead of freezing the last sample on screen
+    barWidget.setText("--")
+    barWidget.setTooltip({ { key = NAME[stat], value = "sampler unavailable" } })
     return
   end
 

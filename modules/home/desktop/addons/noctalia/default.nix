@@ -24,16 +24,21 @@ let
   # in this repo is a template: the mic source match and the absolute tool
   # paths are baked in here so the runtime needs nothing from home.packages
   # and survives PATH-less systemd activation. plugins/sysmon/ ships as-is.
+  # @SOURCE_MATCH@ lands inside a Luau double-quoted string, so it gets Luau
+  # string escaping (backslashes and quotes) — escapeShellArg alone only
+  # protects the substituteInPlace command line, not the target syntax. A
+  # regex like AKG\.C44 would otherwise parse as a bad escape sequence.
+  luauSourceMatch = escape [ "\\" "\"" ] cfg.micVuMeter.sourceMatch;
   pluginSource = pkgs.runCommand "noctalia-plugins-dotnix" { } ''
     mkdir -p $out
     cp -r ${./plugins/mic_vu} $out/mic_vu
     cp -r ${./plugins/sysmon} $out/sysmon
     chmod -R u+w $out
     substituteInPlace $out/mic_vu/plugin.toml \
-      --replace-fail '@SOURCE_MATCH@' ${escapeShellArg cfg.micVuMeter.sourceMatch} \
       --replace-fail '@MIC_CTL@' '${micCtl}/bin/akg-mic-ctl' \
       --replace-fail '@PAVUCONTROL@' '${pkgs.pavucontrol}/bin/pavucontrol'
     substituteInPlace $out/mic_vu/service.luau \
+      --replace-fail '@SOURCE_MATCH@' ${escapeShellArg luauSourceMatch} \
       --replace-fail '@PW_CAT@' '${pkgs.pipewire}/bin/pw-cat' \
       --replace-fail '@PACTL@' '${pkgs.pulseaudio}/bin/pactl' \
       --replace-fail '@OD@' '${pkgs.coreutils}/bin/od' \
@@ -51,6 +56,7 @@ let
       libnotify
       gawk
       coreutils
+      util-linux # flock
     ];
     text = ''
       set -uo pipefail
@@ -61,6 +67,21 @@ let
       # like mako), so keep the printed notification id around and replace
       # the previous toast instead of stacking one per scroll notch.
       idfile="''${XDG_RUNTIME_DIR:-/tmp}/akg-mic-ctl.notify-id"
+
+      # A fast scroll fires several instances at once; unserialized they race
+      # the id file (each reads the pre-burst id, so toasts stack anyway) and
+      # interleave their pactl steps. First-come order, cheap to hold.
+      exec 9> "$idfile.lock"
+      flock -w 2 9 || true
+
+      notify_toast() {
+        local title="$1" body="$2" icon="$3" prev
+        local -a args
+        prev=$(cat "$idfile" 2>/dev/null || true)
+        args=(-t "$timeout" -i "$icon" -p)
+        if [[ -n "$prev" ]]; then args+=(-r "$prev"); fi
+        notify-send "''${args[@]}" "$title" "$body" > "$idfile" || true
+      }
 
       # writeShellApplication runs under errexit: every pactl that may fail
       # (mic unplugged) needs an explicit fallback or the click dies silently.
@@ -75,7 +96,25 @@ let
         | gawk -v m=${escapeShellArg cfg.micVuMeter.sourceMatch} \
             '$2 !~ /[.]monitor$/ && $2 ~ m { print $2; exit }' \
         || true)
-      if [ -z "$src" ]; then src="@DEFAULT_SOURCE@"; fi
+      # No fallback to the default source: the meter face shows "no mic", so
+      # a click must not mute or regain whatever other source happens to be
+      # the default (webcam mic). Say so and stop.
+      if [ -z "$src" ]; then
+        notify_toast "🎤 Mic not found" \
+          "no source matches ${cfg.micVuMeter.sourceMatch}" \
+          "microphone-sensitivity-muted"
+        exit 0
+      fi
+
+      # Mutations race hot-unplug; on failure surface the loss instead of
+      # letting errexit kill the click silently.
+      mutate() {
+        if ! pactl "$@" 2>/dev/null; then
+          notify_toast "🎤 Mic lost" "$src vanished mid-action" \
+            "microphone-sensitivity-muted"
+          exit 0
+        fi
+      }
 
       read_state() {
         local vol muted
@@ -90,39 +129,32 @@ let
       }
 
       notify_state() {
-        local title body icon vol muted prev
-        local -a args
+        local vol muted
         read -r vol muted < <(read_state)
         if [[ "$muted" == "1" ]]; then
-          icon="microphone-sensitivity-muted"
-          title="🎤 Mic muted"
-          body="gain ''${vol}% (no signal)"
+          notify_toast "🎤 Mic muted" "gain ''${vol}% (no signal)" \
+            "microphone-sensitivity-muted"
         else
-          icon="microphone-sensitivity-high"
-          title="🎤 Mic active"
-          body="gain ''${vol}%"
+          notify_toast "🎤 Mic active" "gain ''${vol}%" \
+            "microphone-sensitivity-high"
         fi
-        prev=$(cat "$idfile" 2>/dev/null || true)
-        args=(-t "$timeout" -i "$icon" -p)
-        if [[ -n "$prev" ]]; then args+=(-r "$prev"); fi
-        notify-send "''${args[@]}" "$title" "$body" > "$idfile" || true
       }
 
       case "$action" in
         mute)
-          pactl set-source-mute "$src" toggle
+          mutate set-source-mute "$src" toggle
           notify_state
           ;;
         vol-up)
-          pactl set-source-volume "$src" +5%
+          mutate set-source-volume "$src" +5%
           read -r vol _ < <(read_state)
           if [ "''${vol:-0}" -gt 100 ]; then
-            pactl set-source-volume "$src" 100%
+            mutate set-source-volume "$src" 100%
           fi
           notify_state
           ;;
         vol-down)
-          pactl set-source-volume "$src" -5%
+          mutate set-source-volume "$src" -5%
           notify_state
           ;;
         status)
@@ -207,6 +239,35 @@ let
     id:
     assert capsuleGroups ? ${id};
     "group:${id}";
+
+  # Stable pointers to the live wallpaper for consumers outside the shell
+  # (scripts, screenshot tooling, anything that would otherwise parse the
+  # sidecar). wallpaper_changed is one of only four hook events that carry
+  # env vars, and it fires once per changed output. Hooks run under
+  # `/bin/sh -lc` — a login shell, not fish — with stdio discarded, so the
+  # script must be self-contained and self-evidently cheap.
+  wallpaperChangedHook = pkgs.writeShellScript "noctalia-wallpaper-changed" ''
+    set -eu
+    dir="''${XDG_STATE_HOME:-$HOME/.local/state}/noctalia"
+    mkdir -p "$dir"
+    ln -sfn "$NOCTALIA_WALLPAPER_PATH" "$dir/wallpaper-$NOCTALIA_WALLPAPER_CONNECTOR"
+    ln -sfn "$NOCTALIA_WALLPAPER_PATH" "$dir/wallpaper-current"
+  '';
+
+  # Config-directory layering: every *.toml directly in ~/.config/noctalia/
+  # is a merge root, applied in filename sort order with later files winning
+  # (config_service.cpp:381) — zz- sorts after config.toml, so this root
+  # overrides it at noctalia's own merge. Same build-time validation as the
+  # upstream module gives config.toml.
+  tomlFormat = pkgs.formats.toml { };
+  overridesFile =
+    let
+      raw = tomlFormat.generate "noctalia-zz-overrides.toml" cfg.overrides;
+    in
+    pkgs.runCommand "noctalia-zz-overrides-validated" { } ''
+      ${getExe config.programs.noctalia.package} config validate ${raw}
+      cp ${raw} $out
+    '';
 
   hiddenAutostart = ''
     [Desktop Entry]
@@ -434,6 +495,13 @@ let
     notification = {
       enable_daemon = true;
       layer = "overlay";
+      # Frosted like the bar, not the near-solid 0.97 default. The Hyprland
+      # layer rule already blurs the noctalia-notification namespace, so what
+      # shows through the card is blur, not raw desktop — text stays legible
+      # well below the opacity the plain default needs. Effective only while
+      # the GUI has never written [notification] into the sidecar (it hasn't;
+      # this table is deliberately not pruned).
+      background_opacity = 0.65;
     };
 
     osd = {
@@ -462,6 +530,14 @@ let
       gpu_poll_seconds = 0;
       disk_poll_seconds = 0;
     };
+
+    # The one hook worth having. wallpaper_changed both fires reliably
+    # (colors_changed over-fires — noctalia#3814) and carries env vars; the
+    # script keeps stable symlinks under ~/.local/state/noctalia/:
+    # wallpaper-<connector> per output plus wallpaper-current, where the last
+    # output to change wins. Seed table like the rest — not pruned, so a hook
+    # edited in the settings GUI outranks this one.
+    hooks.wallpaper_changed = [ "${wallpaperChangedHook}" ];
 
     # Slice 4: named widget instances referenced from bar.main below. The
     # sysmon instances use the sab/sysmon plugin rather than the builtin
@@ -680,6 +756,24 @@ in
       Validated at build time by `noctalia config validate`.
     '';
 
+    overrides = mkOpt (attrsOf anything) { } ''
+      A second noctalia config root, written to
+      ~/.config/noctalia/zz-overrides.toml and validated at build time.
+      Every *.toml directly in the config directory is a merge root, applied
+      in filename sort order with later files winning — so these values beat
+      config.toml (defaults + `settings`) at noctalia's own runtime merge,
+      with arrays replaced wholesale. The sidecar settings.toml still outranks
+      both outside the pruned tables.
+
+      Differs from `settings` in when the merge happens: `settings` is folded
+      into config.toml at eval time, `overrides` stays a separate file the
+      shell layers at startup — useful for values you want legible as "this
+      host deviates here" rather than fused into the big table, and for A/B
+      experiments: a hand-dropped ~/.config/noctalia/zz-test.toml layers the
+      same way with no rebuild at all (the directory is real, only the
+      individual files are store symlinks).
+    '';
+
     colorSource =
       mkOpt
         (enum [
@@ -734,6 +828,9 @@ in
     # silently leave the workstation without idle-lock.
     systemd.user.services.noctalia = {
       Unit.StartLimitIntervalSec = 0;
+      Unit.X-Restart-Triggers = optional (
+        cfg.overrides != { }
+      ) "${config.xdg.configFile."noctalia/zz-overrides.toml".source}";
       Service.RestartSec = 2;
       # Blunt the one builtin-template undo hook that costs more than a log
       # line (see [theme.templates] above for why the sweep cannot be turned
@@ -766,6 +863,10 @@ in
     # `network` and `bluetooth` capsules. XDG spec: Hidden=true in the
     # higher-priority ~/.config/autostart means "treat as absent".
     xdg.configFile = {
+      # The extra config root (see the overrides option). Upstream's
+      # X-Restart-Triggers only watches config.toml and the palettes, so the
+      # unit gets its own trigger for this file below.
+      "noctalia/zz-overrides.toml" = mkIf (cfg.overrides != { }) { source = overridesFile; };
       "autostart/nm-applet.desktop".text = hiddenAutostart;
     }
     # waybar's module carries the same blueman mask, and xdg.configFile.<n>.text

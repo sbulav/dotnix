@@ -17,7 +17,9 @@
 --
 -- @PW_CAT@ / @PACTL@ / @OD@ / @GAWK@ are store paths substituted by Nix.
 
-local match = tostring(noctalia.getConfig("source_match") or "")
+-- Baked by Nix as a Luau-escaped literal — the same value akg-mic-ctl greps
+-- for, and deliberately not a GUI-editable setting (see plugin.toml).
+local match = "@SOURCE_MATCH@"
 local quotedMatch = "'" .. match:gsub("'", "'\\''") .. "'"
 
 -- Analog face, ported from the waybar meter: 60x36 canvas, arc segments at
@@ -71,9 +73,11 @@ local function writeFace(svg)
     return
   end
   -- write-then-rename: the file watcher fires on IN_MOVED_TO, so the widget
-  -- never reads a half-written frame.
-  noctalia.writeFile(tmpPath, svg)
-  noctalia.renameFile(tmpPath, svgPath)
+  -- never reads a half-written frame. Rename only a fully-written temp —
+  -- a failed/partial write (disk full) must not clobber the last good face.
+  if noctalia.writeFile(tmpPath, svg) then
+    noctalia.renameFile(tmpPath, svgPath)
+  end
 end
 
 noctalia.state.set("vu", { status = "nosrc", level = 0 })
@@ -102,6 +106,7 @@ while :; do
         was_muted = -1    # force first emit
         last     = -1
         poll     = 0
+        confirm  = 0
       }
       {
         v = $1; if (v < 0) v = -v
@@ -112,7 +117,7 @@ while :; do
           poll++
           if (poll >= 10) {
             poll = 0
-            # poll the matched source, not @DEFAULT_SOURCE@ - they can differ
+            # poll the matched source, not the default source - they can differ
             cmd = pactl " get-source-mute '\''" src "'\'' 2>/dev/null"
             line = ""
             cmd | getline line
@@ -145,6 +150,17 @@ while :; do
             else          printf "%.3f\n", needle
             fflush()
             was_muted = is_muted
+            last = needle
+            confirm = 3
+          } else if (confirm > 0 && --confirm == 0) {
+            # trailing confirm frame, 3 windows (~300 ms) after a burst ends:
+            # the widget-side file watcher drops rename events that land
+            # < 100 ms after the previous one, so a burst-final frame can be
+            # lost and freeze the needle. One duplicate at a guaranteed-safe
+            # distance repaints the true resting face.
+            if (is_muted) print "MUTED"
+            else          printf "%.3f\n", needle
+            fflush()
             last = needle
           }
 

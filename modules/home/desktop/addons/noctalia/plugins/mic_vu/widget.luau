@@ -6,6 +6,10 @@
 local width = tonumber(noctalia.getConfig("meter_width")) or 46
 local height = math.floor(width * 0.6 + 0.5) -- face is 60x36
 
+-- Set once at load (the runtime consumes load-chunk patches too); update()
+-- is only a slow tooltip fallback — state.watch does the real-time work.
+noctalia.setUpdateInterval(5000)
+
 local vu = noctalia.state.get("vu") or { status = "nosrc", level = 0 }
 
 local function refreshTooltip()
@@ -38,6 +42,5 @@ noctalia.state.watch("vu", function(value)
 end)
 
 function update()
-  noctalia.setUpdateInterval(5000)
   refreshTooltip()
 end
