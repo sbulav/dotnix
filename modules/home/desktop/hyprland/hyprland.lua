@@ -56,6 +56,12 @@ hl.config({
 		no_hardware_cursors = false,
 		enable_hyprcursor = true,
 		sync_gsettings_theme = true,
+		-- The pointer never moves on its own. Every focus-driven warp goes
+		-- through warpCursorTo and this kills them all: clicking an app icon
+		-- in noctalia's taskbar (dispatch focuswindow -> warp to window
+		-- middle), xdg-activation via focus_on_activate below, and keyboard
+		-- movefocus/focuswindow binds.
+		no_warps = true,
 	},
 	decoration = {
 		rounding = 10,
@@ -91,6 +97,20 @@ hl.device({
 -- Layer rules
 ----------------------------------------------------------------
 hl.layer_rule({ match = { namespace = "waybar" }, no_anim = true })
+
+-- noctalia surfaces: frosted instead of transparent. The bar runs
+-- background_opacity 0.29; blur alone does nothing there without
+-- ignore_alpha, since Hyprland skips blur behind fully-transparent pixels.
+-- Namespace is always "noctalia-bar-<name>" (never bare "noctalia-bar");
+-- the launcher surfaces as "noctalia-panel". Values are Hyprland regexes,
+-- not Lua patterns.
+hl.layer_rule({
+	match = { namespace = "^noctalia-(bar-.+|notification|dock|panel|attached-panel|osd)$" },
+	blur = true,
+	ignore_alpha = 0.5,
+	no_anim = true,
+})
+hl.layer_rule({ match = { namespace = "^noctalia-backdrop$" }, no_anim = true })
 
 ----------------------------------------------------------------
 -- Animations
