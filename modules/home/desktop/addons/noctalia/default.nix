@@ -181,6 +181,33 @@ let
     }
     // optionalAttrs wallpaperMode { inherit foreground; };
 
+  # Single source of truth for the boxed widget sets: capsule_group is derived
+  # from this attrset and the lanes reference it through groupToken, so a
+  # renamed or removed group fails at eval instead of silently unboxing. The
+  # derived array's order is definitional only — bar.cpp looks groups up by
+  # id, and the lane token decides where the box renders.
+  capsuleGroups = {
+    stats = {
+      foreground = "primary";
+      members = [
+        "sysmon-cpu"
+        "sysmon-ram"
+        "sysmon-temp"
+      ];
+    };
+    net = {
+      foreground = "secondary";
+      members = [
+        "bluetooth"
+        "network"
+      ];
+    };
+  };
+  groupToken =
+    id:
+    assert capsuleGroups ? ${id};
+    "group:${id}";
+
   hiddenAutostart = ''
     [Desktop Entry]
     Hidden=true
@@ -290,9 +317,11 @@ let
   defaultSettings = {
     shell = {
       telemetry_enabled = false;
-      # Trial runs on NVIDIA: keep the shared GL context (default); flip to
-      # false if shell restarts kill Chromium/Electron GPU procs (noctalia#3926).
-      shared_gl_context = true;
+      # shared_gl_context is left at its compiled default (true) — declaring it
+      # here read as an NVIDIA workaround but was a no-op. Setting it to false
+      # is the escape hatch if shell restarts ever kill Chromium/Electron GPU
+      # procs (noctalia#3926).
+      #
       # Launch apps through uwsm like every other launch path in this repo
       # (Hyprland binds, the old rofi drun-command) so they land in their own
       # uwsm-managed app scope instead of noctalia's cgroup.
@@ -361,6 +390,13 @@ let
     wallpaper = {
       enabled = true;
       default.path = toString config.custom.desktop.addons.wallpaper;
+      # The default is all six transitions with one picked at random per
+      # change; narrow to the cheapest on the 3840×2560 output. Key is
+      # `transition`, singular, despite holding a list — and seed-only like
+      # the rest of wallpaper.* (GUI-owned, never pruned): the sidecar holds
+      # no transition key today, but one GUI tweak of the transition set
+      # pins it there and this value stops mattering.
+      transition = [ "fade" ];
     };
     # Slice 5: the shell owns locking and idle (PAM stack "login" — ships
     # with NixOS, no pam.d registration needed). Survived the 10x manual
@@ -404,6 +440,27 @@ let
       position = "top_right";
       # mz is a desktop: no backlight, ddcutil disabled — drop brightness OSD.
       kinds.brightness = false;
+    };
+
+    # Sampler cadence. A poll of 0 disables that metric entirely — no
+    # sampling, no wakeups (non-zero values are clamped to [1, 120] at
+    # consumption). Nothing on this host displays a gpu or disk stat, and
+    # killing the gpu poll also guards against noctalia#3603 (sysmon keeping
+    # the NVIDIA dGPU awake) should a panel ever surface one. cpu / memory /
+    # network stay at their 2/2/3 s defaults — the sysmon plugin redraws at
+    # 2 s, matching. Like control_center.shortcuts this table is NOT pruned
+    # from the sidecar, so it is a seed the settings GUI can outrank.
+    #
+    # cpu_temp_sensor_path is deliberately NOT pinned: a configured value must
+    # be a literal existing temp*_input file (readConfiguredSensor rejects
+    # anything else), and the hwmon index is not boot-stable here — k10temp
+    # was hwmon4 under waybar and hwmon2 on 2026-08-21. The autodetect scans
+    # by driver *name* and ranks k10temp/Tctl first (cpu_temp_sensor.cpp,
+    # knownDriverPriority = 0), so it lands on the right sensor every boot;
+    # a pinned path would break at random ones.
+    system.monitor = {
+      gpu_poll_seconds = 0;
+      disk_poll_seconds = 0;
     };
 
     # Slice 4: named widget instances referenced from bar.main below. The
@@ -474,6 +531,23 @@ let
           tooltip_format = "{:%A, %d %B %Y}";
         };
 
+        # One-click palette reshuffle — with colorSource = "wallpaper" the
+        # whole bar re-tints from the new image. Action values are the bar's
+        # own grammar: a bare word is an in-process IPC verb (`exec …` would
+        # be a shell command), resolved at bind time rather than by `noctalia
+        # config validate` — a typo'd verb builds fine and only shows up as a
+        # runtime log line. Glyph names are Tabler icons plus noctalia's
+        # curated aliases; "shuffle" is the arrows-shuffle alias.
+        wallpaper-shuffle = {
+          type = "custom_button";
+          glyph = "shuffle";
+          tooltip = "Random wallpaper";
+          actions = {
+            left = "wallpaper-random";
+            right = "panel-toggle wallpaper";
+          };
+        };
+
         sysmon-cpu = {
           type = "sab/sysmon:meter";
           stat = "cpu";
@@ -497,7 +571,13 @@ let
     ) widgetAccents;
 
     # Declarative plugin state: no git sources, no background updates — the
-    # only source is the Nix store path built above.
+    # only source is the Nix store path built above. Declaring ANY explicit
+    # [[plugins.source]] replaces the two seeded git catalogs (official →
+    # noctalia-dev/official-plugins, community → noctalia-dev/community-plugins;
+    # config_service.cpp seeds them only when the TOML declares no array), so
+    # the plugin browser in the settings GUI is empty BY DESIGN — hermetic
+    # Nix-only plugins. Re-declare a git source alongside this one to get the
+    # catalogs back.
     plugins = {
       auto_update = "none";
       enabled = [ "sab/sysmon" ] ++ optional cfg.micVuMeter.enable "sab/mic_vu";
@@ -535,17 +615,11 @@ let
       # Members give up their own capsule_* (bar.cpp hands them the group's),
       # but per-widget `color` survives — so theme mode keeps a neon hue per
       # module over a neutral box, and wallpaper mode tints the whole box.
-      capsule_group = [
-        (mkCapsuleGroup "stats" "primary" [
-          "sysmon-cpu"
-          "sysmon-ram"
-          "sysmon-temp"
-        ])
-        (mkCapsuleGroup "net" "secondary" [
-          "bluetooth"
-          "network"
-        ])
-      ];
+      # Definitions live once in capsuleGroups above; lanes reference them
+      # through groupToken.
+      capsule_group = mapAttrsToList (
+        id: group: mkCapsuleGroup id group.foreground group.members
+      ) capsuleGroups;
       # Near-waybar layout: workspaces + window title on the left, and the
       # old modules-right set (language, mic VU, volume, stats cpu/ram/temp,
       # bluetooth, network, tray, power). Launcher / wallpaper / media /
@@ -567,15 +641,21 @@ let
       # volume are not boxed together: the meter draws a pre-coloured SVG and
       # cannot take a group foreground, and in wallpaper mode a third group
       # would have to reuse `tertiary` — the keyboard_layout hue.
+      # wallpaper-shuffle and theme_mode (a builtin whose left-click already
+      # defaults to theme-mode-toggle) sit with the controls cluster; neither
+      # gets a widgetAccents entry, so both keep the on-surface role in either
+      # color mode.
       end = [
         "keyboard_layout"
       ]
       ++ optional cfg.micVuMeter.enable "mic-vu"
       ++ [
         "volume"
-        "group:stats"
-        "group:net"
+        (groupToken "stats")
+        (groupToken "net")
         "tray"
+        "wallpaper-shuffle"
+        "theme_mode"
         "control-center"
         "notifications"
         "session"

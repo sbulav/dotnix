@@ -42,7 +42,9 @@ only when the TOML declares no explicit array.
 
 **`shell.shared_gl_context = true` is a no-op.** `config_types.h:1100` is
 `bool sharedGlContext = true;` — that is already the default. Harmless, but it is
-not the NVIDIA workaround it reads as.
+not the NVIDIA workaround it reads as. *(Adopted 2026-08-21: the key was dropped
+from the module; a comment records `false` as the escape hatch for
+noctalia#3926.)*
 
 **The declared `[[plugins.source]]` has silently dropped both plugin catalogs.**
 `config_service.cpp:1694` seeds defaults only when the TOML declares no explicit
@@ -51,7 +53,8 @@ array, and `config_types.cpp:59-68` returns two git sources — `official` →
 The single `kind = "path"` source replaces both, so the plugin browser is empty.
 This may be the intent of a hermetic Nix-built plugin dir with
 `auto_update = "none"`; it is recorded here because it is not written down
-anywhere as deliberate.
+anywhere as deliberate. *(Adopted 2026-08-21: now documented as deliberate in a
+comment on `plugins.source` in the module.)*
 
 **The sidecar's `wallpaper_scheme = "vibrant"` is a GUI choice, not the default.**
 `config_types.h:1510` defaults to `m3-content`. `vibrant` is one of five custom
@@ -260,30 +263,59 @@ is HTTP 404 and the IPC page documents no environment variables.
 ## 6. Cheap wins not yet taken
 
 **`custom_button` bar widgets.** A real widget type
-(`src/shell/bar/widgets/custom_button_widget_definition.cpp`) taking `glyph`,
-`tooltip` and `command`. Turns any unbound IPC verb — `theme-mode-toggle`,
+(`src/shell/bar/widgets/custom_button_widget_definition.cpp`) taking `glyph`
+(a Tabler icon name or curated alias, `glyph_registry.cpp`), `label`, `tooltip`
+and `custom_image`. ~~`command`~~ — correction: the `command`/`left_command`
+keys are v4 leftovers, auto-migrated away (`config_migrations.cpp:279-329`);
+clicks live in the shared `[widget.<name>.actions]` gesture table (`left`,
+`right`, `middle`, `back`, `forward`, `scroll_*`) whose values are **bare IPC
+verbs** (`left = "wallpaper-random"`), `exec <cmd>`, or `none`. Verbs are
+resolved at bind time, not by `noctalia config validate` — a typo is a runtime
+log line only. Turns any unbound IPC verb — `theme-mode-toggle`,
 `templates-apply`, `wallpaper-random`, `panel-toggle launcher`,
 `effects-profile-set`, `taskbar-cycle` — into a bar button in Nix, with no
-plugin. Highest capability per line on this list.
+plugin. Highest capability per line on this list. *(Adopted 2026-08-21: a
+`wallpaper-shuffle` button (left `wallpaper-random`, right
+`panel-toggle wallpaper`) plus the builtin `theme_mode` widget — whose
+left-click already defaults to `theme-mode-toggle`, so no custom_button was
+needed for it — joined the end lane in
+`modules/home/desktop/addons/noctalia/default.nix`.)*
 
 **`[system.monitor]` poll intervals.** `config_types.h:1163-1200`:
 `kDisabledPollSeconds = 0.0F`, non-zero values clamped to `[1, 120]`, comment
 *"A poll value of 0 disables that metric entirely (no sampling, no wakeups)"*.
 Defaults are cpu 2 / memory 2 / gpu 5 / network 3 / disk 10. GPU probes only run
 while something displays a GPU stat, so an idle machine does not wake the dGPU —
-but see #3603. Pin `cpu_temp_sensor_path` rather than letting it probe.
+but see #3603. ~~Pin `cpu_temp_sensor_path` rather than letting it probe.~~
+Correction: **do not pin it on this host.** A pinned value must be a literal,
+existing `temp*_input` file (`cpu_temp_sensor.cpp`, `readConfiguredSensor` —
+no globbing, silent fallback to autodetect when absent), and the hwmon index is
+not boot-stable on mz: k10temp was `hwmon4` when the waybar config was written,
+`hwmon2` on 2026-08-21. Autodetect ranks by *driver name* — k10temp/Tctl gets
+`knownDriverPriority` 0 — so the probe deterministically lands on the right
+sensor every boot; the per-poll scan is a handful of sysfs reads every cpu poll.
+(The same instability means waybar's hard-coded `hwmon4/temp1_input` path is
+stale.) *(Adopted 2026-08-21: `gpu_poll_seconds = 0` and `disk_poll_seconds = 0`
+seeded in the module; cpu/memory/network left at defaults, sensor path left on
+autodetect.)*
 
 **Hyprland layer rules for noctalia surfaces.** With
 `bar.main.background_opacity = 0.29`, `blur` plus `ignore_alpha 0.5` on
 namespace `^noctalia-(bar-.+|notification|dock|panel|attached-panel|osd)$` is the
 difference between transparent and frosted; `no_anim` removes Hyprland's layer
 animation from every panel. There is a separate `^noctalia-backdrop` namespace.
+*(Adopted 2026-08-21: both rules added to
+`modules/home/desktop/hyprland/hyprland.lua`.)*
 
 **Derive `capsule_group` from the widget lists.** The two groups
 (`group:stats`, `group:net`) are currently declared in two places; filtering
 `group:`-prefixed entries out of the start/center/end lists and mapping them to
 group definitions removes that drift class. The same shape generalises to
 per-monitor bars, which matters given DP-1 3840×2560 against HDMI-A-1 1080p.
+*(Adopted 2026-08-21, inverted: groups are declared once in a `capsuleGroups`
+attrset; `capsule_group` is mapped from it and lanes reference groups through
+`groupToken`, which `assert`s the id exists — a renamed group now fails at eval
+instead of silently unboxing.)*
 
 **Config-directory layering.** Every `*.toml` directly in `~/.config/noctalia/`
 is a root, merged in filename sort order with later files winning
@@ -294,9 +326,14 @@ writes `config.toml` (`nix/home-module.nix:118`), so a plain
 (`config_merge.cpp:124-127`), and `[include].autoload = false` in any root turns
 the directory opt-in — a profile switch, which fits the `colorSource` A/B.
 
-**`wallpaper.transitions` defaults to all six** (`fade wipe disc stripes zoom
-honeycomb`, one picked per change) at `transition_duration_ms = 1500`. Narrowing
-to `["fade"]` is worth it on the 3840×2560 output.
+**`wallpaper.transition` defaults to all six** (`fade wipe disc stripes zoom
+honeycomb`, one picked per change) at `transition_duration = 1500`. Correction:
+the keys are `transition` (singular, array of enums) and `transition_duration`
+(no `_ms`; float ms, range [100, 30000]) — `config_schema.cpp:1591-1594`.
+Narrowing to `["fade"]` is worth it on the 3840×2560 output. *(Adopted
+2026-08-21: seeded in the module's `wallpaper` table; live because the sidecar
+carries no `transition` key today — wallpaper.* stays GUI-owned, no prune
+change.)*
 
 ## 7. Plugins
 
