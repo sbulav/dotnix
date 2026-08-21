@@ -131,7 +131,7 @@ in
     apps = {
       obsidian = {
         enable = true;
-        useWebdavSyncFork = true;
+        syncEngine = enabled;
       };
       ktalk = enabled;
       libreoffice = enabled;

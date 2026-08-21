@@ -14,11 +14,21 @@ let
 
   cfg = config.custom.apps.obsidian;
 
-  webdavSyncPlugin = pkgs.fetchFromGitHub {
-    owner = "sbulav";
-    repo = "obsidian-webdav-sync";
-    rev = "43a32ecb6b156b3ed87efd18f309b7f15fbb6d2d";
-    hash = "sha256-vy9yvPFTnPmVIDM+thhKli3/yOfFdbEKo45g0GJ99Uk=";
+  syncEngineVersion = "3.1.0";
+  syncEngineBaseUrl = "https://github.com/hesprs/sync-engine/releases/download/${syncEngineVersion}";
+  syncEnginePlugin = {
+    manifest = pkgs.fetchurl {
+      url = "${syncEngineBaseUrl}/manifest.json";
+      hash = "sha256-/aJoX22+xQ34+j56NpyEyalWIGtE53YazBZYMSfh8N8=";
+    };
+    main = pkgs.fetchurl {
+      url = "${syncEngineBaseUrl}/main.js";
+      hash = "sha256-tMhn6N++7mKGXE5cfUPxRUqNxsSG79luoYyVZghPAvo=";
+    };
+    styles = pkgs.fetchurl {
+      url = "${syncEngineBaseUrl}/styles.css";
+      hash = "sha256-c9FwSmJZfrmWWGL+VbjguOVVla1y4r2zaWMN3KrVGLo=";
+    };
   };
 in
 {
@@ -31,7 +41,7 @@ in
       description = "Path to the Obsidian vault relative to the home directory.";
     };
 
-    useWebdavSyncFork = mkEnableOption "Use sbulav fork of WebDAV Sync plugin";
+    syncEngine.enable = mkEnableOption "Install the Sync Engine Obsidian plugin";
   };
 
   config = mkIf cfg.enable {
@@ -39,17 +49,17 @@ in
       obsidian
     ];
 
-    home.file = mkIf cfg.useWebdavSyncFork {
-      "${cfg.vaultRelativePath}/.obsidian/plugins/webdav-sync/manifest.json" = {
-        source = "${webdavSyncPlugin}/manifest.json";
+    home.file = mkIf cfg.syncEngine.enable {
+      "${cfg.vaultRelativePath}/.obsidian/plugins/sync-engine/manifest.json" = {
+        source = syncEnginePlugin.manifest;
         force = true;
       };
-      "${cfg.vaultRelativePath}/.obsidian/plugins/webdav-sync/main.js" = {
-        source = "${webdavSyncPlugin}/main.js";
+      "${cfg.vaultRelativePath}/.obsidian/plugins/sync-engine/main.js" = {
+        source = syncEnginePlugin.main;
         force = true;
       };
-      "${cfg.vaultRelativePath}/.obsidian/plugins/webdav-sync/styles.css" = {
-        source = "${webdavSyncPlugin}/styles.css";
+      "${cfg.vaultRelativePath}/.obsidian/plugins/sync-engine/styles.css" = {
+        source = syncEnginePlugin.styles;
         force = true;
       };
     };
