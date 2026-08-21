@@ -161,9 +161,13 @@ let
       # have no noctalia analogue and ride with the rofi addon.
       noctaliaOwned = config.custom.desktop.addons.noctalia.enable;
       rofiEnabled = config.custom.desktop.addons.rofi.enable;
+      wlrWhichKeyEnabled = config.custom.desktop.addons."wlr-which-key".enable;
 
       appBindings =
-        optionalString (kb.terminal != null) ''
+        optionalString (kb.menu != null && (noctaliaOwned || wlrWhichKeyEnabled)) ''
+          ${mkBind mainMod kb.menu (if noctaliaOwned then "exec, noctalia-menu" else "exec, wlr-which-key")}
+        ''
+        + optionalString (kb.terminal != null) ''
           ${mkBind mainMod kb.terminal "exec, wezterm"}
         ''
         + optionalString (kb.browser != null) ''
@@ -304,6 +308,7 @@ in
 
       terminal = mkOpt (types.nullOr types.str) "X" "Launch terminal keybinding";
       browser = mkOpt (types.nullOr types.str) "B" "Launch browser keybinding";
+      menu = mkOpt (types.nullOr types.str) "slash" "Command menu keybinding";
       launcher = mkOpt (types.nullOr types.str) "R" "App launcher keybinding";
       clipboard = mkOpt (types.nullOr types.str) "C" "Clipboard manager keybinding";
       passwords = mkOpt (types.nullOr types.str) "P" "Password manager keybinding";

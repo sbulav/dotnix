@@ -127,9 +127,6 @@ hl.animation({ leaf = "workspaces", enabled = true, speed = 6, bezier = "default
 -- Static keybindings (navigation, workspaces, media, mouse)
 ----------------------------------------------------------------
 
--- Which-key cheatsheet
-hl.bind(mainMod .. " + slash", hl.dsp.exec_cmd(uwsmApp .. "wlr-which-key"))
-
 -- Move focus with mainMod + arrow keys / hjkl
 for _, m in ipairs({
 	{ "left", "l" },

@@ -9,6 +9,7 @@ with lib;
 with lib.custom;
 let
   cfg = config.custom.desktop.addons.noctalia;
+  screenshotCfg = config.custom.desktop.addons.screenshot;
 
   # Staged takeover of the old seven-tool stack (issue #37). Surfaces the
   # shell does NOT own yet are pinned off here and flipped slice by slice:
@@ -374,6 +375,242 @@ let
     print("noctalia: dropped Nix-owned table(s) from settings.toml: "
           + ", ".join(removed))
   '';
+
+  noctaliaMenu = pkgs.writeShellApplication {
+    name = "noctalia-menu";
+    runtimeInputs = [
+      config.programs.noctalia.package
+      pkgs.hyprland
+      pkgs.libnotify
+    ];
+    text = ''
+      pidfile="''${XDG_RUNTIME_DIR:-/tmp}/noctalia-menu.pid"
+      if [[ -r $pidfile ]]; then
+        old_pid=$(<"$pidfile")
+        if [[ $old_pid =~ ^[0-9]+$ && -r /proc/$old_pid/comm && $(<"/proc/$old_pid/comm") == *noctalia-menu* ]] \
+          && kill -0 "$old_pid" 2>/dev/null; then
+          noctalia msg panel-close launcher >/dev/null
+          kill "$old_pid"
+          exit 0
+        fi
+      fi
+      printf '%s\n' "$$" >"$pidfile"
+      trap 'rm -f "$pidfile"' EXIT
+
+      pick() {
+        local prompt="$1" selected
+        shift
+        selected=$(printf '%s\n' "$@" | noctalia dmenu --prompt "$prompt") || true
+        printf '%s' "$selected"
+      }
+
+      show_apps() {
+        case "$(pick "Command Menu / Applications" \
+          $'  Terminal\tOpen WezTerm' \
+          $'󰈹  Browser\tOpen Firefox' \
+          $'󰀻  App Launcher\tSearch installed applications' \
+          $'󰅌  Clipboard\tBrowse clipboard history' \
+          $'  Settings\tOpen Noctalia settings')" in
+          *Terminal*) /run/current-system/sw/bin/uwsm-app -- wezterm ;;
+          *Browser*) /run/current-system/sw/bin/uwsm-app -- firefox ;;
+          *"App Launcher"*) noctalia msg panel-open launcher ;;
+          *Clipboard*) noctalia msg panel-open clipboard ;;
+          *Settings*) noctalia msg settings-open ;;
+          *) show_main ;;
+        esac
+      }
+
+      show_wezterm() {
+        case "$(pick "Cheatsheets / WezTerm" \
+          $'󰌌  Quick Select\tURLs, paths, hashes, and other matches' \
+          $'󰆏  Copy Mode\tKeyboard selection and search' \
+          $'  Search\tFind text in terminal history' \
+          $'  Split Panes\tCreate vertical or horizontal panes' \
+          $'󰊓  Zoom Pane\tToggle focused-pane zoom' \
+          $'󰁔  Navigation\tMove among panes and tabs')" in
+          *"Quick Select"*) notify-send -t 4000 "WezTerm: Quick Select" "Ctrl-B, o\nHighlights: URLs, paths, emails, IPs, git hashes, UUIDs\nType label to copy match to clipboard" ;;
+          *"Copy Mode"*) notify-send -t 4000 "WezTerm: Copy Mode" "Ctrl-B, x\nVim-like navigation: h/j/k/l, w/b, 0/$\nv = start selection, y = copy\n/ = search, n/N = next/prev match\nEsc or q = exit" ;;
+          *Search*) notify-send -t 4000 "WezTerm: Search" "Ctrl-Shift-F (default)\nType pattern, Enter to search\nCtrl-R = cycle match type (Regex/Case)\nCtrl-N/Ctrl-P = next/prev match\nEsc = close" ;;
+          *"Split Panes"*) notify-send -t 3000 "WezTerm: Split" "Ctrl-B, - or Ctrl-B, s = vertical\nCtrl-B, \\ or Ctrl-B, v = horizontal\nAlt-= / Alt-- also work" ;;
+          *"Zoom Pane"*) notify-send -t 3000 "WezTerm: Zoom" "Ctrl-B, z = toggle pane zoom" ;;
+          *Navigation*) notify-send -t 4000 "WezTerm: Navigation" "Ctrl-B, h/j/k/l = focus pane\nCtrl-B, Shift+H/J/K/L = resize pane\nCtrl-B, n/p = next/prev tab\nCtrl-B, 1-9 = go to tab\nCtrl-B, c = new tab\nCtrl-B, d = close pane" ;;
+          *) show_cheatsheets ;;
+        esac
+      }
+
+      show_window() {
+        case "$(pick "Command Menu / Windows" \
+          $'󰅖  Close Active\tClose the focused window' \
+          $'󰊓  Toggle Fullscreen\tFill the current monitor' \
+          $'󰹙  Toggle Floating\tSwitch between tiled and floating' \
+          $'󰆾  Toggle Pseudo-tile\tUse the window requested size' \
+          $'󰯌  Toggle Split\tChange the dwindle split direction' \
+          $'  Focus Left\tMove focus left' \
+          $'  Focus Right\tMove focus right' \
+          $'  Focus Up\tMove focus up')" in
+          *"Close Active"*) hyprctl dispatch killactive ;;
+          *"Toggle Fullscreen"*) hyprctl dispatch fullscreen ;;
+          *"Toggle Floating"*) hyprctl dispatch togglefloating ;;
+          *"Toggle Pseudo-tile"*) hyprctl dispatch pseudo ;;
+          *"Toggle Split"*) hyprctl dispatch togglesplit ;;
+          *"Focus Left"*) hyprctl dispatch movefocus l ;;
+          *"Focus Right"*) hyprctl dispatch movefocus r ;;
+          *"Focus Up"*) hyprctl dispatch movefocus u ;;
+          *) show_main ;;
+        esac
+      }
+
+      ${optionalString screenshotCfg.enable (
+        let
+          sc = screenshotCfg.commands;
+          annotateOption =
+            target: optionalString (sc.${target} ? annotate) " $'󰏫  Annotate\\tOpen in Satty before saving'";
+        in
+        ''
+          capture_target() {
+            local target="$1" title="$2" selection
+            case "$target" in
+              region) selection=$(pick "Screenshots / $title" $'󰅌  Copy to Clipboard\tCapture without creating a file' $'󰈔  Save to File\tWrite a timestamped PNG'${annotateOption "region"}) ;;
+              window) selection=$(pick "Screenshots / $title" $'󰅌  Copy to Clipboard\tCapture without creating a file' $'󰈔  Save to File\tWrite a timestamped PNG'${annotateOption "window"}) ;;
+              screen) selection=$(pick "Screenshots / $title" $'󰅌  Copy to Clipboard\tCapture without creating a file' $'󰈔  Save to File\tWrite a timestamped PNG'${annotateOption "screen"}) ;;
+            esac
+
+            case "$target:$selection" in
+              region:*"Copy to Clipboard"*) ${sc.region.clipboard} ;;
+              region:*"Save to File"*) ${sc.region.file} ;;
+              region:*Annotate*) ${sc.region.annotate or "true"} ;;
+              window:*"Copy to Clipboard"*) ${sc.window.clipboard} ;;
+              window:*"Save to File"*) ${sc.window.file} ;;
+              window:*Annotate*) ${sc.window.annotate or "true"} ;;
+              screen:*"Copy to Clipboard"*) ${sc.screen.clipboard} ;;
+              screen:*"Save to File"*) ${sc.screen.file} ;;
+              screen:*Annotate*) ${sc.screen.annotate or "true"} ;;
+              *) show_screenshot ;;
+            esac
+          }
+
+          show_screenshot() {
+            case "$(pick "Command Menu / Screenshots" \
+              $'󰩭  Region\tSelect an arbitrary area' \
+              $'  Window\tCapture the active window' \
+              $'󰹑  Full Screen\tCapture the complete desktop')" in
+              *Region*) capture_target region "Region" ;;
+              *Window*) capture_target window "Window" ;;
+              *"Full Screen"*) capture_target screen "Full Screen" ;;
+              *) show_main ;;
+            esac
+          }
+        ''
+      )}
+
+      show_recording() {
+        case "$(pick "Command Menu / Screen Recording" \
+          $'  Start or Toggle\tStart recording, or toggle the current recording' \
+          $'󰓛  Stop Recording\tFinish and save the current recording')" in
+          *"Start or Toggle"*) record-screen toggle ;;
+          *"Stop Recording"*) record-screen stop ;;
+          *) show_main ;;
+        esac
+      }
+
+      show_media() {
+        case "$(pick "Command Menu / Media" \
+          $'󰐎  Play/Pause\tToggle playback' \
+          $'󰒭  Next Track\tSkip forward' \
+          $'󰒮  Previous Track\tSkip backward')" in
+          *"Play/Pause"*) noctalia msg media toggle ;;
+          *"Next Track"*) noctalia msg media next ;;
+          *"Previous Track"*) noctalia msg media previous ;;
+          *) show_main ;;
+        esac
+      }
+
+      show_rg_help() {
+        case "$(pick "Cheatsheets / ripgrep" \
+          $'󰱼  Case Sensitivity\tInsensitive and smart-case searches' \
+          $'󰡎  Whole Word\tMatch complete words only' \
+          $'󰈙  File Type\tInclude or exclude known file types' \
+          $'󰀫  Glob\tFilter paths with glob patterns' \
+          $'󰅴  Literal Search\tDisable regular expressions')" in
+          *"Case Sensitivity"*) notify-send -t 4000 "rg: Case Insensitive" "rg -i pattern\nrg -s pattern  (smart case)" ;;
+          *"Whole Word"*) notify-send -t 3000 "rg: Whole Word" "rg -w pattern" ;;
+          *"File Type"*) notify-send -t 4000 "rg: File Type" "rg -t py pattern   (only Python)\nrg -T py pattern   (exclude Python)\nrg --type-list      (show all types)" ;;
+          *Glob*) notify-send -t 4000 "rg: Glob" "rg pattern -g '*.py'    (only py)\nrg pattern -g '!*.py'   (exclude py)\nCan use -g multiple times" ;;
+          *"Literal Search"*) notify-send -t 3000 "rg: Literal Search" "rg -F '(exact match)'\nNo regex interpretation" ;;
+          *) show_cheatsheets ;;
+        esac
+      }
+
+      show_fd_help() {
+        case "$(pick "Cheatsheets / fd" \
+          $'󰈙  Extension\tSearch one or more file extensions' \
+          $'󰀫  Glob\tMatch complete path patterns' \
+          $'󰘓  Hidden Files\tInclude hidden and ignored paths' \
+          $'󰈑  Exclude\tSkip matching paths' \
+          $'󰆍  Execute\tRun a command for every result' \
+          $'󰑑  Regex\tSearch with a regular expression')" in
+          *Extension*) notify-send -t 3000 "fd: Extension" "fd -e txt\nfd -e py pattern" ;;
+          *Glob*) notify-send -t 3000 "fd: Glob" "fd -g 'name.ext'\nfd -g '*.py' path/" ;;
+          *"Hidden Files"*) notify-send -t 3000 "fd: Hidden Files" "fd -H pattern\nfd --hidden --no-ignore pattern" ;;
+          *Exclude*) notify-send -t 3000 "fd: Exclude" "fd -E node_modules pattern\nfd -E '*.pyc' pattern" ;;
+          *Execute*) notify-send -t 4000 "fd: Exec" "fd pattern --exec command\nfd -e jpg --exec convert {} {.}.png" ;;
+          *Regex*) notify-send -t 4000 "fd: Regex" "fd '^foo'           (starts with foo)\nfd 'test.*\\.py$'   (regex match)\nfd pattern path/    (search in dir)" ;;
+          *) show_cheatsheets ;;
+        esac
+      }
+
+      show_cheatsheets() {
+        case "$(pick "Command Menu / Cheatsheets" \
+          $'  WezTerm\tTerminal keybindings' \
+          $'  ripgrep\tFast content-search recipes' \
+          $'󰈞  fd\tFast file-search recipes')" in
+          *WezTerm*) show_wezterm ;;
+          *ripgrep*) show_rg_help ;;
+          *fd*) show_fd_help ;;
+          *) show_main ;;
+        esac
+      }
+
+      show_system() {
+        case "$(pick "Command Menu / System" \
+          $'  Lock\tLock the current session' \
+          $'  Session Menu\tOpen Noctalia power controls' \
+          $'󰒲  Suspend\tSuspend this machine' \
+          $'󰜉  Reboot\tRestart this machine' \
+          $'󰐥  Shut Down\tPower off this machine')" in
+          *Lock*) noctalia msg session lock ;;
+          *"Session Menu"*) noctalia msg panel-open session ;;
+          *Suspend*) noctalia msg session suspend ;;
+          *Reboot*) noctalia msg session reboot ;;
+          *"Shut Down"*) noctalia msg session shutdown ;;
+          *) show_main ;;
+        esac
+      }
+
+      show_main() {
+        case "$(pick "Command Menu" \
+          $'󰀻  Applications\tLaunch common desktop tools' \
+          ${optionalString screenshotCfg.enable "$'  Screenshots\\tCapture a region, window, or full screen' \\"}
+          $'  Screen Recording\tStart, toggle, or stop recording' \
+          $'  Windows\tManage the focused window' \
+          $'󰝚  Media\tControl current playback' \
+          $'  Cheatsheets\tWezTerm, ripgrep, and fd reference' \
+          $'  Random Wallpaper\tPick another wallpaper now' \
+          $'  System\tLock, suspend, reboot, or shut down')" in
+          *Applications*) show_apps ;;
+          ${optionalString screenshotCfg.enable "*Screenshots*) show_screenshot ;;"}
+          *"Screen Recording"*) show_recording ;;
+          *Windows*) show_window ;;
+          *Media*) show_media ;;
+          *Cheatsheets*) show_cheatsheets ;;
+          *"Random Wallpaper"*) noctalia msg wallpaper-random ;;
+          *System*) show_system ;;
+        esac
+      }
+
+      show_main
+    '';
+  };
 
   defaultSettings = {
     shell = {
@@ -878,6 +1115,9 @@ in
 
     # notify-send for the modules that shell out to it; the daemon side used
     # to come from mako, which is disabled while noctalia owns notifications.
-    home.packages = with pkgs; [ libnotify ];
+    home.packages = with pkgs; [
+      libnotify
+      noctaliaMenu
+    ];
   });
 }

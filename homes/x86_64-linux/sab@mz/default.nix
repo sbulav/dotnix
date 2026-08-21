@@ -111,7 +111,7 @@ in
         wlogout = disabled;
         hyprlock = disabled;
         wezterm = enabled;
-        "wlr-which-key" = enabled;
+        "wlr-which-key" = disabled;
         screenshot = enabled;
         wallpaper = "${wallpapers}/share/wallpapers/unorganized/vu_meter_code_neon.png";
 
