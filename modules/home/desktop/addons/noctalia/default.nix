@@ -549,9 +549,10 @@ let
       # Near-waybar layout: workspaces + window title on the left, and the
       # old modules-right set (language, mic VU, volume, stats cpu/ram/temp,
       # bluetooth, network, tray, power). Launcher / wallpaper / media /
-      # notifications / clipboard widgets are dropped from the bar like they
-      # were absent from waybar; those panels stay reachable via keybinds,
-      # IPC, and the control-center kept before session. Desktop machine: no
+      # clipboard widgets are dropped from the bar like they were absent
+      # from waybar; those panels stay reachable via keybinds, IPC, and the
+      # control-center kept before session. The notification-history bell is
+      # the one panel that earned a button back. Desktop machine: no
       # battery/brightness widgets.
       start = [
         "taskbar"
@@ -576,6 +577,7 @@ let
         "group:net"
         "tray"
         "control-center"
+        "notifications"
         "session"
       ];
     };
