@@ -135,6 +135,7 @@ in
       };
       ktalk = enabled;
       libreoffice = enabled;
+      thunderbird = enabled;
     };
 
     cli-apps = {
