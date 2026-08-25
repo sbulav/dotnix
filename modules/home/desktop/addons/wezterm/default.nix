@@ -14,6 +14,8 @@ in
 {
   options.custom.desktop.addons.wezterm = {
     enable = mkEnableOption "Whether to enable the wezterm terminal";
+    forceXWayland = mkBoolOpt false "Whether to use XWayland instead of WezTerm's native Wayland backend";
+    fontSize = mkOpt (types.nullOr types.number) null "Optional WezTerm font size override";
 
     status = {
       kubernetes = {
@@ -65,6 +67,12 @@ in
           }
         ''
         + (builtins.readFile ./wezterm.lua)
+        + optionalString cfg.forceXWayland ''
+          config.enable_wayland = false
+        ''
+        + optionalString (cfg.fontSize != null) ''
+          config.font_size = ${toString cfg.fontSize}
+        ''
         + (builtins.readFile ./mappings.lua)
         + (builtins.readFile ./colors.lua)
         + (builtins.readFile ./tabs.lua)

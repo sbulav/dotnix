@@ -110,7 +110,14 @@ in
         };
         wlogout = disabled;
         hyprlock = disabled;
-        wezterm = enabled;
+        wezterm = {
+          enable = true;
+          # Native Wayland deadlocks after noctalia powers all outputs off.
+          # XWayland survives the same DPMS cycle; use a larger font to
+          # compensate for X11's 96 DPI on the 2x DP-1 output.
+          forceXWayland = true;
+          fontSize = 24;
+        };
         "wlr-which-key" = disabled;
         screenshot = enabled;
         wallpaper = "${wallpapers}/share/wallpapers/unorganized/vu_meter_code_neon.png";

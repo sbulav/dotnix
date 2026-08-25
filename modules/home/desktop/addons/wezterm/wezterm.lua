@@ -7,10 +7,9 @@ if wezterm.config_builder then
 	config = wezterm.config_builder()
 end
 
--- Force XWayland on Hyprland: native Wayland backend mis-maps selection
--- and scroll coords against HiDPI logical size (wezterm #1111, #7156,
--- #7232). xwayland.force_zero_scaling in hyprland.lua keeps it crisp.
--- config.enable_wayland = false
+-- Hosts affected by native Wayland bugs can opt into XWayland through the
+-- home-manager module. xwayland.force_zero_scaling in hyprland.lua keeps it
+-- crisp; those hosts also need a larger font to compensate for X11's 96 DPI.
 
 -- Fonts
 -- {{{
