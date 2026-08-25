@@ -86,8 +86,41 @@ let
       "$SUDO_BIN" "$ROUTE_BIN" delete -net "$VPN_HOST_ROUTE" "$LAN_GATEWAY" >/dev/null 2>&1 || true
     }
 
+    # A resolver file is ours if it carries the marker, or if it has no marker
+    # but its contents are byte-for-byte the nameserver list we write — the
+    # output of the builds that predate the marker. Without that second arm
+    # those older files were unownable: dns_down refused to remove them and
+    # dns_up refused to overwrite them, so `myvpn up` stayed wedged forever.
+    # That matters more here than it looks, because pyn.ru is both a split-DNS
+    # domain and the gateway's own domain: a leftover /etc/resolver/pyn.ru
+    # sends the vpn5.pyn.ru lookup to nameservers that only answer from inside
+    # the tunnel, which is the tunnel we are trying to build.
     resolver_is_ours() {
-      ${pkgs.gnugrep}/bin/grep -qxF "$RESOLVER_MARKER" "''${1}" 2>/dev/null
+      local resolver_file="''${1}"
+
+      [[ -e "$resolver_file" ]] || return 1
+
+      # Entries owned by custom.networking.split-dns are symlinks into the
+      # store; never claim those, whatever they contain.
+      if [[ -L "$resolver_file" ]]; then
+        return 1
+      fi
+
+      if ${pkgs.gnugrep}/bin/grep -qxF "$RESOLVER_MARKER" "$resolver_file" 2>/dev/null; then
+        return 0
+      fi
+
+      local expected=""
+      local server
+      for server in "''${SPLIT_DNS_SERVERS[@]}"; do
+        if [[ -n "$expected" ]]; then
+          expected+=$'\n'
+        fi
+        expected+="nameserver $server"
+      done
+
+      [[ -n "$expected" ]] || return 1
+      [[ "$(${pkgs.coreutils}/bin/cat "$resolver_file" 2>/dev/null)" == "$expected" ]]
     }
 
     flush_dns() {
@@ -293,6 +326,15 @@ let
           echo "myvpn is already up (pid $pid)"
           return 0
         fi
+
+        # Clear leftover split DNS *before* dialling out. openconnect dying on
+        # suspend, or a reboot wiping $STATE_DIR, leaves /etc/resolver entries
+        # behind pointing at nameservers that only answer through the tunnel —
+        # and one of those domains is the gateway's own, so resolving
+        # $OPENCONNECT_SERVER times out and `up` could never recover on its
+        # own. Reconciling on `down` alone was not enough: nothing guarantees
+        # `down` ever ran.
+        ${if cfg.splitDns.enable then "dns_down || true" else ":"}
 
         ensure_state_dir
         "$SUDO_BIN" ${pkgs.coreutils}/bin/rm -f "$PID_FILE"
