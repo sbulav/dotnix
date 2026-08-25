@@ -105,6 +105,96 @@ let
       "hl.workspace_rule({ workspace = ${luaStr ws}, monitor = ${luaStr mon}${optionalString persistent ", persistent = true"} })"
     ) bindings;
 
+  omarchyWindowPolish = optionalString cfg.windowPolish.enable ''
+    -- Omarchy-inspired interaction rules, opt-in per host.
+    -- Picture-in-picture should behave like an overlay rather than another
+    -- tile, and capture/file dialogs should not disturb the workspace layout.
+    hl.window_rule({
+      match = { title = "^(Picture.?in.?[Pp]icture)$" },
+      float = true,
+      pin = true,
+      size = { 600, 338 },
+      keep_aspect_ratio = true,
+      border_size = 0,
+      opacity = "1 1",
+      move = "(monitor_w-window_w-40) (monitor_h*0.04)",
+    })
+
+    hl.window_rule({
+      match = {
+        class = "^(xdg-desktop-portal-gtk|org.gnome.Nautilus)$",
+        title = "^(Open.*Files?|Open [Ff]older.*|Save.*Files?|Save.*As|Save|All Files|.*wants to (open|save).*|[Cc]hoose.*)$",
+      },
+      float = true,
+      center = true,
+      size = { 875, 600 },
+    })
+
+    hl.window_rule({
+      match = { class = "^(com.gabm.satty)$" },
+      float = true,
+      center = true,
+      size = { 1100, 700 },
+      opacity = "1 1",
+    })
+
+    hl.window_rule({
+      match = { title = "^(WebcamOverlay)$" },
+      float = true,
+      pin = true,
+      no_initial_focus = true,
+      no_dim = true,
+      move = "(monitor_w-window_w-40) (monitor_h-window_h-40)",
+    })
+  '';
+
+  keybindingGuide = pkgs.writeShellApplication {
+    name = "hyprland-keybindings";
+    runtimeInputs = with pkgs; [
+      gawk
+      hyprland
+    ];
+    text = ''
+      set -euo pipefail
+
+      bindings=$(
+        hyprctl binds | awk '
+          function modifier(mask, bit, name) {
+            return and(mask, bit) ? name " + " : ""
+          }
+          function emit() {
+            if (description == "") return
+            gsub(/^mouse:272$/, "left click", key)
+            gsub(/^mouse:273$/, "right click", key)
+            gsub(/^mouse_down$/, "scroll down", key)
+            gsub(/^mouse_up$/, "scroll up", key)
+            shortcut = modifier(modmask, 64, "Super") \
+              modifier(modmask, 8, "Alt") \
+              modifier(modmask, 4, "Ctrl") \
+              modifier(modmask, 1, "Shift") key
+            printf "%-28s\t%s\n", shortcut, description
+          }
+          /^bind$/ { emit(); modmask = 0; key = ""; description = ""; next }
+          /^[[:space:]]*modmask:/ { modmask = $2; next }
+          /^[[:space:]]*key:/ { key = $2; next }
+          /^[[:space:]]*description:/ {
+            sub(/^[[:space:]]*description:[[:space:]]*/, "")
+            description = $0
+          }
+          END { emit() }
+        '
+      )
+
+      if [[ ''${1:-} == --print ]]; then
+        printf '%s\n' "$bindings"
+      elif command -v noctalia >/dev/null 2>&1; then
+        printf '%s\n' "$bindings" | noctalia dmenu --prompt "Keybindings" >/dev/null || true
+      else
+        printf '%s\n' "$bindings"
+      fi
+    '';
+  };
+
   # Translate a hyprlang-style action into a Lua dispatcher expression.
   # Examples:
   #   "exec, wezterm"           → hl.dsp.exec_cmd("wezterm")
@@ -140,7 +230,7 @@ let
       throw "translateAction: unsupported verb '${verb}' in '${action}'";
 
   mkBind =
-    mainMod: keySpec: action:
+    mainMod: keySpec: description: action:
     let
       keyParts = lib.splitString " " keySpec;
       hasModifiers = builtins.length keyParts > 1;
@@ -148,7 +238,7 @@ let
       actualKey = if hasModifiers then lib.last keyParts else keySpec;
       keyStr = concatStringsSep " + " ([ mainMod ] ++ extraMods ++ [ actualKey ]);
     in
-    "hl.bind(${luaStr keyStr}, ${translateAction action})";
+    "hl.bind(${luaStr keyStr}, ${translateAction action}, { description = ${luaStr description} })";
 
   mkKeybindings =
     kb:
@@ -165,21 +255,23 @@ let
 
       appBindings =
         optionalString (kb.menu != null && (noctaliaOwned || wlrWhichKeyEnabled)) ''
-          ${mkBind mainMod kb.menu (if noctaliaOwned then "exec, noctalia-menu" else "exec, wlr-which-key")}
+          ${mkBind mainMod kb.menu "Open command menu" (
+            if noctaliaOwned then "exec, noctalia-menu" else "exec, wlr-which-key"
+          )}
         ''
         + optionalString (kb.terminal != null) ''
-          ${mkBind mainMod kb.terminal "exec, wezterm"}
+          ${mkBind mainMod kb.terminal "Open terminal" "exec, wezterm"}
         ''
         + optionalString (kb.browser != null) ''
-          ${mkBind mainMod kb.browser "exec, firefox"}
+          ${mkBind mainMod kb.browser "Open browser" "exec, firefox"}
         ''
         + optionalString (kb.launcher != null) ''
-          ${mkBind mainMod kb.launcher (
+          ${mkBind mainMod kb.launcher "Open application launcher" (
             if noctaliaOwned then "exec, noctalia msg panel-toggle launcher" else "exec, rofi -show drun"
           )}
         ''
         + optionalString (kb.clipboard != null) ''
-          ${mkBind mainMod kb.clipboard (
+          ${mkBind mainMod kb.clipboard "Open clipboard history" (
             if noctaliaOwned then
               "exec, noctalia msg panel-toggle clipboard"
             else
@@ -187,49 +279,49 @@ let
           )}
         ''
         + optionalString (kb.passwords != null && rofiEnabled) ''
-          ${mkBind mainMod kb.passwords "exec, rofi-rbw"}
+          ${mkBind mainMod kb.passwords "Open password manager" "exec, rofi-rbw"}
         ''
         + optionalString (kb.search != null && rofiEnabled) ''
-          ${mkBind mainMod kb.search
+          ${mkBind mainMod kb.search "Search the web"
             ''exec, rofi -dmenu -p "Search" | xargs -I{} xdg-open "https://www.google.com/search?q={}" && hyprctl dispatch focuswindow firefox''
           }
         ''
         + optionalString (kb.woomer != null) ''
-          ${mkBind mainMod kb.woomer "exec, woomer"}
+          ${mkBind mainMod kb.woomer "Zoom the desktop" "exec, woomer"}
         ''
         + optionalString (kb.lock != null) ''
-          ${mkBind mainMod "SHIFT ${kb.lock}" (
+          ${mkBind mainMod "SHIFT ${kb.lock}" "Lock the session" (
             if noctaliaOwned then "exec, noctalia msg session lock" else "exec, swaylock"
           )}
         ''
         + optionalString (kb.logout != null) ''
-          ${mkBind mainMod "SHIFT ${kb.logout}" (
+          ${mkBind mainMod "SHIFT ${kb.logout}" "Open session controls" (
             if noctaliaOwned then "exec, noctalia msg panel-toggle session" else "exec, wlogout"
           )}
         '';
 
       windowBindings =
         optionalString (kb.kill != null) ''
-          ${mkBind mainMod kb.kill "killactive,"}
+          ${mkBind mainMod kb.kill "Close the active window" "killactive,"}
         ''
         + optionalString (kb.exit != null) ''
-          ${mkBind mainMod "SHIFT ${kb.exit}" "exit"}
+          ${mkBind mainMod "SHIFT ${kb.exit}" "Exit Hyprland" "exit"}
         ''
         + optionalString (kb.fullscreen != null) ''
-          ${mkBind mainMod kb.fullscreen "fullscreen,"}
+          ${mkBind mainMod kb.fullscreen "Toggle fullscreen" "fullscreen,"}
         ''
         + optionalString (kb.floating != null && kb.paste == null) ''
-          ${mkBind mainMod kb.floating "togglefloating,"}
+          ${mkBind mainMod kb.floating "Toggle floating" "togglefloating,"}
         ''
         + optionalString (kb.pseudo != null) ''
-          ${mkBind mainMod kb.pseudo "pseudo,"}
+          ${mkBind mainMod kb.pseudo "Toggle pseudo-tiling" "pseudo,"}
         ''
         + optionalString (kb.split != null) ''
-          ${mkBind mainMod kb.split "layoutmsg, togglesplit"}
+          ${mkBind mainMod kb.split "Toggle split direction" "layoutmsg, togglesplit"}
         '';
 
       copyPasteBindings = optionalString (kb.floating != null && kb.paste != null) ''
-        ${mkBind mainMod "SHIFT ${kb.floating}" "togglefloating,"}
+        ${mkBind mainMod "SHIFT ${kb.floating}" "Toggle floating" "togglefloating,"}
       '';
 
       # `extra` entries are now expected to be full Lua statements.
@@ -238,22 +330,30 @@ let
       screenshotCfg = config.custom.desktop.addons.screenshot;
       sc = screenshotCfg.commands;
       hasAnnotate = screenshotCfg.enable && screenshotCfg.annotator != "none";
-      mkPrintBind = modKey: cmd: "hl.bind(${luaStr modKey}, hl.dsp.exec_cmd(${luaStr (uwsmExec cmd)}))";
+      hasOcr = screenshotCfg.enable && screenshotCfg.ocr.enable;
+      mkPrintBind =
+        modKey: description: cmd:
+        "hl.bind(${luaStr modKey}, hl.dsp.exec_cmd(${luaStr (uwsmExec cmd)}), { description = ${luaStr description} })";
       screenshotBindings =
         if !screenshotCfg.enable then
           ""
         else
           concatStringsSep "\n" (
             [
-              (mkPrintBind "Print" sc.region.clipboard)
-              (mkPrintBind "SHIFT + Print" sc.region.file)
-              (mkPrintBind "CONTROL + Print" sc.window.clipboard)
-              (mkPrintBind "CONTROL + SHIFT + Print" sc.window.file)
-              (mkPrintBind "SUPER + Print" sc.screen.file)
-              (mkPrintBind "SUPER + SHIFT + Print" sc.screen.clipboard)
+              (mkPrintBind "Print" "Smart screenshot" (
+                if screenshotCfg.smart.enable then sc.smart.capture else sc.region.clipboard
+              ))
+              (mkPrintBind "SHIFT + Print" "Save region screenshot" sc.region.file)
+              (mkPrintBind "CONTROL + Print" "Copy active-window screenshot" sc.window.clipboard)
+              (mkPrintBind "CONTROL + SHIFT + Print" "Save active-window screenshot" sc.window.file)
+              (mkPrintBind "SUPER + Print" "Save full-screen screenshot" sc.screen.file)
+              (mkPrintBind "SUPER + SHIFT + Print" "Copy full-screen screenshot" sc.screen.clipboard)
             ]
             ++ optionals hasAnnotate [
-              (mkPrintBind "ALT + Print" sc.region.annotate)
+              (mkPrintBind "ALT + Print" "Annotate region screenshot" sc.region.annotate)
+            ]
+            ++ optionals hasOcr [
+              (mkPrintBind "SUPER + CONTROL + Print" "OCR selected region" sc.ocr.clipboard)
             ]
           );
     in
@@ -303,6 +403,10 @@ in
       '';
     };
 
+    windowPolish.enable = mkBoolOpt false ''
+      Whether to enable Omarchy-inspired picture-in-picture and dialog rules.
+    '';
+
     keybindings = {
       mainMod = mkOpt types.str "SUPER" "Main modifier key";
 
@@ -335,6 +439,7 @@ in
     home = {
       packages = with pkgs; [
         brightnessctl
+        keybindingGuide
         wtype
         hyprpicker
       ];
@@ -400,6 +505,9 @@ in
 
           -- Workspace assignments (windows → workspaces)
           ${mkWorkspaceRules cfg.workspaces.assignments}
+
+          -- Host opt-in interaction polish
+          ${omarchyWindowPolish}
 
           -- Keybindings
           ${mkKeybindings cfg.keybindings}

@@ -41,6 +41,7 @@ in
           "8" = "HDMI-A-1";
           "9" = "HDMI-A-1";
         };
+        windowPolish.enable = true;
         keybindings = {
           copy = "C";
           paste = "V";
@@ -48,12 +49,16 @@ in
           extra = [
             # ALT+Print is now region->annotate (screenshot addon).
             # Move record-screen toggle to SUPER+ALT+Print.
-            ''hl.bind("SUPER + ALT + Print", hl.dsp.exec_cmd("/run/current-system/sw/bin/uwsm-app -- record-screen toggle"))''
+            ''hl.bind("SUPER + ALT + Print", hl.dsp.exec_cmd("/run/current-system/sw/bin/uwsm-app -- record-screen toggle"), { description = "Toggle smart screen recording" })''
+            ''hl.bind("SUPER + XF86AudioMute", hl.dsp.exec_cmd("/run/current-system/sw/bin/uwsm-app -- audio-output-cycle"), { description = "Cycle audio output" })''
           ];
         };
       };
       addons = {
-        system-polish = enabled;
+        system-polish = {
+          enable = true;
+          audioOutputCycle.enable = true;
+        };
         hyprpaper = disabled;
         # Noctalia shell trial (issue #37), slices 1-4: bar, notifications,
         # OSD, launcher, session menu, wallpaper engine, sysmon widgets and
@@ -119,7 +124,14 @@ in
           fontSize = 24;
         };
         "wlr-which-key" = disabled;
-        screenshot = enabled;
+        screenshot = {
+          enable = true;
+          smart.enable = true;
+          ocr = {
+            enable = true;
+            languages = "eng+rus";
+          };
+        };
         wallpaper = "${wallpapers}/share/wallpapers/unorganized/vu_meter_code_neon.png";
 
         waypaper = {

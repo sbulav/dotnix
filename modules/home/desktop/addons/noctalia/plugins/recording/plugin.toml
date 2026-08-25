@@ -1,0 +1,20 @@
+id          = "sab/recording"
+name        = "Recording Indicator"
+version     = "1.0.0"
+plugin_api  = 28
+author      = "sab"
+license     = "MIT"
+icon        = "video"
+description = "Shows a persistent REC indicator while record-screen is active."
+tags        = ["capture"]
+
+[[widget]]
+id    = "indicator"
+entry = "widget.luau"
+
+  [widget.actions]
+  left = "exec @RECORD_SCREEN@ stop"
+
+[[service]]
+id    = "watch"
+entry = "service.luau"

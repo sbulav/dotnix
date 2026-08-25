@@ -7,6 +7,12 @@
 local mainMod = "SUPER"
 local uwsmApp = "/run/current-system/sw/bin/uwsm-app -- "
 
+local function bind(keys, description, dispatcher, options)
+	options = options or {}
+	options.description = description
+	return hl.bind(keys, dispatcher, options)
+end
+
 ----------------------------------------------------------------
 -- Autostart
 ----------------------------------------------------------------
@@ -138,7 +144,7 @@ for _, m in ipairs({
 	{ "k", "u" },
 	{ "j", "d" },
 }) do
-	hl.bind(mainMod .. " + " .. m[1], hl.dsp.focus({ direction = m[2] }))
+	bind(mainMod .. " + " .. m[1], "Focus " .. m[1], hl.dsp.focus({ direction = m[2] }))
 end
 
 -- Swap windows with CONTROLALT + hjkl
@@ -148,50 +154,50 @@ for _, m in ipairs({
 	{ "k", "u" },
 	{ "j", "d" },
 }) do
-	hl.bind("CONTROL + ALT + " .. m[1], hl.dsp.window.swap({ direction = m[2] }))
+	bind("CONTROL + ALT + " .. m[1], "Swap window " .. m[1], hl.dsp.window.swap({ direction = m[2] }))
 end
 
 -- Switch workspaces with mainMod + [0-9]
 for i = 1, 9 do
-	hl.bind(mainMod .. " + " .. tostring(i), hl.dsp.focus({ workspace = i }))
+	bind(mainMod .. " + " .. tostring(i), "Switch to workspace " .. tostring(i), hl.dsp.focus({ workspace = i }))
 end
-hl.bind(mainMod .. " + 0", hl.dsp.focus({ workspace = 10 }))
+bind(mainMod .. " + 0", "Switch to workspace 10", hl.dsp.focus({ workspace = 10 }))
 
 -- ALT + down/up → workspaces 1/2 (legacy ergonomic)
-hl.bind("ALT + down", hl.dsp.focus({ workspace = 1 }))
-hl.bind("ALT + up", hl.dsp.focus({ workspace = 2 }))
+bind("ALT + down", "Switch to workspace 1", hl.dsp.focus({ workspace = 1 }))
+bind("ALT + up", "Switch to workspace 2", hl.dsp.focus({ workspace = 2 }))
 
 -- Move active window to a workspace with mainMod + SHIFT + [0-9]
 for i = 1, 9 do
-	hl.bind(mainMod .. " + SHIFT + " .. tostring(i), hl.dsp.window.move({ workspace = i }))
+	bind(mainMod .. " + SHIFT + " .. tostring(i), "Move window to workspace " .. tostring(i), hl.dsp.window.move({ workspace = i }))
 end
-hl.bind(mainMod .. " + SHIFT + 0", hl.dsp.window.move({ workspace = 10 }))
+bind(mainMod .. " + SHIFT + 0", "Move window to workspace 10", hl.dsp.window.move({ workspace = 10 }))
 
 -- Move workspace between monitors
-hl.bind(mainMod .. " + CONTROL + left", hl.dsp.workspace.move({ monitor = "l" }))
-hl.bind(mainMod .. " + CONTROL + right", hl.dsp.workspace.move({ monitor = "r" }))
+bind(mainMod .. " + CONTROL + left", "Move workspace to left monitor", hl.dsp.workspace.move({ monitor = "l" }))
+bind(mainMod .. " + CONTROL + right", "Move workspace to right monitor", hl.dsp.workspace.move({ monitor = "r" }))
 
 -- Cycle through workspaces
-hl.bind(mainMod .. " + mouse_down", hl.dsp.focus({ workspace = "e+1" }))
-hl.bind(mainMod .. " + mouse_up", hl.dsp.focus({ workspace = "e-1" }))
-hl.bind("CONTROL + ALT + right", hl.dsp.focus({ workspace = "e+1" }))
-hl.bind("CONTROL + ALT + left", hl.dsp.focus({ workspace = "e-1" }))
+bind(mainMod .. " + mouse_down", "Switch to next workspace", hl.dsp.focus({ workspace = "e+1" }))
+bind(mainMod .. " + mouse_up", "Switch to previous workspace", hl.dsp.focus({ workspace = "e-1" }))
+bind("CONTROL + ALT + right", "Switch to next workspace", hl.dsp.focus({ workspace = "e+1" }))
+bind("CONTROL + ALT + left", "Switch to previous workspace", hl.dsp.focus({ workspace = "e-1" }))
 
 -- Move/resize windows with mainMod + LMB/RMB
-hl.bind(mainMod .. " + mouse:272", hl.dsp.window.drag(), { mouse = true })
-hl.bind(mainMod .. " + mouse:273", hl.dsp.window.resize(), { mouse = true })
+bind(mainMod .. " + mouse:272", "Move window", hl.dsp.window.drag(), { mouse = true })
+bind(mainMod .. " + mouse:273", "Resize window", hl.dsp.window.resize(), { mouse = true })
 
 -- Audio
-hl.bind("XF86AudioRaiseVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"), { repeating = true })
-hl.bind("XF86AudioLowerVolume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"), { repeating = true })
-hl.bind("XF86AudioMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), { repeating = true })
-hl.bind("XF86AudioMicMute", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), { repeating = true })
-hl.bind("XF86AudioPlay", hl.dsp.exec_cmd("playerctl play-pause"))
-hl.bind("XF86AudioPause", hl.dsp.exec_cmd("playerctl play-pause"))
-hl.bind("XF86AudioNext", hl.dsp.exec_cmd("playerctl next"))
-hl.bind("XF86AudioPrev", hl.dsp.exec_cmd("playerctl previous"))
-hl.bind("XF86MonBrightnessUp", hl.dsp.exec_cmd("display-brightness up"))
-hl.bind("XF86MonBrightnessDown", hl.dsp.exec_cmd("display-brightness down"))
+bind("XF86AudioRaiseVolume", "Raise output volume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%+"), { repeating = true })
+bind("XF86AudioLowerVolume", "Lower output volume", hl.dsp.exec_cmd("wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-"), { repeating = true })
+bind("XF86AudioMute", "Mute output audio", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle"), { repeating = true })
+bind("XF86AudioMicMute", "Mute microphone", hl.dsp.exec_cmd("wpctl set-mute @DEFAULT_AUDIO_SOURCE@ toggle"), { repeating = true })
+bind("XF86AudioPlay", "Play or pause media", hl.dsp.exec_cmd("playerctl play-pause"))
+bind("XF86AudioPause", "Play or pause media", hl.dsp.exec_cmd("playerctl play-pause"))
+bind("XF86AudioNext", "Play next track", hl.dsp.exec_cmd("playerctl next"))
+bind("XF86AudioPrev", "Play previous track", hl.dsp.exec_cmd("playerctl previous"))
+bind("XF86MonBrightnessUp", "Raise display brightness", hl.dsp.exec_cmd("display-brightness up"))
+bind("XF86MonBrightnessDown", "Lower display brightness", hl.dsp.exec_cmd("display-brightness down"))
 
 ----------------------------------------------------------------
 -- Window rules

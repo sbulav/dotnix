@@ -105,6 +105,11 @@ in
     python3
   ];
 
+  # Direct KMS capture needs the capability-wrapped gsr-kms-server supplied
+  # by NixOS. Without it gpu-screen-recorder falls back to pkexec and asks for
+  # the root password every time a recording starts.
+  programs.gpu-screen-recorder.enable = true;
+
   # Suites managed by nix, see suites by home-manager in homes
   suites = {
     common.enable = true; # Enables the basics, like audio, networking, ssh, etc.

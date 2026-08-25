@@ -10,6 +10,7 @@ with lib.custom;
 let
   cfg = config.custom.desktop.addons.noctalia;
   screenshotCfg = config.custom.desktop.addons.screenshot;
+  recordingEnabled = config.custom.tools.record-screen.enable;
 
   # Staged takeover of the old seven-tool stack (issue #37). Surfaces the
   # shell does NOT own yet are pinned off here and flipped slice by slice:
@@ -33,6 +34,7 @@ let
   pluginSource = pkgs.runCommand "noctalia-plugins-dotnix" { } ''
     mkdir -p $out
     cp -r ${./plugins/mic_vu} $out/mic_vu
+    cp -r ${./plugins/recording} $out/recording
     cp -r ${./plugins/sysmon} $out/sysmon
     chmod -R u+w $out
     substituteInPlace $out/mic_vu/plugin.toml \
@@ -44,6 +46,8 @@ let
       --replace-fail '@PACTL@' '${pkgs.pulseaudio}/bin/pactl' \
       --replace-fail '@OD@' '${pkgs.coreutils}/bin/od' \
       --replace-fail '@GAWK@' '${pkgs.gawk}/bin/gawk'
+    substituteInPlace $out/recording/plugin.toml $out/recording/service.luau \
+      --replace-fail '@RECORD_SCREEN@' '${pkgs.custom.record-screen}/bin/record-screen'
   '';
 
   # Port of the old waybar akg-mic-ctl: mute toggle / 5% gain steps with a
@@ -491,9 +495,13 @@ let
 
           show_screenshot() {
             case "$(pick "Command Menu / Screenshots" \
+              $'󰹑  Smart Capture\tClick a window/output or drag an area' \
+              ${optionalString screenshotCfg.ocr.enable "$'󰗊  OCR to Clipboard\\tRecognize English and Russian text' \\"}
               $'󰩭  Region\tSelect an arbitrary area' \
               $'  Window\tCapture the active window' \
               $'󰹑  Full Screen\tCapture the complete desktop')" in
+              *"Smart Capture"*) ${sc.smart.capture} ;;
+              ${optionalString screenshotCfg.ocr.enable "*OCR*) ${sc.ocr.clipboard} ;;"}
               *Region*) capture_target region "Region" ;;
               *Window*) capture_target window "Window" ;;
               *"Full Screen"*) capture_target screen "Full Screen" ;;
@@ -505,9 +513,17 @@ let
 
       show_recording() {
         case "$(pick "Command Menu / Screen Recording" \
-          $'  Start or Toggle\tStart recording, or toggle the current recording' \
+          $'  Start or Toggle\tSelect a window, output, or arbitrary area' \
+          $'󰕾  Record with Desktop Audio\tInclude the default output' \
+          $'󰍬  Record with Microphone\tInclude the default input' \
+          $'󰍬  Record with Both Audio Sources\tInclude output and input' \
+          $'󰄀  Record with Webcam\tAdd webcam overlay and microphone audio' \
           $'󰓛  Stop Recording\tFinish and save the current recording')" in
           *"Start or Toggle"*) record-screen toggle ;;
+          *"Desktop Audio"*) record-screen start --desktop-audio ;;
+          *"with Microphone"*) record-screen start --microphone-audio ;;
+          *"Both Audio Sources"*) record-screen start --desktop-audio --microphone-audio ;;
+          *"with Webcam"*) record-screen start --webcam --desktop-audio ;;
           *"Stop Recording"*) record-screen stop ;;
           *) show_main ;;
         esac
@@ -561,9 +577,11 @@ let
 
       show_cheatsheets() {
         case "$(pick "Command Menu / Cheatsheets" \
+          $'󰌌  Keybindings\tSearch active Hyprland shortcuts' \
           $'  WezTerm\tTerminal keybindings' \
           $'  ripgrep\tFast content-search recipes' \
           $'󰈞  fd\tFast file-search recipes')" in
+          *Keybindings*) hyprland-keybindings ;;
           *WezTerm*) show_wezterm ;;
           *ripgrep*) show_rg_help ;;
           *fd*) show_fd_help ;;
@@ -594,7 +612,7 @@ let
           $'  Screen Recording\tStart, toggle, or stop recording' \
           $'  Windows\tManage the focused window' \
           $'󰝚  Media\tControl current playback' \
-          $'  Cheatsheets\tWezTerm, ripgrep, and fd reference' \
+          $'  Cheatsheets\tKeybindings and command references' \
           $'  Random Wallpaper\tPick another wallpaper now' \
           $'  System\tLock, suspend, reboot, or shut down')" in
           *Applications*) show_apps ;;
@@ -881,6 +899,11 @@ let
       // optionalAttrs cfg.micVuMeter.enable {
         mic-vu.type = "sab/mic_vu:meter";
       }
+      // optionalAttrs recordingEnabled {
+        screen-recording = {
+          type = "sab/recording:indicator";
+        };
+      }
     ) widgetAccents;
 
     # Declarative plugin state: no git sources, no background updates — the
@@ -893,7 +916,11 @@ let
     # catalogs back.
     plugins = {
       auto_update = "none";
-      enabled = [ "sab/sysmon" ] ++ optional cfg.micVuMeter.enable "sab/mic_vu";
+      enabled = [
+        "sab/sysmon"
+      ]
+      ++ optional cfg.micVuMeter.enable "sab/mic_vu"
+      ++ optional recordingEnabled "sab/recording";
       source = [
         {
           name = "dotnix";
@@ -962,6 +989,7 @@ let
         "keyboard_layout"
       ]
       ++ optional cfg.micVuMeter.enable "mic-vu"
+      ++ optional recordingEnabled "screen-recording"
       ++ [
         "volume"
         (groupToken "stats")

@@ -63,6 +63,66 @@ let
     '';
   };
 
+  audioOutputCycle = pkgs.writeShellApplication {
+    name = "audio-output-cycle";
+    runtimeInputs = with pkgs; [
+      coreutils
+      jq
+      libnotify
+      pulseaudio
+    ];
+    text = ''
+      set -euo pipefail
+
+      sinks=$(pactl -f json list sinks \
+        | jq '[.[] | select((.ports | length == 0) or ([.ports[]? | .availability != "not available"] | any))]')
+      count=$(jq 'length' <<< "$sinks")
+      if ((count == 0)); then
+        notify-send -a audio-output-cycle -u normal "Audio output" "No available output devices"
+        exit 1
+      fi
+
+      current=$(pactl get-default-sink)
+      current_index=$(jq -r --arg current "$current" 'map(.name) | index($current)' <<< "$sinks")
+      if [[ $current_index == null ]]; then
+        next_index=0
+      else
+        next_index=$(((current_index + 1) % count))
+      fi
+
+      next=$(jq -c ".[$next_index]" <<< "$sinks")
+      name=$(jq -r '.name' <<< "$next")
+      description=$(jq -r '.description // .name' <<< "$next")
+      muted=$(jq -r '.mute' <<< "$next")
+      volume=$(jq -r '[.volume[].value_percent | sub("%"; "") | tonumber] | add / length | round' <<< "$next")
+
+      pactl set-default-sink "$name"
+      while IFS= read -r input; do
+        [[ -n $input ]] && pactl move-sink-input "$input" "$name" || true
+      done < <(pactl -f json list sink-inputs | jq -r '.[].index')
+
+      if [[ $muted == true ]]; then
+        icon=audio-volume-muted
+        detail="muted"
+      elif ((volume <= 33)); then
+        icon=audio-volume-low
+        detail="''${volume}%"
+      elif ((volume <= 66)); then
+        icon=audio-volume-medium
+        detail="''${volume}%"
+      else
+        icon=audio-volume-high
+        detail="''${volume}%"
+      fi
+
+      idfile="''${XDG_RUNTIME_DIR:-/tmp}/audio-output-cycle.notify-id"
+      previous=$(cat "$idfile" 2>/dev/null || true)
+      args=(-a audio-output-cycle -p -t 1800 -i "$icon")
+      [[ $previous =~ ^[0-9]+$ ]] && args+=(-r "$previous")
+      notify-send "''${args[@]}" "Audio output" "$description · $detail" > "$idfile" || true
+    '';
+  };
+
   clamshell = pkgs.writeShellApplication {
     name = "hyprland-clamshell";
     runtimeInputs = with pkgs; [
@@ -145,10 +205,12 @@ in
       position = mkOpt str "auto" "Position restored when the lid opens.";
       scale = mkOpt str "1" "Scale restored when the lid opens.";
     };
+
+    audioOutputCycle.enable = mkBoolOpt false "Install a helper that cycles available PipeWire output devices.";
   };
 
   config = mkIf cfg.enable {
-    home.packages = [ displayBrightness ];
+    home.packages = [ displayBrightness ] ++ optional cfg.audioOutputCycle.enable audioOutputCycle;
 
     services.udiskie = {
       enable = true;

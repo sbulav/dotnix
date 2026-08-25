@@ -19,6 +19,10 @@ let
 
   wlCopy = "${lib.getExe' pkgs.wl-clipboard "wl-copy"}";
 
+  tesseract = pkgs.tesseract.override {
+    enableLanguages = unique ([ "eng" ] ++ splitString "+" cfg.ocr.languages);
+  };
+
   getDateTime = lib.getExe (
     pkgs.writeShellScriptBin "screenshot-datetime" ''
       exec date +'${cfg.filenameFormat}'
@@ -79,6 +83,114 @@ let
       ''
     )}";
 
+  screenshotTool = pkgs.writeShellApplication {
+    name = "screenshot-tool";
+    runtimeInputs =
+      with pkgs;
+      [
+        bash
+        coreutils
+        custom.capture-region
+        grim
+        libnotify
+        wl-clipboard
+      ]
+      ++ optional (cfg.annotator == "satty") satty
+      ++ optional cfg.ocr.enable tesseract;
+    text = ''
+      set -euo pipefail
+
+      output_dir=${escapeShellArg resolvedDir}
+      filename_format=${escapeShellArg cfg.filenameFormat}
+
+      edit_screenshot() {
+        local file="$1"
+        ${
+          if cfg.annotator == "satty" then
+            ''satty --filename "$file" --output-filename "$file"''
+          else if cfg.annotator == "swappy" then
+            ''swappy -f "$file" -o "$file"''
+          else
+            "true"
+        }
+      }
+
+      smart_capture() {
+        mkdir -p "$output_dir"
+        local file
+        file="$output_dir/$(date +"$filename_format").png"
+
+        # The nested shell expands CAPTURE_GEOMETRY after capture-region sets it.
+        # shellcheck disable=SC2016
+        capture-region ${optionalString cfg.freeze "--freeze"} -- \
+          ${pkgs.bash}/bin/bash -c '
+            set -euo pipefail
+            file="$1"
+            grim -g "$CAPTURE_GEOMETRY" "$file"
+            wl-copy < "$file"
+          ' screenshot-smart "$file"
+
+        ${optionalString cfg.notify ''
+          (
+            action=$(notify-send \
+              -a screenshot-tool \
+              -t 10000 \
+              -i "$file" \
+              -A default=edit \
+              "Screenshot saved" \
+              "Copied to clipboard; click to annotate" || true)
+            if [[ $action == default ]]; then
+              edit_screenshot "$file"
+            fi
+          ) >/dev/null 2>&1 &
+        ''}
+
+        printf '%s\n' "$file"
+      }
+
+      ocr_capture() {
+        ${
+          if cfg.ocr.enable then
+            ''
+              local text
+              text=$(
+                # The nested shell expands CAPTURE_GEOMETRY after capture-region sets it.
+                # shellcheck disable=SC2016
+                capture-region ${optionalString cfg.freeze "--freeze"} -- \
+                  ${pkgs.bash}/bin/bash -c '
+                    set -euo pipefail
+                    grim -g "$CAPTURE_GEOMETRY" - \
+                      | tesseract stdin stdout --oem 1 --psm 6 \
+                          -l ${escapeShellArg cfg.ocr.languages} --dpi 300 \
+                          -c preserve_interword_spaces=1 2>/dev/null
+                  ' screenshot-ocr
+              )
+              [[ -n $text ]] || {
+                notify-send -a screenshot-tool -u normal "OCR" "No text found"
+                return 1
+              }
+              printf '%s' "$text" | wl-copy
+              notify-send -a screenshot-tool -u low "OCR" "Copied selected text to clipboard"
+            ''
+          else
+            ''
+              echo "OCR support is disabled" >&2
+              return 2
+            ''
+        }
+      }
+
+      case "''${1:-}" in
+        smart) smart_capture ;;
+        ocr) ocr_capture ;;
+        *)
+          echo "usage: screenshot-tool {smart|ocr}" >&2
+          exit 2
+          ;;
+      esac
+    '';
+  };
+
   # Public command attrset consumed by other modules (hyprland and command menus).
   commands = {
     region = {
@@ -98,6 +210,9 @@ let
       file = gbSave "screen";
     }
     // lib.optionalAttrs hasAnnotate { annotate = mkAnnotate "screen"; };
+
+    smart.capture = "screenshot-tool smart";
+    ocr = optionalAttrs cfg.ocr.enable { clipboard = "screenshot-tool ocr"; };
   };
 
   # Relative path inside $HOME for the .keep file (skip if dir is outside $HOME).
@@ -126,6 +241,17 @@ in
     freeze = mkBoolOpt true "Freeze the screen during region/window selection (--freeze).";
     notify = mkBoolOpt true "Show notification on save/copy (--notify).";
 
+    smart.enable = mkBoolOpt false ''
+      Use click-to-snap or drag-to-select smart capture for the bare Print key.
+    '';
+
+    ocr = {
+      enable = mkBoolOpt false "Enable screenshot-region OCR with Tesseract.";
+      languages = mkOpt str "eng" ''
+        Tesseract language expression, for example `eng` or `eng+rus`.
+      '';
+    };
+
     filenameFormat =
       mkOpt str "ss_%Y%m%d_%H%M%S"
         "date(1) format for screenshot filenames (without extension).";
@@ -134,6 +260,8 @@ in
       Read-only map of generated screenshot commands. Consumed by other
       modules (hyprland binds and command menus). Structure:
         commands.<region|window|screen>.<clipboard|file|annotate>
+        commands.smart.capture
+        commands.ocr.clipboard
       The `annotate` keys are omitted when `annotator = "none"`.
     '';
   };
@@ -149,7 +277,9 @@ in
     home.packages =
       with pkgs;
       [
+        custom.capture-region
         grimblast
+        screenshotTool
         wl-clipboard
       ]
       ++ lib.optional (cfg.annotator == "swappy") swappy;
