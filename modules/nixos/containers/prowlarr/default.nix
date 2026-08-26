@@ -9,7 +9,11 @@
 # configurable only via the UI (the PROWLARR__PROXY__* env vars cover
 # config.xml settings only and do NOT work) — one-time wiring:
 #   Settings → General → Proxy: SOCKS5 172.16.64.108:20170,
-#   Ignored: localhost,127.0.0.1,172.16.64.0/24,192.168.80.0/20
+#   Ignored: localhost,127.0.0.1,172.16.64.0/24,192.168.80.0/20,*.sbulav.ru
+# When FlareSolverr is enabled, add it in Prowlarr as an Indexer Proxy at
+# http://127.0.0.1:8191 with a dedicated tag, then apply the same tag only
+# to Cloudflare-protected indexers. Prowlarr forwards its global SOCKS proxy
+# to FlareSolverr, preserving the v2rayA egress path.
 # Torrent peer traffic never touches prowlarr — it only hands
 # .torrent/magnets over.
 {
@@ -26,6 +30,7 @@ in
 {
   options.${namespace}.containers.prowlarr = with types; {
     enable = mkBoolOpt false "Enable prowlarr nixos-container;";
+    enableFlareSolverr = mkBoolOpt false "Enable FlareSolverr alongside Prowlarr for protected indexers";
     dataPath = mkOpt str "/tank/prowlarr" "Prowlarr state path on host machine";
     host = mkOpt str "prowlarr.sbulav.ru" "The host to serve prowlarr on";
     hostAddress = mkOpt str "172.16.64.10" "With private network, which address to use on Host";
@@ -78,6 +83,13 @@ in
           services.prowlarr = {
             enable = true;
             dataDir = "/var/lib/prowlarr-data";
+          };
+
+          services.flaresolverr.enable = cfg.enableFlareSolverr;
+
+          systemd.services.prowlarr = lib.mkIf cfg.enableFlareSolverr {
+            after = [ "flaresolverr.service" ];
+            wants = [ "flaresolverr.service" ];
           };
 
           networking = {

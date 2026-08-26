@@ -37,9 +37,20 @@
     enable = true;
     resolvers."sbulav.ru" = [ "172.16.64.104" ];
     hosts = {
+      # The arr UIs (issue #39) are pinned here, not just left to the
+      # resolver above: their traefik routers are LAN-only
+      # (ClientIP 192.168.80.0/20), so a browser that answers the name from
+      # public DNS gets the router's WAN address, hairpins out to the ISP and
+      # arrives from a public source IP — no router matches and traefik
+      # returns 404. Firefox defaults network.trr.exclude-etc-hosts=true, so
+      # an /etc/hosts entry is consulted before DoH; it also survives the
+      # corporate VPN capturing DNS, which 172.16.64.104 does not.
       "192.168.89.207" = [
         "zanoza"
         "zanoza.sbulav.ru"
+        "sonarr.sbulav.ru"
+        "prowlarr.sbulav.ru"
+        "qbittorrent.sbulav.ru"
       ];
       "192.168.92.194" = [
         "beez"

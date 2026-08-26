@@ -292,6 +292,7 @@ in
     # the Jellyfin UI. Nothing else in the system is touched.
     prowlarr = {
       enable = true;
+      enableFlareSolverr = true;
       host = "prowlarr.sbulav.ru";
       hostAddress = "172.16.64.10";
       localAddress = "172.16.64.113";
