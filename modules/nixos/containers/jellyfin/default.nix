@@ -18,6 +18,8 @@ in
     localAddress = mkOpt str "172.16.64.107" "With privateNetwork, which address to use in container";
     secret_file = mkOpt str "secrets/serverz/default.yaml" "SOPS secret to get creds from";
     enableGPU = mkBoolOpt false "Enable GPU device passthrough for hardware video acceleration";
+    # Read-only view of the arr-stack library (issue #39). Empty = no mount.
+    arrLibraryPath = mkOpt str "" "Host path of the arr media library to bind read-only";
   };
   imports = [
     (import ../shared/shared-traefik-clientip-route.nix {
@@ -104,6 +106,12 @@ in
         "/var/lib/jellyfin/video/ipcam" = {
           "hostPath" = "/tank/ipcam";
           isReadOnly = false;
+        };
+      }
+      // lib.optionalAttrs (cfg.arrLibraryPath != "") {
+        "/var/lib/jellyfin/media" = {
+          hostPath = cfg.arrLibraryPath;
+          isReadOnly = true;
         };
       }
       // lib.optionalAttrs cfg.enableGPU {

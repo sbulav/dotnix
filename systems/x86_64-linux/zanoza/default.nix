@@ -277,6 +277,36 @@ in
       secret_file = "secrets/zanoza/default.yaml";
       hostAddress = "172.16.64.10";
       localAddress = "172.16.64.107";
+      # RO view of the arr-stack library (issue #39); add the "Anime"
+      # library in the Jellyfin UI pointing at /var/lib/jellyfin/media.
+      arrLibraryPath = "/tank/media/library";
+    };
+    # arr stack test playground (issue #39). Manual pre-steps, once:
+    #   zfs create -o mountpoint=/tank/media tank/media
+    #   zfs create -o mountpoint=/tank/prowlarr tank/prowlarr
+    #   zfs create -o mountpoint=/tank/sonarr tank/sonarr
+    #   zfs create -o mountpoint=/tank/qbittorrent tank/qbittorrent
+    # Revert: set enable = false (or drop these blocks) AND clear jellyfin's
+    # arrLibraryPath (its bind mount keeps tank/media busy), rebuild, then
+    # zfs destroy the four datasets above. Also remove the "Anime" library in
+    # the Jellyfin UI. Nothing else in the system is touched.
+    prowlarr = {
+      enable = true;
+      host = "prowlarr.sbulav.ru";
+      hostAddress = "172.16.64.10";
+      localAddress = "172.16.64.113";
+    };
+    sonarr = {
+      enable = true;
+      host = "sonarr.sbulav.ru";
+      hostAddress = "172.16.64.10";
+      localAddress = "172.16.64.114";
+    };
+    qbittorrent = {
+      enable = true;
+      host = "qbittorrent.sbulav.ru";
+      hostAddress = "172.16.64.10";
+      localAddress = "172.16.64.115";
     };
     v2raya = {
       enable = true;
