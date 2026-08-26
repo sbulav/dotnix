@@ -15,8 +15,13 @@
 # needed in sonarr, and imports are hardlinks (one dataset, group media,
 # UMask 0002).
 #
-# Metadata/indexer egress goes through the v2raya SOCKS proxy
-# (SONARR__PROXY__* settings); calls to prowlarr/qbittorrent bypass it.
+# Metadata/indexer egress goes through the v2raya SOCKS proxy.
+# NOTE: *arr proxy settings live in the app database and are
+# configurable only via the UI (the SONARR__PROXY__* env vars cover
+# config.xml settings only and do NOT work) — one-time wiring:
+#   Settings → General → Proxy: SOCKS5 172.16.64.108:20170,
+#   Ignored: localhost,127.0.0.1,172.16.64.0/24,192.168.80.0/20
+# Calls to prowlarr/qbittorrent bypass it (local addresses).
 {
   config,
   lib,
@@ -37,9 +42,6 @@ in
     host = mkOpt str "sonarr.sbulav.ru" "The host to serve sonarr on";
     hostAddress = mkOpt str "172.16.64.10" "With private network, which address to use on Host";
     localAddress = mkOpt str "172.16.64.114" "With privateNetwork, which address to use in container";
-    # v2raya container address; its SOCKS listens on 0.0.0.0 (portSharing).
-    proxyHost = mkOpt str "172.16.64.108" "SOCKS5 proxy host for metadata traffic (v2raya)";
-    proxyPort = mkOpt port 20170 "SOCKS5 proxy port for metadata traffic (v2raya)";
   };
   imports = [
     (import ../shared/shared-traefik-clientip-route.nix {
@@ -105,17 +107,6 @@ in
           services.sonarr = {
             enable = true;
             group = "media";
-            settings = {
-              # Metadata egress through v2raya; prowlarr/qbittorrent bypass.
-              proxy = {
-                enabled = true;
-                type = "socks5";
-                hostname = cfg.proxyHost;
-                port = cfg.proxyPort;
-                bypassfilter = "localhost,127.0.0.1,172.16.64.0/24,192.168.80.0/20";
-                bypasslocaladdresses = true;
-              };
-            };
           };
 
           # Group-writable imports so jellyfin can read and future arr

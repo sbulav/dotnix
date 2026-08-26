@@ -5,8 +5,13 @@
 # Revert: disable this module, then `zfs destroy tank/prowlarr`.
 #
 # All outbound indexer/metadata traffic goes through the v2raya SOCKS
-# proxy (declaratively, via PROWLARR__PROXY__* settings). Torrent peer
-# traffic never touches prowlarr — it only hands .torrent/magnets over.
+# proxy. NOTE: *arr proxy settings live in the app database and are
+# configurable only via the UI (the PROWLARR__PROXY__* env vars cover
+# config.xml settings only and do NOT work) — one-time wiring:
+#   Settings → General → Proxy: SOCKS5 172.16.64.108:20170,
+#   Ignored: localhost,127.0.0.1,172.16.64.0/24,192.168.80.0/20
+# Torrent peer traffic never touches prowlarr — it only hands
+# .torrent/magnets over.
 {
   config,
   lib,
@@ -25,9 +30,6 @@ in
     host = mkOpt str "prowlarr.sbulav.ru" "The host to serve prowlarr on";
     hostAddress = mkOpt str "172.16.64.10" "With private network, which address to use on Host";
     localAddress = mkOpt str "172.16.64.113" "With privateNetwork, which address to use in container";
-    # v2raya container address; its SOCKS listens on 0.0.0.0 (portSharing).
-    proxyHost = mkOpt str "172.16.64.108" "SOCKS5 proxy host for indexer traffic (v2raya)";
-    proxyPort = mkOpt port 20170 "SOCKS5 proxy port for indexer traffic (v2raya)";
   };
   imports = [
     (import ../shared/shared-traefik-clientip-route.nix {
@@ -76,17 +78,6 @@ in
           services.prowlarr = {
             enable = true;
             dataDir = "/var/lib/prowlarr-data";
-            settings = {
-              # Indexer/metadata egress through v2raya; local API calls bypass.
-              proxy = {
-                enabled = true;
-                type = "socks5";
-                hostname = cfg.proxyHost;
-                port = cfg.proxyPort;
-                bypassfilter = "localhost,127.0.0.1,172.16.64.0/24,192.168.80.0/20";
-                bypasslocaladdresses = true;
-              };
-            };
           };
 
           networking = {
