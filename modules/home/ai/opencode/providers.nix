@@ -16,24 +16,9 @@
       "gpt-5.6-terra" = {
         name = "ChatGPT 5.6 Terra";
       };
-      "gpt-5-mini" = {
-        name = "ChatGPT 5 Mini";
-        options = {
-          reasoning = false;
-        };
+      "gpt-5.6-luna" = {
+        name = "ChatGPT 5.6 Luna";
       };
-      "gpt-4.1" = {
-        name = "ChatGPT 4.1";
-      };
-      # "gpt-5.3-codex" = {
-      #   name = "ChatGPT 5.3 Codex";
-      # };
-      # "gpt-5.3" = {
-      #   name = "ChatGPT 5.3";
-      # };
-      # "gpt-5.4" = {
-      #   name = "ChatGPT 5.4";
-      # };
     };
   };
 
@@ -41,23 +26,11 @@
     name = "HHDev Anthropic Gateway";
     npm = "@ai-sdk/anthropic";
     models = {
-      "claude-sonnet-4-6" = {
-        name = "Claude Sonnet 4.6";
-      };
-      "claude-opus-4-7" = {
-        name = "Claude Opus 4.7";
-      };
       "claude-opus-4-8" = {
         name = "Claude Opus 4.8";
       };
       "claude-fable-5" = {
         name = "Claude Fable 5";
-      };
-      "claude-haiku-4-5-20251001" = {
-        name = "Claude Haiku 4.5 (2025-10-01)";
-        options = {
-          max_tokens = 8192;
-        };
       };
     };
     options = {
@@ -70,6 +43,9 @@
     };
   };
 
+  # Legacy gateway DeepSeek. Kept configured but not routed: max_tokens is
+  # capped at 2048/4096, too small for real subtasks. The self-hosted
+  # hhdev-deepseek-v4-flash below is the usable DeepSeek lane.
   "hhdev-deepseek" = {
     name = "HHDev DeepSeek Gateway";
     npm = "@ai-sdk/openai-compatible";
@@ -139,25 +115,31 @@
     };
   };
 
+  # GLM-5.3 Flash is deployed under the old glm5-fp8 endpoint name — the URL
+  # does not match the model. Brand-new release; speed/bug feedback pending.
   "hhdev-glm5-fp8" = {
-    name = "GLM-5.2 FP8";
+    name = "GLM-5.3 Flash";
     npm = "@ai-sdk/openai-compatible";
     options = {
       baseURL = "https://llm-gateway.pyn.ru/proxy/glm5-fp8/v1";
       apiKey = "{env:OPENAI_API_PYN_KEY}";
     };
     models = {
-      "zai-org/GLM-5.2-FP8" = {
-        name = "GLM-5.2 FP8";
+      "zai-org/GLM-5.3-Flash" = {
+        name = "GLM-5.3 Flash";
+        # Thinks by default — emits reasoning_content even without kwargs.
+        # Give it max_tokens headroom or the budget is spent on thinking and
+        # content comes back empty. Thinking can be switched off per request
+        # via chat_template_kwargs.enable_thinking = false.
+        reasoning = true;
+        limit = {
+          context = 131072;
+        };
       };
-      # limit = {
-      #   context = 8000;
-      #   output = 10000;
-      # };
     };
   };
 
-  # Self-hosted on the pyn.ru gateway (same box family as GLM-5.2): free, fast,
+  # Self-hosted on the pyn.ru gateway (same box family as GLM-5.3 Flash): free, fast,
   # 128k context. Reasoning is OFF unless the request explicitly carries
   # chat_template_kwargs.enable_thinking — vLLM's chat template gates it there,
   # not behind a `reasoning` flag.
@@ -213,19 +195,4 @@
       };
     };
   };
-
-  # "pyn-gpt-oss-120b" = {
-  #   name = "GPT-OSS 120B";
-  #   npm = "@ai-sdk/openai-compatible";
-  #   options = {
-  #     baseURL = "https://llm-gateway.pyn.ru/proxy/gpt-oss-120b/v1";
-  #     apiKey = "{env:OPENAI_API_KEY}";
-  #   };
-  #   models = {
-  #     "gpt-oss-120b" = {
-  #       name = "GPT-OSS 120B";
-  #     };
-  #   };
-  # };
-
 }

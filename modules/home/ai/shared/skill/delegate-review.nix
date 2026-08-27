@@ -1,7 +1,7 @@
 {
   name = "delegate-review";
   version = "1.5.0";
-  description = "Multi-model PR review orchestrator. Use when reviewing a pull request or a list of PRs: classify PR complexity, route reasoning/spec work to GPT-5.6 Sol, code/correctness work to GPT-5.6 Terra, use cheap Grok 4.5 for independent-family passes, degrade on API limits, pack a context brief, spawn parallel opencode sessions, reconcile findings, and plan fixes. Triggers: delegate-review, review PR, review pull request, multi-model review, PR review swarm.";
+  description = "Multi-model PR review orchestrator. Use when reviewing a pull request or a list of PRs: classify PR complexity, route reasoning/spec work to GPT-5.6 Sol, code/correctness work to GPT-5.6 Terra, use cheap Grok 4.6 for independent-family passes, degrade on API limits, pack a context brief, spawn parallel opencode sessions, reconcile findings, and plan fixes. Triggers: delegate-review, review PR, review pull request, multi-model review, PR review swarm.";
   "argument-hint" = "[PR number(s), or 'open' for open PRs]";
   "user-invocable" = true;
   allowed-tools = [
@@ -59,40 +59,33 @@
     marked "never a review slot" / "below review bars" unless the class bar
     still admits it — see bars). Anything not on the table is **out of pool**:
     do not invent IDs, do not "try haiku", do not use whatever `opencode models`
-    lists as a cheaper substitute.
+    lists as a cheaper substitute. Deprecated models (haiku, gpt-4.1,
+    opus-4-7, gpt-5-mini) are removed from the gateway config;
+    `hhdev-deepseek/deepseek-chat` and `deepseek-coder` remain configured but
+    are not on the scorecard (max_tokens 2048/4096 — unusable for review), so
+    the allowlist rule already keeps them out of the pool.
 
     Before every `opencode run -m …`, run this checklist mentally:
 
     1. Is the exact model string on the scorecard? If no → **abort that choice**.
-    2. Is it on the HARD BAN list (or a haiku / gpt-4.1 / deepseek alias)? If yes →
-       **abort**. Bans beat cost, speed, diversity, security override, and panic.
+    2. Is it marked "NOT a review slot"? If yes → **abort**. Bans beat cost,
+       speed, diversity, security override, and panic.
     3. Does it clear the class bar (Reason + Code)? If no → **abort**.
     4. Only then rank by Cost / Speed / diversity.
 
-    ### HARD BAN — never pass these to `-m`, not as fallback, not "just this once"
-
-    Exact IDs and any alias that is clearly the same model:
-
-    | Banned | Why |
-    |---|---|
-    | `hhdev-anthropic/claude-haiku-4-5-20251001` | too weak for review; burns work tokens for noise |
-    | any `*haiku*` / `claude-haiku*` | same class — ban by substring |
-    | `hhdev-openai/gpt-4.1` | banned in delegate; do not "save quota" with it |
-    | any `gpt-4.1` / `gpt-4o` mini-tier not on the scorecard | out of pool |
-    | `hhdev-deepseek/deepseek-chat` | max_tokens 2048 — unusable for review |
-    | `hhdev-deepseek/deepseek-coder` | max_tokens 4096 — unusable for review |
-    | any `deepseek*` | out of pool |
-
-    **If you catch yourself about to dispatch a banned model: stop, pick the next
-    allowlisted clearer, or self-cover the lens. Never "degrade to haiku".**
+    **If you catch yourself about to dispatch an off-scorecard model: stop, pick
+    the next allowlisted clearer, or self-cover the lens. Never "degrade" to a
+    cheap substitute.**
 
     ### Not a review slot (on scorecard but forbidden for `-m` review)
 
     - `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` — free, self-hosted, 128k
       context. **Never a reviewer session** (no verdicts, no severities), but it
       is the **default engine for review support work** — see below.
-    - `hhdev-glm5-fp8/zai-org/GLM-5.2-FP8` — free; may help *you* list files
-      locally, **never** a reviewer session.
+    - `hhdev-glm5-fp8/zai-org/GLM-5.3-Flash` — free, fast (~270 tok/s); may help
+      *you* list files locally, **never** a reviewer session.
+    - `hhdev-deepseek-v4-flash/deepseek-ai/DeepSeek-V4-Flash-0731` — free,
+      self-hosted; support lane only, **never** a reviewer session.
 
     ### Self-hosted support lane (use it constantly)
 
@@ -109,7 +102,7 @@
     - Reformatting reconciled findings into the final table, and drafting the
       PR comment text once *you* have decided the content.
 
-    Prefer gemma-4-26b for these; use GLM-5.2 when the support task needs code
+    Prefer gemma-4-26b for these; use GLM-5.3 when the support task needs code
     understanding rather than text shuffling. **Never** let either one decide
     whether a finding is real, or assign a severity — that is orchestrator or
     reviewer-slot work.
@@ -133,17 +126,16 @@
 
     | Model | Reason | Code | Speed | Cost | Family | Review notes |
     |---|---|---|---|---|---|---|
-    | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` | 5 | 5 | 9 | **0** | gemma | **NOT a review slot** — self-hosted support lane (brief packing, diff/log summarisation, formatting) |
-    | `hhdev-glm5-fp8/zai-org/GLM-5.2-FP8` | 6 | 7 | 7 | **0** | glm | **NOT a review slot** (triage only for orchestrator) |
+    | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` | 5 | 5 | 8 | **0** | gemma | **NOT a review slot** — self-hosted support lane (brief packing, diff/log summarisation, formatting) |
+    | `hhdev-glm5-fp8/zai-org/GLM-5.3-Flash` | 8 | 9 | 9 | **0** | glm | **NOT a review slot** (triage only for orchestrator); scores provisional |
+    | `hhdev-deepseek-v4-flash/deepseek-ai/DeepSeek-V4-Flash-0731` | 7 | 7 | 8 | **0** | deepseek | **NOT a review slot** — support lane backup for GLM-5.3 |
     | `hhdev-grok/grok-4.6` | 8 | 8 | 8 | **1** | grok | cheap skim, batch, and independent-family reviewer |
     | `openai/gpt-5.6-sol` | 10 | 9 | 7 | 2 | openai/sol | spec, intent, architecture, and reasoning reviewer |
     | `openai/gpt-5.6-terra` | 9 | 10 | 7 | 2 | openai/terra | correctness, tests, debugging, and code reviewer |
-    | `hhdev-anthropic/claude-sonnet-4-6` | 8 | 9 | 7 | 6 | anthropic | default work-tokens reviewer |
     | `hhdev-google/gemini-3.1-pro-preview` | 9 | 8 | 6 | 7 | google | large-context / huge-diff lens |
     | `hhdev-openai/gpt-5.5` | 9 | 9 | 6 | 7 | openai† | legacy fallback only when fwdproxy is down |
     | `hhdev-anthropic/claude-fable-5` | 10 | 10 | 6 | 8 | anthropic | parallel heavyweight only |
     | `hhdev-anthropic/claude-opus-4-8` | 10 | 10 | 4 | 9 | anthropic | deep / security / contested |
-    | `hhdev-anthropic/claude-opus-4-7` | 9 | 9 | 4 | 9 | anthropic | prefer opus-4-8 |
 
     ## Capability bars (review classes)
 
@@ -267,14 +259,14 @@
     - **Auth middleware change**  
       class=`security`, 2 slots. Slot1 correctness → cheapest R≥9 C≥9 =
       **openai/gpt-5.6-terra**. Slot2 security + security-override →
-      **hhdev-anthropic/claude-opus-4-8** (not sonnet). variant=high.
+      **hhdev-anthropic/claude-opus-4-8**. variant=high.
 
     - **80-file generated + hand edits**  
       class=`large-context`, 3 slots. A: Terra correctness; B: Sol spec;
       C: **gemini-3.1-pro-preview** standards/large-surface. Brief carries file
       list + hotspots only; reviewers fetch full diff via git.
 
-    - **Author was claude-sonnet (handoff)**  
+    - **Author was an anthropic model (handoff)**  
       Prefer first slot **openai/gpt-5.6-terra**, second **openai/gpt-5.6-sol** or another non-anthropic
       clearer before a second anthropic.
 
@@ -554,21 +546,21 @@
        - Slot plan: Terra covers correctness and Sol covers spec/reasoning.
          Record `lineage-diversity-compromised`; self-cover an independent lens
          when the class requires a genuinely different lineage.
-       - Do **not** pull haiku, gpt-4.1, deepseek, GLM, or gemma into a review
+       - Do **not** pull GLM, gemma, or deepseek-v4-flash into a review
          slot to "replace" anthropic.
 
     2. **`openai-quota` (personal sub exhausted)**  
        - Drop `openai/*`.  
        - Use cheap `hhdev-grok/grok-4.6` first when it clears the bar, then
-         `hhdev-anthropic/claude-sonnet-4-6`, `hhdev-google/gemini-3.1-pro-preview`,
-         or `hhdev-anthropic/claude-opus-4-8` (security), still by role + bar + cost.
+          `hhdev-google/gemini-3.1-pro-preview`,
+          or `hhdev-anthropic/claude-opus-4-8` (security), still by role + bar + cost.
        - If only one hhdev clearer remains: one reviewer + self-cover.
 
     3. **`fwdproxy-down`**  
        - There is no exact Sol/Terra gateway mirror. Map either intended lane to
          legacy `hhdev-openai/gpt-5.5` only when it clears the bar (Cost 7), and
          state that profile specialization was lost.
-       - Pair with `hhdev-anthropic/claude-sonnet-4-6` or gemini for diversity.  
+       - Pair with `hhdev-anthropic/claude-fable-5` or gemini for diversity.  
        - If `hhdev-openai` also fails → treat as `openai-quota` ladder without
          personal openai.
 
@@ -582,10 +574,9 @@
 
     5. **Single-model failure (one ID 429, siblings OK)**  
        - Add only that ID to unavailable; pick next ranked clearer on the same
-         slot. Example: opus-4-8 429 → sonnet-4-6 if bar still clears for that
-         class; if security bar needs R≥9 C≥9 and sonnet is R8 → use
-         `openai/gpt-5.6-sol`, `openai/gpt-5.6-terra`, fable-5, or self-cover —
-         **not** haiku.
+          slot. Example: opus-4-8 429 → fable-5 (clears every bar), then
+          `openai/gpt-5.6-sol` / `openai/gpt-5.6-terra`, or self-cover —
+          **never** an off-scorecard substitute.
 
     6. **`garbage` / `hang`**  
        - One retry (same session for garbage; new dispatch for hang) on **same**
@@ -598,7 +589,7 @@
 
     ### Step C — what you must never do under pressure
 
-    - Never dispatch `*haiku*`, `gpt-4.1`, `deepseek*`, GLM, or gemma as a
+    - Never dispatch GLM, gemma, or deepseek-v4-flash as a
       reviewer because "something is better than nothing". Self-cover instead.
     - Never lower the capability bar to admit a weak model (bars are fixed;
       unavailable set only shrinks the pool).
@@ -624,8 +615,8 @@
     - Prefer `tea pulls` / `tea issues` / `tea comment`; no token fishing.
     - Do not invent CI results or line numbers.
     - Never skip the routing card — silent model choice is a process failure.
-    - **Allowlist only** for `-m`. **HARD BAN is absolute** (haiku, gpt-4.1,
-      deepseek, and any non-scorecard id).
+    - **Allowlist only** for `-m`: anything not on the scorecard is out of pool,
+      no aliases, no "cheaper substitutes".
     - **Never use GLM or gemma as a review slot** — they are the free support
       lane only (brief packing, summarisation, formatting).
     - On total API loss: self-cover, do not invent banned substitutes.

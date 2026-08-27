@@ -21,7 +21,7 @@ Enable the module in your Home Manager configuration:
     enable = true;
     settings = {
       # Override default settings here
-      model = "hhdev-anthropic/claude-sonnet-4-6";
+      model = "hhdev-glm5-fp8/zai-org/GLM-5.3-Flash";
       theme = "dark";
     };
   };
@@ -59,7 +59,7 @@ Create `.nix` files in the `agent/` directory:
 {
   name = "Coding Assistant";
   description = "Specialized coding assistant";
-  model = "hhdev-openai/gpt-4.1";
+  model = "hhdev-glm5-fp8/zai-org/GLM-5.3-Flash";
   temperature = 0.3;
   system_prompt = "You are a helpful coding assistant...";
 }
@@ -67,7 +67,7 @@ Create `.nix` files in the `agent/` directory:
 
 ### Included Agents
 
-- **committer**: Generate and apply Conventional Commits for staged changes, safely. Uses `hhdev-openai/gpt-4.1` with low temperature for deterministic formatting. Has restricted permissions to prevent accidental file modifications.
+- **committer**: Generate and apply Conventional Commits for staged changes, safely. Uses the module default model with low temperature for deterministic formatting. Has restricted permissions to prevent accidental file modifications.
 - **pr-creator**: Creates Pull Requests in Forgejo from the current branch. Determines owner/repo and default branch from git, generates a concise Russian description based on commits, and calls curl with FJ_TOKEN. Uses restricted permissions for safe git operations and API calls.
 
 ### Included Commands

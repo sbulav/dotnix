@@ -17,9 +17,11 @@ with lib.custom;
 
       opencode = {
         enable = true;
-        # Use direct Anthropic API on mba13 (no corporate gateway)
+        # Default to the free self-hosted GLM-5.3 Flash (pyn.ru gateway);
+        # direct Anthropic provider stays available alongside hhdev-* for
+        # work-token models.
         settings = {
-          model = "anthropic/claude-sonnet-4-6";
+          model = "hhdev-glm5-fp8/zai-org/GLM-5.3-Flash";
           small_model = "anthropic/claude-haiku-4-5-20251001";
           # Add direct Anthropic provider alongside hhdev-* providers
           provider = {
@@ -27,9 +29,6 @@ with lib.custom;
               npm = "@ai-sdk/anthropic";
               name = "Anthropic";
               models = {
-                "claude-sonnet-4-6" = {
-                  name = "Claude Sonnet 4.6";
-                };
                 "claude-opus-4-8" = {
                   name = "Claude Opus 4.8";
                 };

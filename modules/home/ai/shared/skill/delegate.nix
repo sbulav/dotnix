@@ -41,22 +41,30 @@
     heavyweight worker running while you continue). Otherwise do the hard thinking yourself
     and delegate the mechanical work.
 
-    **Push everything mechanical onto self-hosted models.** Two models run on our own
+    **Push everything mechanical onto self-hosted models.** Three models run on our own
     hardware and cost nothing per token:
 
-    - `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` — 26B A4B, 128k context, very fast.
+    - `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` — 26B A4B, 128k context, no
+      thinking overhead: instant answers, ideal for pure text work.
       This is the **first choice for any subtask that does not need strong reasoning or
       code judgement**: renames, formatting, boilerplate, log and output parsing, file
       and format conversion, extracting fields from docs, summarising long output,
       drafting commit/PR text, triage passes over many files, first-pass reading of big
       logs (its 128k window swallows them whole). Use it aggressively and in parallel —
       a wasted gemma call costs nothing but wall clock.
-    - `hhdev-glm5-fp8/zai-org/GLM-5.2-FP8` — also free, slower, but noticeably better at
-      code. Use it when a mechanical task still needs to *understand* code, or when gemma
-      returns something sloppy.
+    - `hhdev-glm5-fp8/zai-org/GLM-5.3-Flash` — 320B/18B-active MoE, 131k context,
+      free and fast (~270 tok/s, ~3x gemma). Clearly better at code: this is the
+      **first choice for any subtask that must *understand* code** — mass edits
+      across a codebase, bug triage, anything mechanical-but-structural — and the
+      escalation when gemma returns something sloppy. Thinks by default: keep
+      max_tokens headroom, or thinking eats the budget and content comes back
+      empty. Brand-new (Aug 2026): treat odd behaviour as a bug worth reporting.
+    - `hhdev-deepseek-v4-flash/deepseek-ai/DeepSeek-V4-Flash-0731` — also free,
+      thinking on by config. Backup for GLM-5.3 when it misbehaves; single smoke
+      test so far, scores provisional.
 
-    Escalation ladder for cheap work: **gemma → GLM-5.2 → grok-4.6 → paid tiers.** Never
-    spend paid tokens on a task the self-hosted pair can do; never keep a paid model doing
+    Escalation ladder for cheap work: **gemma → GLM-5.3 → grok-4.6 → paid tiers.** Never
+    spend paid tokens on a task the self-hosted trio can do; never keep a paid model doing
     grunt work just because it is already in the loop.
 
     ## Model scorecard (the weights)
@@ -66,34 +74,33 @@
 
     | Model | Reason | Code | Speed | Cost | Notes |
     |---|---|---|---|---|---|
-    | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` | 5 | 5 | 9 | **0** | self-hosted, free, 128k ctx; **default for grunt work, lookups, and bulk text** |
-    | `hhdev-glm5-fp8/zai-org/GLM-5.2-FP8` | 6 | 7 | 7 | **0** | self-hosted, free; grunt work that needs real code sense |
+    | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` | 5 | 5 | 8 | **0** | self-hosted, free, 128k ctx; instant answers for grunt work, lookups, and bulk text (measured ~80 tok/s) |
+    | `hhdev-glm5-fp8/zai-org/GLM-5.3-Flash` | 8 | 9 | 9 | **0** | self-hosted, free, 131k ctx; ~270 tok/s; grunt work needing real code sense — scores provisional (vendor claims near-Opus-4.8 coding) |
+    | `hhdev-deepseek-v4-flash/deepseek-ai/DeepSeek-V4-Flash-0731` | 7 | 7 | 8 | **0** | self-hosted, free; thinking on by config; backup when GLM-5.3 misbehaves |
     | `hhdev-grok/grok-4.6` | 8 | 8 | 8 | **1** | cheap gateway model; generalist, research, and independent review |
     | `openai/gpt-5.6-sol` | 10 | 9 | 7 | 2 | personal sub; reasoning, planning, spec, and difficult analysis |
     | `openai/gpt-5.6-terra` | 9 | 10 | 7 | 2 | personal sub; implementation, refactoring, debugging, and code review |
-    | `hhdev-anthropic/claude-sonnet-4-6` | 8 | 9 | 7 | 6 | work tokens |
     | `hhdev-google/gemini-3.1-pro-preview` | 9 | 8 | 6 | 7 | work tokens; huge context window |
     | `hhdev-openai/gpt-5.5` | 9 | 9 | 6 | 7 | work tokens; legacy fallback only when fwdproxy is down |
     | `hhdev-anthropic/claude-fable-5` | 10 | 10 | 6 | 8 | work tokens; orchestrator-equivalent — use ONLY for parallel heavyweight work |
     | `hhdev-anthropic/claude-opus-4-8` | 10 | 10 | 4 | 9 | work tokens; deep-debug delegate |
-    | `hhdev-anthropic/claude-opus-4-7` | 9 | 9 | 4 | 9 | work tokens; prefer opus-4-8 |
 
-    **Not routed:** `hhdev-deepseek/deepseek-chat`, `hhdev-deepseek/deepseek-coder`
-    (max_tokens capped at 2048/4096 — too small for real subtasks).
-
-    **HARD BAN — never use, not even as a fallback:**
-    - `hhdev-openai/gpt-4.1`
-    - `hhdev-anthropic/claude-haiku-4-5-20251001`
+    **Not on the scorecard = not routed.** Deprecated models (gpt-4.1, gpt-5-mini,
+    haiku, opus-4-7) have been removed from the gateway config;
+    `hhdev-deepseek/deepseek-chat` and `deepseek-coder` stay configured but are
+    not routed (max_tokens capped at 2048/4096 — too small for real subtasks; the
+    self-hosted deepseek-v4-flash is the usable DeepSeek lane). Do not invent
+    substitutes — escalate through the ladder instead.
 
     ## Routing table
 
     | Task class | Primary | Escalation | Variant |
     |---|---|---|---|
-    | Grunt work: renames, formatting, boilerplate, log parsing, file conversion | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` | GLM-5.2, then `hhdev-grok/grok-4.6` | low/medium |
+    | Grunt work: renames, formatting, boilerplate, log parsing, file conversion | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` | GLM-5.3, then `hhdev-grok/grok-4.6` | low/medium |
     | Quick lookups, summarization, doc extraction | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` | `hhdev-grok/grok-4.6` | low/medium |
-    | Bulk text: commit/PR drafts, changelogs, release notes, translation | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` | GLM-5.2 | low/medium |
-    | First-pass triage over many files or a long log (fan out, then read the hits yourself) | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` (parallel) | GLM-5.2 | low |
-    | Mechanical work that still needs code understanding (mass edits across a codebase) | GLM-5.2 | `openai/gpt-5.6-terra` | medium |
+    | Bulk text: commit/PR drafts, changelogs, release notes, translation | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` | GLM-5.3 | low/medium |
+    | First-pass triage over many files or a long log (fan out, then read the hits yourself) | `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it` (parallel) | GLM-5.3 | low |
+    | Mechanical work that still needs code understanding (mass edits across a codebase) | GLM-5.3 | `openai/gpt-5.6-terra` | medium |
     | Well-specified code implementation | `openai/gpt-5.6-terra` | `openai/gpt-5.6-sol` | medium |
     | Complex implementation / refactoring | `openai/gpt-5.6-terra` | `openai/gpt-5.6-sol` | medium, high if truly hard |
     | Deep debugging / root-cause analysis | orchestrator itself; delegate a parallel code lens to `openai/gpt-5.6-terra` and a reasoning lens to `openai/gpt-5.6-sol` | `hhdev-anthropic/claude-opus-4-8` | high |
@@ -217,15 +224,16 @@
       remaining subtasks — deep debugging -> orchestrator itself or the appropriate
       `openai/gpt-5.6-sol` / `openai/gpt-5.6-terra` lane; large-context -> Sol;
       research -> Sol.
-      The self-hosted pair (gemma-4-26b, GLM-5.2) is unaffected — different gateway,
+      The self-hosted trio (gemma-4-26b, GLM-5.3, deepseek-v4-flash) is unaffected —
+      different gateway,
       llm-gateway.pyn.ru — and stays primary for grunt work; lean on it harder while
       hhdev is out. Announce the reroute ONCE, then continue; do not report it per
       subtask.
     - **llm-gateway.pyn.ru down / gemma returns errors**: fall through the cheap ladder —
-      GLM-5.2, then `hhdev-grok/grok-4.6`. Do not promote grunt work straight to a paid
+      GLM-5.3, then `hhdev-grok/grok-4.6`. Do not promote grunt work straight to a paid
       reasoning tier.
     - **fwdproxy.pyn.ru unreachable** (`openai/*` dispatches fail to connect): reroute
-      `openai/*` traffic to cheap Grok / GLM-5.2 first, then `hhdev-*` equivalents
+      `openai/*` traffic to cheap Grok / GLM-5.3 first, then `hhdev-*` equivalents
       (including legacy `hhdev-openai/gpt-5.5`) when their capability clears the bar.
       Announce once.
     - **Worker produces garbage or fails verification**: one retry in the same session

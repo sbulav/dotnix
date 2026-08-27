@@ -2,7 +2,7 @@
   name = "Nix Expert";
   description = "Nix and NixOS configuration specialist — idiomatic, secure, and performant Nix code";
   mode = "subagent";
-  model = "hhdev-glm5-fp8/zai-org/GLM-5.2-FP8";
+  model = "hhdev-glm5-fp8/zai-org/GLM-5.3-Flash";
   temperature = 0.1;
 
   tools = {

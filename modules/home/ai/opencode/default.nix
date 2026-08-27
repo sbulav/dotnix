@@ -188,7 +188,7 @@ let
 
   # Default configuration settings
   defaultSettings = {
-    model = "hhdev-glm5-fp8/zai-org/GLM-5.2-FP8";
+    model = "hhdev-glm5-fp8/zai-org/GLM-5.3-Flash";
     # Titles and summaries are pure text work: hand them to the fastest free
     # self-hosted model instead of occupying GLM.
     small_model = "hhdev-gemma4-26b/google/gemma-4-26B-A4B-it";
