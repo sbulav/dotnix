@@ -49,6 +49,7 @@
         "zanoza"
         "zanoza.sbulav.ru"
         "sonarr.sbulav.ru"
+        "radarr.sbulav.ru"
         "prowlarr.sbulav.ru"
         "qbittorrent.sbulav.ru"
       ];
