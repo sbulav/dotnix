@@ -295,6 +295,9 @@ in
     prowlarr = {
       enable = true;
       enableFlareSolverr = true;
+      # filmix-torznab bridge; needs the filmix-env secret in
+      # secrets/zanoza/default.yaml (see the prowlarr module header).
+      enableFilmix = true;
       host = "prowlarr.sbulav.ru";
       hostAddress = "172.16.64.10";
       localAddress = "172.16.64.113";
@@ -307,6 +310,9 @@ in
     };
     radarr = {
       enable = true;
+      # Reject releases over 10 GiB (Settings → Indexers → Maximum Size),
+      # reapplied over the API on every container start.
+      maxReleaseSizeGB = 10;
       host = "radarr.sbulav.ru";
       hostAddress = "172.16.64.10";
       localAddress = "172.16.64.116";

@@ -9,16 +9,37 @@
 # configurable only via the UI (the PROWLARR__PROXY__* env vars cover
 # config.xml settings only and do NOT work) — one-time wiring:
 #   Settings → General → Proxy: SOCKS5 172.16.64.108:20170,
-#   Ignored: localhost,127.0.0.1,172.16.64.0/24,192.168.80.0/20,*.sbulav.ru
+#   Ignored: localhost,127.0.0.1,172.16.64.0/24,192.168.80.0/20,*.sbulav.ru,
+#            torrentio.strem.fun
+# (torrentio must bypass the proxy: the v2rayA exit IP gets a hard
+# Cloudflare 403, while direct access from home works. The direct path
+# is RKN-throttled though — Cloudflare TLS streams stall after ~12-16 KB
+# — so torrentio.yml pins "|limit=2" in default_opts to keep responses
+# ~6-8 KB; without it popular titles die with "ResponseEnded".)
 # When FlareSolverr is enabled, add it in Prowlarr as an Indexer Proxy at
 # http://127.0.0.1:8191 with a dedicated tag, then apply the same tag only
 # to Cloudflare-protected indexers. Prowlarr forwards its global SOCKS proxy
 # to FlareSolverr, preserving the v2rayA egress path.
 # Torrent peer traffic never touches prowlarr — it only hands
 # .torrent/magnets over.
+#
+# Custom Cardigann definitions (*.yml next to this file) are symlinked
+# into {dataDir}/Definitions/Custom at container boot; Prowlarr picks
+# them up on start. Installing the definition only makes the indexer
+# *available* — add it once via UI: Indexers → Add → search "Torrentio".
+#
+# enableFilmix runs the filmix-torznab bridge (pkgs.custom.filmix-torznab)
+# on 127.0.0.1:9117 inside the container. It needs a "filmix-env" sops
+# secret shaped as an env file:
+#   FILMIX_COOKIE=dle_user_id=NNN; dle_password=HEXHASH
+# (long-lived "remember me" DLE cookies, copied from a logged-in browser;
+# add HTTPS_PROXY=socks5h://... there if filmix must egress via v2rayA).
+# One-time UI step: Indexers → Add → Generic Torznab,
+# URL http://127.0.0.1:9117, API path /api, no API key.
 {
   config,
   lib,
+  pkgs,
   namespace,
   ...
 }:
@@ -31,6 +52,8 @@ in
   options.${namespace}.containers.prowlarr = with types; {
     enable = mkBoolOpt false "Enable prowlarr nixos-container;";
     enableFlareSolverr = mkBoolOpt false "Enable FlareSolverr alongside Prowlarr for protected indexers";
+    enableFilmix = mkBoolOpt false "Run the filmix-torznab bridge alongside Prowlarr";
+    secret_file = mkOpt str "secrets/zanoza/default.yaml" "SOPS file with the filmix-env secret";
     dataPath = mkOpt str "/tank/prowlarr" "Prowlarr state path on host machine";
     host = mkOpt str "prowlarr.sbulav.ru" "The host to serve prowlarr on";
     hostAddress = mkOpt str "172.16.64.10" "With private network, which address to use on Host";
@@ -61,6 +84,12 @@ in
       externalInterface = "enp3s0";
     };
 
+    custom.security.sops.secrets = mkIf cfg.enableFilmix {
+      "filmix-env" = lib.custom.secrets.containers.envFileWithRestart "prowlarr" // {
+        sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
+      };
+    };
+
     containers.prowlarr = {
       ephemeral = true;
       autoStart = true;
@@ -71,6 +100,11 @@ in
         "/var/lib/prowlarr-data" = {
           hostPath = "${cfg.dataPath}/";
           isReadOnly = false;
+        };
+      }
+      // lib.optionalAttrs cfg.enableFilmix {
+        "${config.sops.secrets."filmix-env".path}" = {
+          isReadOnly = true;
         };
       };
       privateNetwork = true;
@@ -87,9 +121,44 @@ in
 
           services.flaresolverr.enable = cfg.enableFlareSolverr;
 
-          systemd.services.prowlarr = lib.mkIf cfg.enableFlareSolverr {
-            after = [ "flaresolverr.service" ];
-            wants = [ "flaresolverr.service" ];
+          systemd.services.prowlarr = lib.mkMerge [
+            {
+              # Cardigann custom definitions, declaratively. Installed from
+              # preStart (not tmpfiles): the data dir belongs to prowlarr's
+              # DynamicUser, so root-driven tmpfiles trips the "unsafe path
+              # transition" check on the bind-mounted dataset. Must go
+              # through $STATE_DIRECTORY — the raw /var/lib/prowlarr-data
+              # path is read-only inside the service sandbox.
+              preStart = ''
+                install -D -m0644 ${./torrentio.yml} \
+                  "$STATE_DIRECTORY/Definitions/Custom/torrentio.yml"
+              '';
+            }
+            (lib.mkIf cfg.enableFlareSolverr {
+              after = [ "flaresolverr.service" ];
+              wants = [ "flaresolverr.service" ];
+            })
+          ];
+
+          # Torznab bridge for Filmix PRO+ (see header). Loopback only:
+          # nothing but Prowlarr in this container ever talks to it.
+          systemd.services.filmix-torznab = lib.mkIf cfg.enableFilmix {
+            description = "Filmix Torznab bridge";
+            wantedBy = [ "multi-user.target" ];
+            after = [ "network.target" ];
+            serviceConfig = {
+              ExecStart = lib.getExe pkgs.custom.filmix-torznab;
+              EnvironmentFile = config.sops.secrets."filmix-env".path;
+              DynamicUser = true;
+              Restart = "on-failure";
+              RestartSec = 10;
+              # Hardening: it only needs outbound HTTP and a loopback socket.
+              NoNewPrivileges = true;
+              ProtectSystem = "strict";
+              ProtectHome = true;
+              PrivateTmp = true;
+              CapabilityBoundingSet = "";
+            };
           };
 
           networking = {

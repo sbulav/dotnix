@@ -1,0 +1,148 @@
+# Torrentio meta-indexer for Prowlarr (Cardigann custom definition).
+#
+# Vendored from https://github.com/dreulavelle/Prowlarr-Indexers
+# (Custom/torrentio.yml). Torrentio is the Stremio torrent-aggregation
+# addon: one endpoint fans out to rutor, rutracker, 1337x, TPB, EZTV,
+# nyaa and more, searchable by IMDB id. Public — no account needed;
+# a debrid key is optional and off by default.
+#
+# Update: re-fetch from upstream and diff; local changes:
+#   - infohash: selector "infoHash" with "url" fallback. Non-debrid
+#     streams carry the raw hash in "infoHash" and have no "url" at all
+#     (upstream's url-only selector fails validation without a debrid
+#     key); debrid streams keep working through the fallback chain.
+#   - default_opts gains "|limit=2" (max results per quality bucket).
+#     Torrentio goes direct (the v2rayA exit is Cloudflare-403'd) and
+#     the RU uplink throttles Cloudflare TLS streams to a stall after
+#     ~12-16 KB — a full-provider response for a popular title never
+#     finishes ("response ended prematurely (ResponseEnded)").
+#     limit=2 keeps responses ~6-8 KB so they complete in <1 s.
+---
+id: torrentio
+name: Torrentio
+description: "Torrentio Indexer"
+language: en-US
+type: public
+encoding: UTF-8
+followredirect: false
+testlinktorrent: false
+requestDelay: 2
+links:
+  - https://torrentio.strem.fun/
+
+caps:
+  categories:
+    Movies: Movies
+    TV: TV
+
+  modes:
+    search: [q]
+    movie-search: [q, imdbid]
+    tv-search: [q, imdbid, season, ep]
+  allowrawsearch: false
+
+settings:
+  - name: default_opts
+    type: text
+    label: Torrentio Options
+    default: "providers=eztv,rarbg,1337x,thepiratebay,kickasstorrents,torrentgalaxy,magnetdl,horriblesubs,nyaasi,tokyotosho,anidex,rutor,rutracker,comando,bludv,torrent9,ilcorsaronero,mejortorrent,wolfmax4k,cinecalidad,besttorrents|sort=qualitysize|qualityfilter=scr,cam|limit=2"
+  - name: rdkey_label
+    type: info
+    label: Real-Debrid API Key Required
+  - name: debrid_provider_key
+    type: text
+    label: Debrid provider API Key
+    default: ""
+  - name: debrid_provider
+    type: select
+    label: Debrid provider
+    default: none
+    options:
+      none: None
+      realdebrid: Real-Debrid
+      alldebrid: AllDebrid
+      premiumize: Premiumize
+      debridlink: Debridlink
+      offcloud: Offcloud
+      putio: Put.io
+      torbox: Torbox
+  - name: validation_label
+    type: info
+    label: Validation settings optional
+  - name: validate_imdb_movie_label
+    type: info
+    label: The following help to validate an indexer in Sonarr by confirming that the show returns results
+  - name: validate_imdb_movie
+    type: text
+    label: IMDB ID of Movie to use for Radarr validation (must exist in indexer)
+    default: "tt0137523" # Fight Club
+  - name: validate_imdb_tv
+    type: text
+    label: IMDB ID TV show to use for Sonarr validation (must exist in indexer)
+    default: "tt9288030" # Reacher S02E01
+
+search:
+  headers:
+    User-Agent:
+      [
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0",
+      ]
+  paths:
+    - path: "{{ if .Query.IMDBID }}{{ .Config.default_opts }}|{{ .Config.debrid_provider }}={{ .Config.debrid_provider_key }}/stream/movie/{{ .Query.IMDBID }}.json{{ else }}providers=rarbg,1337x|sort=size|qualityfilter=brremux,hdrall,dolbyvision,4k,720p,480p,other,scr,cam,unknown|{{ .Config.debrid_provider }}={{ .Config.debrid_provider_key }}/stream/movie/{{ .Config.validate_imdb_movie }}.json{{ end }}"
+      method: get
+      response:
+        type: json
+        noResultsMessage: '"streams": []'
+      categories: [Movies]
+    - path: "{{ if .Query.IMDBID }}{{ .Config.default_opts }}{{else}}providers=rarbg,1337x|sort=size|qualityfilter=brremux,hdrall,dolbyvision,4k,720p,480p,other,scr,cam,unknown{{ end }}|{{ .Config.debrid_provider }}={{ .Config.debrid_provider_key }}/stream/series/{{ if .Query.IMDBID }}{{ .Query.IMDBID}}{{ else }}{{ .Config.validate_imdb_tv }}{{ end }}:{{ if .Query.Season }}{{ .Query.Season }}{{ else }}1{{ end }}:{{ if .Query.Ep }}{{ .Query.Ep }}{{ else }}1{{ end }}.json"
+      method: get
+      response:
+        type: json
+        noResultsMessage: '"streams": []'
+      categories: [TV]
+
+  rows:
+    selector: streams
+    missingAttributeEqualsNoResults: true
+
+  fields:
+    title:
+      selector: title
+      filters:
+        - name: split
+          args: ["\n", 0]
+    year:
+      selector: title
+      filters:
+        - name: regexp
+          args: "(\\b(19|20)\\d\\d\\b)"
+    category_is_tv_show:
+      text: "{{ .Result.title }}"
+      filters:
+        - name: regexp
+          args: "\\b(S\\d+(?:E\\d+)?)\\b"
+    category:
+      text: "{{ if .Result.category_is_tv_show }}TV{{ else }}Movies{{ end }}"
+    infohash_from_hash:
+      selector: infoHash
+      optional: true
+    infohash_from_url:
+      selector: url
+      optional: true
+      filters:
+        - name: regexp
+          args: "/([a-f0-9]{40})"
+    infohash:
+      text: "{{ if .Result.infohash_from_hash }}{{ .Result.infohash_from_hash }}{{ else }}{{ .Result.infohash_from_url }}{{ end }}"
+    seeders:
+      selector: title
+      filters:
+        - name: regexp
+          args: "👤 (\\d+)"
+    leechers:
+      text: "0"
+    size:
+      selector: title
+      filters:
+        - name: regexp
+          args: "💾 (\\d+(?:\\.\\d+)? [KMGT]B)"

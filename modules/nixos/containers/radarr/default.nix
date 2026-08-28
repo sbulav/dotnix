@@ -38,10 +38,21 @@
 #     result as 8000/"Other" (stated in its Prowlarr definition), so
 #     without it Prowlarr refuses to sync RuTor ("no results in the
 #     configured categories")
+#
+# maxReleaseSizeGB caps release size (Settings → Indexers → Maximum Size).
+# Unlike the wiring above it is NOT a one-time UI step: an
+# `radarr-api-settings` oneshot reapplies it over the API on every container
+# start, so Nix owns that one key and the UI cannot win. Prowlarr has no
+# equivalent knob — the cap has to live here, in the app that decides what
+# to grab. It is a Permanent rejection, so it also blocks force-grabs from
+# automatic search; interactive search still shows the release, greyed out.
+# The cap only gates NEW grabs — use `radarr-requeue` on the host to kick
+# already-running oversized downloads back out for a smaller release.
 # Torrent peer traffic never touches radarr — qbittorrent handles it.
 {
   config,
   lib,
+  pkgs,
   namespace,
   ...
 }:
@@ -56,6 +67,9 @@ in
     enable = mkBoolOpt false "Enable radarr nixos-container;";
     dataPath = mkOpt str "/tank/radarr" "Radarr state path on host machine";
     mediaPath = mkOpt str "/tank/media" "Shared arr media path on host machine";
+    maxReleaseSizeGB =
+      mkOpt int 0
+        "Reject releases larger than this many GiB (Settings → Indexers → Maximum Size); 0 = unlimited";
     host = mkOpt str "radarr.sbulav.ru" "The host to serve radarr on";
     hostAddress = mkOpt str "172.16.64.10" "With private network, which address to use on Host";
     localAddress = mkOpt str "172.16.64.116" "With privateNetwork, which address to use in container";
@@ -84,6 +98,20 @@ in
       internalInterfaces = [ "ve-radarr" ];
       externalInterface = "enp3s0";
     };
+
+    # `radarr-requeue` — kick oversized in-flight downloads out of the
+    # queue so radarr re-grabs them under the size cap (the cap itself only
+    # applies to new grabs).
+    environment.systemPackages = [
+      (import ../shared/shared-arr-requeue.nix {
+        inherit pkgs lib;
+        app = "radarr";
+        url = "http://${cfg.localAddress}:7878";
+        configXml = "${cfg.dataPath}/.config/Radarr/config.xml";
+        queueParams = "includeUnknownMovieItems=true&includeMovie=true";
+        defaultMaxGB = cfg.maxReleaseSizeGB;
+      })
+    ];
 
     # Refuse to start when the tank/media dataset is not mounted — otherwise
     # imports would silently land on the root filesystem. Library layout is
@@ -119,6 +147,17 @@ in
       config =
         { ... }:
         {
+          imports = [
+            # Maximum Size lives in the app database, so it can only be set
+            # over the API — this reapplies it on every container start.
+            (import ../shared/shared-arr-api-settings.nix {
+              app = "radarr";
+              port = 7878;
+              configXml = "/var/lib/radarr/.config/Radarr/config.xml";
+              settings.indexer.maximumSize = cfg.maxReleaseSizeGB * 1024;
+            })
+          ];
+
           users.groups.media.gid = mediaGid;
 
           services.radarr = {

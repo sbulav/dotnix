@@ -45,7 +45,7 @@ Daily driver is the `sys` wrapper (`packages/sys/default.nix`):
 Raw equivalents:
 
 - Build a host: `nix build .#nixosConfigurations.{hostname}.config.system.build.toplevel` (`darwinConfigurations.mba13` for Darwin)
-- Deploy to a remote host: `nix run .#deploy.{hostname}` — deploy-rs nodes are auto-derived from `nixosConfigurations` by `lib.custom.mkDeploy`
+- Deploy to a remote host: `nix run nixpkgs#deploy-rs -- .#{hostname}` — deploy-rs nodes are auto-derived from `nixosConfigurations` by `lib.custom.mkDeploy` (the flake exposes the raw `deploy` output, not an app)
 - Format: `nix fmt` · Validate all configurations: `nix flake check`
 
 **Guardrail: always ask the user before any switch or test** (`sys rebuild`,
@@ -56,7 +56,7 @@ Raw equivalents:
 1. `nix fmt` — clean.
 2. `nix build .#nixosConfigurations.{affected-host}.config.system.build.toplevel` — builds without error, for every host the change touches.
 3. `nix flake check` when the change spans hosts or shared modules.
-4. Activation (`sys test`, then `sys rebuild`) — only with the user's explicit go-ahead; remote hosts build locally first, then `nix run .#deploy.{hostname}`.
+4. Activation (`sys test`, then `sys rebuild`) — only with the user's explicit go-ahead; remote hosts build locally first, then `nix run nixpkgs#deploy-rs -- .#{hostname}`.
 
 ## Module conventions
 
