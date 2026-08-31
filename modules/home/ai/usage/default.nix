@@ -15,12 +15,17 @@ let
   # carve out only the subscription host for this limits-only collector.
   usageNoProxy = "${proxy.noProxy},chatgpt.com";
 
+  # Single source of truth for the cache location: the wrapper env covers the
+  # collector (service-spawned or manual), the substitution covers the reader.
+  stateFile = "${config.xdg.stateHome}/sab/ai-usage/state.json";
+
   collector = pkgs.symlinkJoin {
     name = "ai-usage-proxied";
     paths = [ pkgs.custom.ai-usage ];
     nativeBuildInputs = [ pkgs.makeWrapper ];
     postBuild = ''
       wrapProgram $out/bin/ai-usage-update \
+        --set AI_USAGE_STATE_FILE '${stateFile}' \
         --set AI_USAGE_CODEX_BIN '${lib.getExe pkgs.unstable.codex}' \
         --set HTTP_PROXY '${proxy.httpProxy}' \
         --set HTTPS_PROXY '${proxy.httpProxy}' \
@@ -39,7 +44,7 @@ let
       --replace-fail '@NOCTALIA@' '${config.programs.noctalia.package}/bin/noctalia'
     substituteInPlace $out/ai_usage/service.luau \
       --replace-fail '@AI_USAGE_UPDATE@' '${collector}/bin/ai-usage-update' \
-      --replace-fail '@STATE_FILE@' '${config.xdg.stateHome}/sab/ai-usage/state.json'
+      --replace-fail '@STATE_FILE@' '${stateFile}'
     substituteInPlace $out/ai_usage/panel.luau \
       --replace-fail '@NOCTALIA@' '${config.programs.noctalia.package}/bin/noctalia'
   '';

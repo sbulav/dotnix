@@ -5,6 +5,7 @@
 local stateFile = "@STATE_FILE@"
 local running = false
 local queued = false
+local args = { "@AI_USAGE_UPDATE@", "--state-file", stateFile }
 
 local function publish(payload)
   if payload ~= nil and payload.providers ~= nil then
@@ -21,19 +22,15 @@ local function loadCache()
   publish(payload)
 end
 
-local function refresh(force)
+local function refresh()
   if running then
-    queued = queued or force
+    queued = true
     return
   end
   running = true
   noctalia.state.set("refreshing", true)
   noctalia.state.set("refreshError", "")
 
-  local args = { "@AI_USAGE_UPDATE@" }
-  if force then
-    args[#args + 1] = "--force"
-  end
   local launched = noctalia.runAsync(args, function(result)
     running = false
     noctalia.state.set("refreshing", false)
@@ -50,7 +47,7 @@ local function refresh(force)
     end
     if queued then
       queued = false
-      refresh(true)
+      refresh()
     end
   end, 30000)
 
@@ -62,15 +59,15 @@ local function refresh(force)
 end
 
 function update()
-  refresh(false)
+  refresh()
 end
 
 function onIpc(event, _payload)
   if event == "refresh" then
-    refresh(true)
+    refresh()
   end
 end
 
 noctalia.setUpdateInterval(15 * 60 * 1000)
 loadCache()
-refresh(false)
+refresh()

@@ -430,8 +430,9 @@ def merge_probe(
 
 
 def state_path(override: str = "") -> Path:
-  if override:
-    return Path(os.path.expanduser(os.path.expandvars(override)))
+  chosen = override or os.environ.get("AI_USAGE_STATE_FILE") or ""
+  if chosen:
+    return Path(os.path.expanduser(os.path.expandvars(chosen)))
   state_home = Path(os.environ.get("XDG_STATE_HOME") or Path.home() / ".local" / "state")
   return state_home / "sab" / "ai-usage" / "state.json"
 
@@ -507,7 +508,6 @@ def collect(
 def parse_args(argv: list[str]) -> argparse.Namespace:
   parser = argparse.ArgumentParser(description="Refresh Claude Code and Codex subscription limit state.")
   parser.add_argument("providers", nargs="*", choices=sorted(PROVIDERS), help="refresh only selected providers")
-  parser.add_argument("--force", action="store_true", help="explicit manual refresh (reserved for contract compatibility)")
   parser.add_argument("--state-file", default="", help=argparse.SUPPRESS)
   return parser.parse_args(argv)
 

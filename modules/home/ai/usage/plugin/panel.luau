@@ -39,7 +39,7 @@ local function limitRows(provider, now)
           color = color,
         }),
       }),
-      ui.progress({ progress = tonumber(limit.percent) or 0, height = 7, fill = color, track = "surface_variant", radius = 4 }),
+      ui.progress({ progress = math.min(1, tonumber(limit.percent) or 0), height = 7, fill = color, track = "surface_variant", radius = 4 }),
       ui.label({
         text = usage.resetText(limit.resetsAtMs, now),
         fontSize = 11,
@@ -111,7 +111,7 @@ local function render()
     headline = (provider.name or provider.id) .. " · " .. (limit.label or "Limit")
     headlineMeta = tostring(usage.round(limit.percent)) .. "% used · " .. usage.resetText(limit.resetsAtMs, now)
     headlineColor = usage.color(limit.percent)
-    headlineProgress = tonumber(limit.percent) or 0
+    headlineProgress = math.min(1, tonumber(limit.percent) or 0)
   end
 
   local providers = {

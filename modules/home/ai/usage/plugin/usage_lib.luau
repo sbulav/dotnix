@@ -9,14 +9,16 @@ function M.round(value)
   return math.floor((tonumber(value) or 0) * 100 + 0.5)
 end
 
+-- Theme roles, not literal traffic-light hexes: the palette is derived from
+-- the wallpaper per mode, so fixed colors cannot stay legible in both.
 function M.color(percent)
   local value = tonumber(percent) or 0
   if value >= 0.90 then
-    return "#ff5c57"
+    return "error"
   elseif value >= 0.70 then
-    return "#f6c344"
+    return "tertiary"
   end
-  return "#2ecc71"
+  return "primary"
 end
 
 function M.providerGlyph(providerId)
