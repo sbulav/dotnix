@@ -14,6 +14,8 @@ in
       enable = true;
     };
 
+    ai.usage = enabled;
+
     desktop = {
       hyprland = {
         enable = true;

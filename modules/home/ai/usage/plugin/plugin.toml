@@ -1,0 +1,32 @@
+id          = "sab/ai_usage"
+name        = "AI Capacity"
+version     = "1.0.0"
+plugin_api  = 28
+author      = "sab"
+license     = "MIT"
+icon        = "sparkles"
+description = "Live Claude Code and Codex subscription limits, with safe cached fallback."
+tags        = ["ai", "limits"]
+
+[[widget]]
+id    = "status"
+entry = "widget.luau"
+
+  [widget.actions]
+  left  = "panel-toggle sab/ai_usage:limits"
+  right = "exec @NOCTALIA@ msg plugin sab/ai_usage:collector all refresh"
+
+[[panel]]
+id                       = "limits"
+entry                    = "panel.luau"
+width                    = 430
+height                   = 600
+placement                = "attached"
+position                 = "auto"
+open_near_click          = true
+dismiss_on_outside_click = true
+keyboard_focus           = "on_demand"
+
+[[service]]
+id    = "collector"
+entry = "service.luau"

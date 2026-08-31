@@ -11,6 +11,7 @@ let
   cfg = config.custom.desktop.addons.noctalia;
   screenshotCfg = config.custom.desktop.addons.screenshot;
   recordingEnabled = config.custom.tools.record-screen.enable;
+  aiUsageEnabled = config.custom.ai.usage.enable;
 
   # Staged takeover of the old seven-tool stack (issue #37). Surfaces the
   # shell does NOT own yet are pinned off here and flipped slice by slice:
@@ -992,6 +993,9 @@ let
       ++ optional recordingEnabled "screen-recording"
       ++ [
         "volume"
+      ]
+      ++ optional aiUsageEnabled "ai-usage"
+      ++ [
         (groupToken "stats")
         (groupToken "net")
         "tray"
