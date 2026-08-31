@@ -36,11 +36,11 @@ let
   );
 
   parakeetHashes = {
-    "encoder-model.onnx" = "";
-    "encoder-model.onnx.data" = "";
-    "decoder_joint-model.onnx" = "";
-    "vocab.txt" = "";
-    "config.json" = "";
+    "encoder-model.onnx" = "sha256-mKdLIbTMABfB5wMDGaSpb0qVBuUPBwjzpRbQKnfJa7E=";
+    "encoder-model.onnx.data" = "sha256-miLTcsUUVcNPE0BdolILrvtxJb0WmBOXVhQj7TLSTzY=";
+    "decoder_joint-model.onnx" = "sha256-6Xjd9miFJxgsEP3i60uDBoQhZImF7yP3qGvnMr6HBsE=";
+    "vocab.txt" = "sha256-1YVEZ56kvGrFY9H1Ret9R0vWz6Rn8KbiwdwcfTfjw10=";
+    "config.json" = "sha256-ZmkDx2uXmMrywhCv1PbNYLCKjb+YAOyNejvA0hSKxGY=";
   };
 
   # CPU-only by default in nixpkgs; Vulkan is a cache-miss override our CI
@@ -64,14 +64,19 @@ let
         device = "default";
         sample_rate = 16000;
         pause_media = true;
+        # Required field in 0.7.x (no serde default): max recording length.
+        max_duration_secs = 60;
       };
       whisper = {
         model = "${cfg.model}";
         language = cfg.language;
       };
       output = {
-        mode = "type";
+        mode = cfg.outputMode;
         fallback_to_clipboard = true;
+      }
+      // optionalAttrs (cfg.outputMode == "paste") {
+        paste_keys = cfg.pasteKeys;
       };
     }
     # Only emitted when selected: a [parakeet] section on a non-ONNX build
@@ -79,11 +84,18 @@ let
     # whisper table stays as the one-line rollback.
     // optionalAttrs (cfg.engine == "parakeet") {
       engine = "parakeet";
-      parakeet.model_path = "${cfg.parakeet.model}";
+      # Key is `model`, not `model_path` (0.7.x schema).
+      parakeet.model = "${cfg.parakeet.model}";
     }
   ) cfg.settings;
 
   voxtypeBin = "${cfg.package}/bin/voxtype";
+
+  # Passed to the daemon explicitly via -c so a config change also changes
+  # the unit file: HM restarts changed units, and voxtype reads config only
+  # at startup — without this, activation silently leaves the old daemon
+  # running with stale settings.
+  configFile = tomlFormat.generate "voxtype-config.toml" settings;
 in
 {
   options.custom.apps.voxtype = {
@@ -102,7 +114,34 @@ in
       mkOpt types.path defaultParakeetModel
         "Directory with the Parakeet ONNX model files (parakeet engine).";
 
-    language = mkOpt types.str "auto" "Whisper language code (auto, en, ru, it, ...).";
+    language = mkOpt (types.either types.str (types.listOf types.str)) "auto" ''
+      Whisper language code, or a constrained auto-detect list. A short
+      clip spoken in one of your languages is routinely misdetected under
+      unconstrained "auto"; a two-language list pins detection to the set
+      you actually speak (e.g. [ "en" "ru" ]).
+    '';
+
+    outputMode =
+      mkOpt
+        (types.enum [
+          "type"
+          "clipboard"
+          "paste"
+        ])
+        "type"
+        ''
+          How transcribed text reaches the focused window. "type" synthesizes
+          keystrokes via wtype — broken in XWayland windows when the compositor
+          layout is not us, and lossy in fast Electron apps. "paste" goes
+          through the clipboard atomically and is layout-independent;
+          "clipboard" copies only (manual paste).
+        '';
+
+    pasteKeys = mkOpt types.str "ctrl+shift+v" ''
+      Keystroke for outputMode = "paste". ctrl+shift+v reads the clipboard in
+      terminals and pastes plain text in GUI apps; shift+insert reads the
+      primary selection in WezTerm and therefore misses voxtype's clipboard.
+    '';
 
     pushToTalkBind =
       mkOpt (types.nullOr types.str) "ALT + slash"
@@ -118,7 +157,7 @@ in
   config = mkIf cfg.enable {
     home.packages = [ cfg.package ];
 
-    xdg.configFile."voxtype/config.toml".source = tomlFormat.generate "voxtype-config.toml" settings;
+    xdg.configFile."voxtype/config.toml".source = configFile;
 
     systemd.user.services.voxtype = {
       Unit = {
@@ -128,7 +167,7 @@ in
         ConditionEnvironment = "WAYLAND_DISPLAY";
       };
       Service = {
-        ExecStart = voxtypeBin;
+        ExecStart = "${voxtypeBin} -c ${configFile}";
         Restart = "on-failure";
         RestartSec = 2;
       };

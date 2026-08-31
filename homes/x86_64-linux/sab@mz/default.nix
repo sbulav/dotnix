@@ -152,12 +152,22 @@ in
     apps = {
       voxtype = {
         enable = true;
-        # Parakeet v3: en+ru (25 languages) with native auto-detect, beats
-        # whisper large-v3 on Russian. Engine = "whisper" rolls back to the
-        # GGML model with language auto-detect.
-        engine = "parakeet";
+        # Whisper over Parakeet: Parakeet v3 language-detects per utterance
+        # and has no constraint option, so short English clips get
+        # transliterated into Russian ("can you hear me" -> "Каню Хирми").
+        # Whisper's constrained auto-detect pins detection to en/ru, and
+        # large-v3-turbo on the 5070 (Vulkan) is roughly Parakeet speed.
+        engine = "whisper";
+        language = [
+          "en"
+          "ru"
+        ];
         # Same chord the old whisper-dictation evdev daemon used.
         pushToTalkBind = "ALT + slash";
+        # Direct wtype text synthesis breaks with Colemak/Cyrillic and drops
+        # characters in Electron. Paste mode transfers the text atomically;
+        # its Ctrl-Shift-V chord uses CLIPBOARD in both WezTerm and Obsidian.
+        outputMode = "paste";
       };
       obsidian = {
         enable = true;
