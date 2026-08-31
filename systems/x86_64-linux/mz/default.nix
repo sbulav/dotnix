@@ -118,15 +118,6 @@ in
     games.enable = true;
   };
   custom = {
-    apps.whisper-dictation = {
-      enable = true;
-      language = "en";
-      paste.method = "type";
-      hotkey = {
-        modifiers = [ "alt" ];
-        key = "slash";
-      };
-    };
     security.sops = {
       enable = true;
       sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];

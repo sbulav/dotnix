@@ -49,11 +49,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    whisper-dictation = {
-      url = "github:jacopone/whisper-dictation";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     # Woomer: Wayland zoomer (personal fork with HiDPI/scaling fixes).
     # Intentionally NOT following our nixpkgs: woomer pins its own
     # nixpkgs-unstable + crane for the raylib/bindgen build.

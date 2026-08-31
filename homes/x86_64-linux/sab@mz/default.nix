@@ -148,6 +148,15 @@ in
     };
 
     apps = {
+      voxtype = {
+        enable = true;
+        # Parakeet v3: en+ru (25 languages) with native auto-detect, beats
+        # whisper large-v3 on Russian. Engine = "whisper" rolls back to the
+        # GGML model with language auto-detect.
+        engine = "parakeet";
+        # Same chord the old whisper-dictation evdev daemon used.
+        pushToTalkBind = "ALT + slash";
+      };
       obsidian = {
         enable = true;
         syncEngine = enabled;
