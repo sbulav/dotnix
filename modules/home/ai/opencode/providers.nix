@@ -134,6 +134,7 @@
         reasoning = true;
         limit = {
           context = 131072;
+          output = 32768;
         };
       };
     };
