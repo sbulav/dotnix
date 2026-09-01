@@ -289,12 +289,12 @@ in
                     };
                     orgId = 1;
                   };
-                  v2rayaTraffic =
-                    if config.${namespace}.containers.v2raya.enable then
+                  singBoxTraffic =
+                    if config.${namespace}.containers.sing-box.enable then
                       [
                         {
-                          name = "v2rayA traffic";
-                          options.path = ./dashboards/v2raya-traffic.json;
+                          name = "sing-box traffic";
+                          options.path = ./dashboards/sing-box-traffic.json;
                           orgId = 1;
                         }
                       ]
@@ -370,7 +370,7 @@ in
                   smartctlExporter
                   zfsStats
                 ]
-                ++ v2rayaTraffic
+                ++ singBoxTraffic
                 ++ logs
                 ++ authelia
                 ++ traefik

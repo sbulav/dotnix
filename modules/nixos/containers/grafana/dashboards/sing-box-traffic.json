@@ -2,7 +2,7 @@
   "annotations": {
     "list": []
   },
-  "description": "Aggregate traffic observed on zanoza's host-side v2rayA container interface. Proxy payloads can cross this interface more than once, so these values are not provider quota usage.",
+  "description": "Aggregate traffic observed on zanoza's host-side sing-box container interface. Proxy payloads can cross this interface more than once, so these values are not provider quota usage.",
   "editable": true,
   "fiscalYearStartMonth": 0,
   "graphTooltip": 1,
@@ -14,7 +14,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Combined receive and transmit rate on the host-side v2raya veth.",
+      "description": "Combined receive and transmit rate on the host-side sing-box veth.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -61,7 +61,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(rate(node_network_receive_bytes_total{instance=\"127.0.0.1:3021\",device=\"ve-v2raya\"}[$__rate_interval]) + rate(node_network_transmit_bytes_total{instance=\"127.0.0.1:3021\",device=\"ve-v2raya\"}[$__rate_interval]))",
+          "expr": "sum(rate(node_network_receive_bytes_total{instance=\"127.0.0.1:3021\",device=\"ve-sing-box\"}[$__rate_interval]) + rate(node_network_transmit_bytes_total{instance=\"127.0.0.1:3021\",device=\"ve-sing-box\"}[$__rate_interval]))",
           "instant": false,
           "legendFormat": "Total",
           "range": true,
@@ -123,7 +123,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(increase(node_network_receive_bytes_total{instance=\"127.0.0.1:3021\",device=\"ve-v2raya\"}[$__range]) + increase(node_network_transmit_bytes_total{instance=\"127.0.0.1:3021\",device=\"ve-v2raya\"}[$__range]))",
+          "expr": "sum(increase(node_network_receive_bytes_total{instance=\"127.0.0.1:3021\",device=\"ve-sing-box\"}[$__range]) + increase(node_network_transmit_bytes_total{instance=\"127.0.0.1:3021\",device=\"ve-sing-box\"}[$__range]))",
           "instant": true,
           "legendFormat": "Observed bytes",
           "range": false,
@@ -138,7 +138,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Whether node exporter currently reports the v2raya host interface.",
+      "description": "Whether node exporter currently reports the sing-box host interface.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -202,14 +202,14 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "count(node_network_receive_bytes_total{instance=\"127.0.0.1:3021\",device=\"ve-v2raya\"}) or vector(0)",
+          "expr": "count(node_network_receive_bytes_total{instance=\"127.0.0.1:3021\",device=\"ve-sing-box\"}) or vector(0)",
           "instant": true,
           "legendFormat": "Interface",
           "range": false,
           "refId": "A"
         }
       ],
-      "title": "v2rayA interface",
+      "title": "sing-box interface",
       "type": "stat"
     },
     {
@@ -217,7 +217,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Receive/transmit are from the host-side ve-v2raya perspective.",
+      "description": "Receive/transmit are from the host-side ve-sing-box perspective.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -295,7 +295,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "rate(node_network_receive_bytes_total{instance=\"127.0.0.1:3021\",device=\"ve-v2raya\"}[$__rate_interval])",
+          "expr": "rate(node_network_receive_bytes_total{instance=\"127.0.0.1:3021\",device=\"ve-sing-box\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "From container",
           "range": true,
@@ -303,7 +303,7 @@
         },
         {
           "editorMode": "code",
-          "expr": "rate(node_network_transmit_bytes_total{instance=\"127.0.0.1:3021\",device=\"ve-v2raya\"}[$__rate_interval])",
+          "expr": "rate(node_network_transmit_bytes_total{instance=\"127.0.0.1:3021\",device=\"ve-sing-box\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "To container",
           "range": true,
@@ -318,7 +318,7 @@
         "type": "prometheus",
         "uid": "prometheus"
       },
-      "description": "Packet rate on the host-side v2raya interface.",
+      "description": "Packet rate on the host-side sing-box interface.",
       "fieldConfig": {
         "defaults": {
           "color": {
@@ -393,7 +393,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "rate(node_network_receive_packets_total{instance=\"127.0.0.1:3021\",device=\"ve-v2raya\"}[$__rate_interval])",
+          "expr": "rate(node_network_receive_packets_total{instance=\"127.0.0.1:3021\",device=\"ve-sing-box\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "From container",
           "range": true,
@@ -401,7 +401,7 @@
         },
         {
           "editorMode": "code",
-          "expr": "rate(node_network_transmit_packets_total{instance=\"127.0.0.1:3021\",device=\"ve-v2raya\"}[$__rate_interval])",
+          "expr": "rate(node_network_transmit_packets_total{instance=\"127.0.0.1:3021\",device=\"ve-sing-box\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "To container",
           "range": true,
@@ -415,7 +415,7 @@
   "refresh": "30s",
   "schemaVersion": 41,
   "tags": [
-    "v2raya",
+    "sing-box",
     "network",
     "node-exporter"
   ],
@@ -428,8 +428,8 @@
   },
   "timepicker": {},
   "timezone": "browser",
-  "title": "Network · v2rayA Traffic",
-  "uid": "v2raya-traffic",
+  "title": "Network · sing-box Traffic",
+  "uid": "sing-box-traffic",
   "version": 1,
   "weekStart": ""
 }

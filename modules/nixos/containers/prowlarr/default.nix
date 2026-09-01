@@ -4,14 +4,14 @@
 #   zfs create -o mountpoint=/tank/prowlarr tank/prowlarr
 # Revert: disable this module, then `zfs destroy tank/prowlarr`.
 #
-# All outbound indexer/metadata traffic goes through the v2raya SOCKS
+# All outbound indexer/metadata traffic goes through the sing-box SOCKS
 # proxy. NOTE: *arr proxy settings live in the app database and are
 # configurable only via the UI (the PROWLARR__PROXY__* env vars cover
 # config.xml settings only and do NOT work) — one-time wiring:
 #   Settings → General → Proxy: SOCKS5 172.16.64.108:20170,
 #   Ignored: localhost,127.0.0.1,172.16.64.0/24,192.168.80.0/20,*.sbulav.ru,
 #            torrentio.strem.fun
-# (torrentio must bypass the proxy: the v2rayA exit IP gets a hard
+# (torrentio must bypass the proxy: the sing-box exit IP gets a hard
 # Cloudflare 403, while direct access from home works. The direct path
 # is RKN-throttled though — Cloudflare TLS streams stall after ~12-16 KB
 # — so torrentio.yml pins "|limit=2" in default_opts to keep responses
@@ -19,7 +19,7 @@
 # When FlareSolverr is enabled, add it in Prowlarr as an Indexer Proxy at
 # http://127.0.0.1:8191 with a dedicated tag, then apply the same tag only
 # to Cloudflare-protected indexers. Prowlarr forwards its global SOCKS proxy
-# to FlareSolverr, preserving the v2rayA egress path.
+# to FlareSolverr, preserving the sing-box egress path.
 # Torrent peer traffic never touches prowlarr — it only hands
 # .torrent/magnets over.
 #
@@ -33,7 +33,7 @@
 # secret shaped as an env file:
 #   FILMIX_COOKIE=dle_user_id=NNN; dle_password=HEXHASH
 # (long-lived "remember me" DLE cookies, copied from a logged-in browser;
-# add HTTPS_PROXY=socks5h://... there if filmix must egress via v2rayA).
+# add HTTPS_PROXY=socks5h://... there if filmix must egress via sing-box).
 # One-time UI step: Indexers → Add → Generic Torznab,
 # URL http://127.0.0.1:9117, API path /api, no API key.
 {

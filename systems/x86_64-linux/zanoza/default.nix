@@ -9,82 +9,6 @@
 let
   system = "x86_64-linux";
   hostName = "zanoza";
-  tvProxyAssets = pkgs.symlinkJoin {
-    name = "tv-proxy-xray-assets";
-    paths = [
-      pkgs.v2ray-geoip
-      pkgs.v2ray-domain-list-community
-    ];
-  };
-  tvProxyRouterConfig = pkgs.writeText "tv-proxy-router.json" (
-    builtins.toJSON {
-      log.loglevel = "warning";
-      inbounds = [
-        {
-          tag = "tv";
-          listen = "127.0.0.1";
-          port = 20169;
-          protocol = "socks";
-          settings.udp = false;
-          sniffing = {
-            enabled = true;
-            destOverride = [
-              "http"
-              "tls"
-            ];
-            routeOnly = false;
-          };
-        }
-      ];
-      outbounds = [
-        {
-          tag = "proxy";
-          protocol = "socks";
-          settings.servers = [
-            {
-              address = "172.16.64.108";
-              port = 20170;
-            }
-          ];
-        }
-        {
-          tag = "direct";
-          protocol = "freedom";
-        }
-      ];
-      routing = {
-        domainStrategy = "IPIfNonMatch";
-        rules = [
-          {
-            type = "field";
-            outboundTag = "direct";
-            domain = [
-              "domain:sbulav.ru"
-              "domain:pyn.ru"
-              "domain:hhdev.ru"
-              "geosite:category-ru"
-              "regexp:\\.ru$"
-              "regexp:\\.su$"
-              "regexp:\\.xn--p1ai$"
-            ];
-          }
-          {
-            type = "field";
-            outboundTag = "direct";
-            ip = [
-              "geoip:private"
-              "geoip:ru"
-            ];
-          }
-          {
-            type = "field";
-            outboundTag = "proxy";
-            network = "tcp";
-          }
-        ];
-      };
-    }
-  );
 in
 {
   imports = [
@@ -169,7 +93,7 @@ in
         "/tank/authelia/logs/*.log"
         "/tank/torrents/log/*.log"
         "/tank/traefik/logs/*.log"
-        "/tank/v2raya/logs/*.log"
+        "/tank/sing-box/logs/*.log"
       ];
     };
   };
@@ -327,9 +251,9 @@ in
       hostAddress = "172.16.64.10";
       localAddress = "172.16.64.115";
     };
-    v2raya = {
+    sing-box = {
       enable = true;
-      host = "v2raya.sbulav.ru";
+      host = "sing-box.sbulav.ru";
       hostAddress = "172.16.64.10";
       localAddress = "172.16.64.108";
     };
@@ -365,16 +289,15 @@ in
 
   # Transparent proxy gateway for the Android TV (YouTube unblock):
   # the MikroTik policy-routes traffic from the TV here; TCP 80/443 is
-  # redirected via redsocks into the v2rayA SOCKS5 (VLESS outbound).
+  # redirected via redsocks straight into the sing-box container's SOCKS5.
+  # sing-box does the RU-direct/proxy split itself (sniff + route rules).
   # Scoped by sourceIps so no other LAN host or local service is affected.
   custom.services.linuxTransparentProxy = {
     enable = true;
     mode = "redirect";
     interface = "enp3s0";
-    # A local Xray router keeps Russian services direct and sends all other
-    # traffic through v2rayA while preserving redsocks' SOCKS5 transport.
-    v2rayAHost = "127.0.0.1";
-    v2rayAPort = 20169;
+    v2rayAHost = "172.16.64.108";
+    v2rayAPort = 20170;
     # 12345 (module default) is taken by Grafana Alloy's HTTP listener
     listenPort = 12346;
     tcpPorts = [
@@ -386,28 +309,9 @@ in
     ];
   };
 
-  systemd.services = {
-    tv-proxy-router = {
-      description = "Route TV traffic between direct and v2rayA outbounds";
-      wantedBy = [ "multi-user.target" ];
-      after = [ "container@v2raya.service" ];
-      requires = [ "container@v2raya.service" ];
-      serviceConfig = {
-        ExecStart = "${lib.getExe pkgs.xray} run -c ${tvProxyRouterConfig}";
-        Restart = "on-failure";
-        RestartSec = "2s";
-        DynamicUser = true;
-        NoNewPrivileges = true;
-        ProtectSystem = "strict";
-        ProtectHome = true;
-        PrivateTmp = true;
-      };
-      environment.XRAY_LOCATION_ASSET = "${tvProxyAssets}/share/v2ray";
-    };
-    redsocks = {
-      after = [ "tv-proxy-router.service" ];
-      requires = [ "tv-proxy-router.service" ];
-    };
+  systemd.services.redsocks = {
+    after = [ "container@sing-box.service" ];
+    requires = [ "container@sing-box.service" ];
   };
 
   services.prometheus.scrapeConfigs = [

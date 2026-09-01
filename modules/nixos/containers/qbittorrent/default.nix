@@ -10,7 +10,7 @@
 #
 # Torrent peer traffic goes DIRECT (no proxy/VPN) — the VPN provider
 # blocks detected torrent traffic. Only indexer/metadata HTTP from
-# prowlarr/sonarr goes through the v2raya SOCKS proxy.
+# prowlarr/sonarr goes through the sing-box SOCKS proxy.
 #
 # Shared media convention (same in sonarr container):
 #   host /tank/media  →  container /data

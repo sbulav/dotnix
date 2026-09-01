@@ -15,7 +15,7 @@
 # needed in sonarr, and imports are hardlinks (one dataset, group media,
 # UMask 0002).
 #
-# Metadata/indexer egress goes through the v2raya SOCKS proxy.
+# Metadata/indexer egress goes through the sing-box SOCKS proxy.
 # NOTE: *arr proxy settings live in the app database and are
 # configurable only via the UI (the SONARR__PROXY__* env vars cover
 # config.xml settings only and do NOT work) — one-time wiring:

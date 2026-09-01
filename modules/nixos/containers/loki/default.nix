@@ -126,7 +126,7 @@ in
           /tank/authelia/logs \
           /tank/grafana/data/log \
           /tank/jellyfin/log \
-          /tank/v2raya/logs; do
+          /tank/sing-box/logs; do
           [ -d "$d" ] || continue
           setfacl -R -m g:logreaders:rX "$d"
           setfacl -R -d -m g:logreaders:rX "$d"
@@ -166,7 +166,7 @@ in
           {__path__ = "/tank/authelia/logs/authelia.log",    job = "authelia",           host = "${config.system.name}"},
           {__path__ = "/tank/grafana/data/log/grafana.log",  job = "grafana",            host = "${config.system.name}"},
           {__path__ = "/tank/jellyfin/log/*.log",            job = "jellyfin",           host = "${config.system.name}"},
-          {__path__ = "/tank/v2raya/logs/*.log",             job = "v2raya",             host = "${config.system.name}"},
+          {__path__ = "/tank/sing-box/logs/*.log",           job = "sing-box",           host = "${config.system.name}"},
         ]
       }
 
