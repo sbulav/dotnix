@@ -106,6 +106,10 @@ in
   # The WTR Pro's ata3 link also produces ICRC/BadCRC errors with DIPM active.
   # Keep all AHCI links at maximum performance to avoid faulty LPM transitions.
   boot.kernelParams = [
+    # Continuing after an oops left critical kernel threads dead and the host
+    # partially hung. Reboot into a clean kernel instead.
+    "oops=panic"
+    "panic=30"
     "nvme_core.default_ps_max_latency_us=0"
     "ahci.mobile_lpm_policy=1"
   ];
