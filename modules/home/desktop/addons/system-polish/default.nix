@@ -222,8 +222,6 @@ in
     systemd.user.services = {
       # These are session infrastructure, not disposable application scopes.
       udiskie.Service.Slice = "session.slice";
-      hypridle.Service.Slice = mkIf config.custom.desktop.addons.hypridle.enable "session.slice";
-      hyprpaper.Service.Slice = mkIf config.custom.desktop.addons.hyprpaper.enable "session.slice";
 
       hyprland-clamshell = mkIf cfg.clamshell.enable {
         Unit = {

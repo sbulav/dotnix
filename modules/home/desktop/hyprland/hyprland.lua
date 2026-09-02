@@ -102,8 +102,6 @@ hl.device({
 ----------------------------------------------------------------
 -- Layer rules
 ----------------------------------------------------------------
-hl.layer_rule({ match = { namespace = "waybar" }, no_anim = true })
-
 -- noctalia surfaces: frosted instead of transparent. The bar runs
 -- background_opacity 0.29; blur alone does nothing there without
 -- ignore_alpha, since Hyprland skips blur behind fully-transparent pixels.
@@ -223,9 +221,7 @@ hl.window_rule({
 
 -- Floating helpers
 for _, c in ipairs({
-	"Rofi",
 	"viewnior",
-	"wlogout",
 	"file_progress",
 	"confirm",
 	"dialog",

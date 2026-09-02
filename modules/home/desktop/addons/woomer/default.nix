@@ -20,10 +20,6 @@ in
       inputs.woomer.packages.${pkgs.stdenv.hostPlatform.system}.default
     ];
 
-    # Bind SUPER+Z to woomer and move the web search off SUPER+Z to SUPER+S.
-    custom.desktop.hyprland.keybindings = {
-      woomer = "Z";
-      search = "S";
-    };
+    custom.desktop.hyprland.keybindings.woomer = "Z";
   };
 }

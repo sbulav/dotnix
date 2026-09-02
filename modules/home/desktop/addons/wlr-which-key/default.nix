@@ -14,11 +14,9 @@ let
   hasScreenshotAddon = screenshotCfg.enable;
   hasAnnotate = hasScreenshotAddon && screenshotCfg.annotator != "none";
 
-  # When the noctalia addon owns launcher/clipboard/session (issue #37), the
-  # menu dispatches to its IPC; passwords and web search have no noctalia
-  # analogue and ride with the rofi addon.
+  # The noctalia addon owns launcher/clipboard/session — the menu dispatches
+  # to its IPC, so those entries only appear while it is enabled.
   noctaliaOwned = config.custom.desktop.addons.noctalia.enable;
-  rofiEnabled = config.custom.desktop.addons.rofi.enable;
 
   # Fallback commands for when the screenshot addon is disabled (legacy
   # grim+slurp behavior). Keeps the menu working out of the box.
@@ -110,31 +108,17 @@ let
           desc = "Browser";
           cmd = "firefox";
         }
+      ]
+      ++ optionals noctaliaOwned [
         {
           key = "r";
           desc = "App Launcher";
-          cmd = if noctaliaOwned then "noctalia msg panel-toggle launcher" else "rofi -show drun";
+          cmd = "noctalia msg panel-toggle launcher";
         }
         {
           key = "c";
           desc = "Clipboard";
-          cmd =
-            if noctaliaOwned then
-              "noctalia msg panel-toggle clipboard"
-            else
-              "rofi -show clip -theme-str 'listview { columns: 1; fixed-columns: true; }'";
-        }
-      ]
-      ++ optionals rofiEnabled [
-        {
-          key = "p";
-          desc = "Passwords";
-          cmd = "rofi-rbw";
-        }
-        {
-          key = "z";
-          desc = "Web Search";
-          cmd = ''rofi -dmenu -p "Search" | xargs -I{} xdg-open "https://www.google.com/search?q={}"'';
+          cmd = "noctalia msg panel-toggle clipboard";
         }
       ];
     }
@@ -331,33 +315,36 @@ let
     {
       key = "p";
       desc = "Power";
-      submenu = [
-        {
-          key = "l";
-          desc = "Lock Screen";
-          cmd = if noctaliaOwned then "noctalia msg session lock" else "swaylock";
-        }
-        {
-          key = "e";
-          desc = "Logout";
-          cmd = if noctaliaOwned then "noctalia msg panel-toggle session" else "wlogout";
-        }
-        {
-          key = "s";
-          desc = "Suspend";
-          cmd = "systemctl suspend";
-        }
-        {
-          key = "r";
-          desc = "Reboot";
-          cmd = "systemctl reboot";
-        }
-        {
-          key = "o";
-          desc = "Power Off";
-          cmd = "systemctl poweroff";
-        }
-      ];
+      submenu =
+        optionals noctaliaOwned [
+          {
+            key = "l";
+            desc = "Lock Screen";
+            cmd = "noctalia msg session lock";
+          }
+          {
+            key = "e";
+            desc = "Logout";
+            cmd = "noctalia msg panel-toggle session";
+          }
+        ]
+        ++ [
+          {
+            key = "s";
+            desc = "Suspend";
+            cmd = "systemctl suspend";
+          }
+          {
+            key = "r";
+            desc = "Reboot";
+            cmd = "systemctl reboot";
+          }
+          {
+            key = "o";
+            desc = "Power Off";
+            cmd = "systemctl poweroff";
+          }
+        ];
     }
   ];
 

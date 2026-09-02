@@ -245,12 +245,9 @@ let
     let
       mainMod = kb.mainMod;
 
-      # When the noctalia addon owns launcher/clipboard/session (issue #37),
-      # the binds dispatch to its IPC instead of rofi/wlogout — same pattern
-      # as the screenshot addon read below. The passwords and search binds
-      # have no noctalia analogue and ride with the rofi addon.
+      # The noctalia addon owns launcher/clipboard/session — the binds
+      # dispatch to its IPC, same pattern as the screenshot addon read below.
       noctaliaOwned = config.custom.desktop.addons.noctalia.enable;
-      rofiEnabled = config.custom.desktop.addons.rofi.enable;
       wlrWhichKeyEnabled = config.custom.desktop.addons."wlr-which-key".enable;
 
       appBindings =
@@ -265,39 +262,22 @@ let
         + optionalString (kb.browser != null) ''
           ${mkBind mainMod kb.browser "Open browser" "exec, firefox"}
         ''
-        + optionalString (kb.launcher != null) ''
-          ${mkBind mainMod kb.launcher "Open application launcher" (
-            if noctaliaOwned then "exec, noctalia msg panel-toggle launcher" else "exec, rofi -show drun"
-          )}
+        + optionalString (kb.launcher != null && noctaliaOwned) ''
+          ${mkBind mainMod kb.launcher "Open application launcher" "exec, noctalia msg panel-toggle launcher"}
         ''
-        + optionalString (kb.clipboard != null) ''
-          ${mkBind mainMod kb.clipboard "Open clipboard history" (
-            if noctaliaOwned then
-              "exec, noctalia msg panel-toggle clipboard"
-            else
-              "exec, rofi -show clip -theme-str 'listview { columns: 1; fixed-columns: true; }'"
-          )}
-        ''
-        + optionalString (kb.passwords != null && rofiEnabled) ''
-          ${mkBind mainMod kb.passwords "Open password manager" "exec, rofi-rbw"}
-        ''
-        + optionalString (kb.search != null && rofiEnabled) ''
-          ${mkBind mainMod kb.search "Search the web"
-            ''exec, rofi -dmenu -p "Search" | xargs -I{} xdg-open "https://www.google.com/search?q={}" && hyprctl dispatch focuswindow firefox''
-          }
+        + optionalString (kb.clipboard != null && noctaliaOwned) ''
+          ${mkBind mainMod kb.clipboard "Open clipboard history" "exec, noctalia msg panel-toggle clipboard"}
         ''
         + optionalString (kb.woomer != null) ''
           ${mkBind mainMod kb.woomer "Zoom the desktop" "exec, woomer"}
         ''
-        + optionalString (kb.lock != null) ''
-          ${mkBind mainMod "SHIFT ${kb.lock}" "Lock the session" (
-            if noctaliaOwned then "exec, noctalia msg session lock" else "exec, swaylock"
-          )}
+        + optionalString (kb.lock != null && noctaliaOwned) ''
+          ${mkBind mainMod "SHIFT ${kb.lock}" "Lock the session" "exec, noctalia msg session lock"}
         ''
-        + optionalString (kb.logout != null) ''
-          ${mkBind mainMod "SHIFT ${kb.logout}" "Open session controls" (
-            if noctaliaOwned then "exec, noctalia msg panel-toggle session" else "exec, wlogout"
-          )}
+        + optionalString (kb.logout != null && noctaliaOwned) ''
+          ${mkBind mainMod "SHIFT ${kb.logout}" "Open session controls"
+            "exec, noctalia msg panel-toggle session"
+          }
         '';
 
       windowBindings =
@@ -415,8 +395,6 @@ in
       menu = mkOpt (types.nullOr types.str) "slash" "Command menu keybinding";
       launcher = mkOpt (types.nullOr types.str) "R" "App launcher keybinding";
       clipboard = mkOpt (types.nullOr types.str) "C" "Clipboard manager keybinding";
-      passwords = mkOpt (types.nullOr types.str) "P" "Password manager keybinding";
-      search = mkOpt (types.nullOr types.str) "Z" "Web search keybinding";
       woomer = mkOpt (types.nullOr types.str) null "Woomer (Wayland zoomer) keybinding";
       lock = mkOpt (types.nullOr types.str) "L" "Lock screen keybinding";
       logout = mkOpt (types.nullOr types.str) "P" "Logout menu keybinding";

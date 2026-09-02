@@ -61,15 +61,11 @@ in
           enable = true;
           audioOutputCycle.enable = true;
         };
-        hyprpaper = disabled;
-        # Noctalia shell trial (issue #37), slices 1-4: bar, notifications,
-        # OSD, launcher, session menu, wallpaper engine, sysmon widgets and
-        # the mic VU meter plugin. The disabled configs
-        # below (mako/waybar/rofi/wlogout/hyprpaper/waypaper) are kept with
-        # enable flipped off — rollback is a re-enable + rebuild (packages
-        # leave the closure). NB: disabling rofi also parks its extras
-        # (rofi-rbw, web-search bind, VPN picker, cliphist watcher);
-        # noctalia's clipboard history is native and does not need cliphist.
+        # Noctalia shell (issue #37): bar, notifications, OSD, launcher,
+        # session menu, wallpaper engine, lock, idle, sysmon widgets and the
+        # mic VU meter plugin. The old waybar/mako/rofi/wlogout/hyprpaper/
+        # waypaper/swaylock/hypridle stack was removed from the repo after
+        # the trial — rollback is now a git revert, not a re-enable.
         noctalia = {
           enable = true;
           # This host runs the wallpaper-derived palette (picked in the
@@ -83,40 +79,8 @@ in
           # Port of the old waybar akg-vu-meter (default sourceMatch AKG_C44).
           micVuMeter.enable = true;
         };
-        mako = disabled;
-        rofi = disabled;
         woomer = enabled;
         kitty = disabled;
-        # Slice 5b: noctalia owns lock + idle (lock@600, screen off@900 —
-        # same numbers as the hypridle "pc" profile). Rollback needs BOTH
-        # sides flipped: re-enable these two AND turn noctalia's off via
-        #   noctalia.settings.lockscreen.enabled = false;
-        #   noctalia.settings.idle.behavior.lock.enabled = false;
-        #   noctalia.settings.idle.behavior.screen-off.enabled = false;
-        # (recursiveUpdate can't delete keys) — otherwise two lockers race
-        # on ext-session-lock and both idle timers fire.
-        swaylock = disabled;
-        hypridle = {
-          enable = false;
-          profile = "pc";
-        };
-        waybar = {
-          enable = false;
-          keyboardName = "kinesis-advantage2-keyboard-1";
-          temperature = {
-            enable = true;
-
-            # AMD Ryzen k10temp sensor - use hwmon0 which corresponds to k10temp-pci-00c3
-            hwmonPath = "/sys/class/hwmon/hwmon4/temp1_input";
-            criticalThreshold = 85;
-            tooltip = true;
-          };
-          micVuMeter = {
-            enable = true;
-          };
-        };
-        wlogout = disabled;
-        hyprlock = disabled;
         wezterm = {
           enable = true;
           # Native Wayland deadlocks after noctalia powers all outputs off.
@@ -135,11 +99,6 @@ in
           };
         };
         wallpaper = "${wallpapers}/share/wallpapers/unorganized/vu_meter_code_neon.png";
-
-        waypaper = {
-          enable = false;
-          wallpaperDirectory = "${wallpapers}/share/wallpapers";
-        };
       };
     };
 

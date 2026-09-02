@@ -13,14 +13,10 @@ let
   recordingEnabled = config.custom.tools.record-screen.enable;
   aiUsageEnabled = config.custom.ai.usage.enable;
 
-  # Staged takeover of the old seven-tool stack (issue #37). Surfaces the
-  # shell does NOT own yet are pinned off here and flipped slice by slice:
-  #   slice 1: bar + notifications + OSD   (waybar/mako off)        — done
-  #   slice 2: launcher + session/power    (rofi/wlogout off)       — done
-  #   slice 3: wallpaper engine + palette  (hyprpaper/waypaper off) — done
-  #   slice 4: sysmon widgets + mic VU plugin                       — done
-  #   slice 5a: manual lock                (old stack kept as fallback) — done
-  #   slice 5b: idle behaviors             (swaylock/hypridle off)  — done
+  # Full takeover of the old seven-tool stack (issue #37): bar, notifications,
+  # OSD, launcher, session/power menu, wallpaper engine, clipboard, lock and
+  # idle. The staged trial is over — the waybar/mako/rofi/wlogout/hyprpaper/
+  # waypaper/swaylock/hypridle modules were removed from the repo.
 
   # Nix-managed plugin source (a read-only "path" source in noctalia terms,
   # scanned one level deep — every child dir is a plugin). plugins/mic_vu/
@@ -496,8 +492,13 @@ let
 
           show_screenshot() {
             case "$(pick "Command Menu / Screenshots" \
-              $'󰹑  Smart Capture\tClick a window/output or drag an area' \
-              ${optionalString screenshotCfg.ocr.enable "$'󰗊  OCR to Clipboard\\tRecognize English and Russian text' \\"}
+              $'󰹑  Smart Capture\tClick a window/output or drag an area' ${
+                # Inline, not on its own continuation line: an empty
+                # optionalString there would leave a blank line that
+                # terminates the pick call mid-list.
+                optionalString screenshotCfg.ocr.enable
+                  "$'󰗊  OCR to Clipboard\\tRecognize English and Russian text'"
+              } \
               $'󰩭  Region\tSelect an arbitrary area' \
               $'  Window\tCapture the active window' \
               $'󰹑  Full Screen\tCapture the complete desktop')" in
@@ -608,8 +609,7 @@ let
 
       show_main() {
         case "$(pick "Command Menu" \
-          $'󰀻  Applications\tLaunch common desktop tools' \
-          ${optionalString screenshotCfg.enable "$'  Screenshots\\tCapture a region, window, or full screen' \\"}
+          $'󰀻  Applications\tLaunch common desktop tools' ${optionalString screenshotCfg.enable "$'  Screenshots\\tCapture a region, window, or full screen'"} \
           $'  Screen Recording\tStart, toggle, or stop recording' \
           $'  Windows\tManage the focused window' \
           $'󰝚  Media\tControl current playback' \
@@ -701,9 +701,8 @@ let
     };
 
     # Slice 3: the shell owns the wallpaper engine. Seeded from the repo-wide
-    # addons.wallpaper option exactly like hyprpaper was (swaylock/hypridle
-    # keep reading that option for the lock image until slice 5); the picker
-    # directory is host-specific and comes in via cfg.settings.
+    # addons.wallpaper option (as the removed hyprpaper module once was); the
+    # picker directory is host-specific and comes in via cfg.settings.
     wallpaper = {
       enabled = true;
       default.path = toString config.custom.desktop.addons.wallpaper;
@@ -717,8 +716,8 @@ let
     };
     # Slice 5: the shell owns locking and idle (PAM stack "login" — ships
     # with NixOS, no pam.d registration needed). Survived the 10x manual
-    # lock/unlock gate; swaylock + hypridle are now disabled on the host
-    # (one flip re-enables them for rollback).
+    # lock/unlock gate; the old swaylock/hypridle modules were removed from
+    # the repo after the trial.
     lockscreen = {
       enabled = true;
       # The login PAM stack runs pam_u2f as `auth sufficient` first, so a
@@ -1137,11 +1136,6 @@ in
       # unit gets its own trigger for this file below.
       "noctalia/zz-overrides.toml" = mkIf (cfg.overrides != { }) { source = overridesFile; };
       "autostart/nm-applet.desktop".text = hiddenAutostart;
-    }
-    # waybar's module carries the same blueman mask, and xdg.configFile.<n>.text
-    # merges by concatenation rather than erroring — so only claim it while
-    # waybar is off, which is the normal state whenever noctalia owns the bar.
-    // optionalAttrs (!config.custom.desktop.addons.waybar.enable) {
       "autostart/blueman.desktop".text = hiddenAutostart;
     };
 

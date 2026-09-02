@@ -27,11 +27,9 @@ in
     environment.systemPackages = with pkgs; [
       # hyprland
       # hyprland-protocols
-      hyprpaper
       hyprpicker
 
       wlroots
-      cliphist
       wl-clipboard
 
       grim

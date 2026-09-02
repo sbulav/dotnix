@@ -33,26 +33,47 @@ in
           };
         };
         gtk = enabled;
-        hyprpaper = enabled;
-        mako = enabled;
-        rofi = enabled;
         kitty = disabled;
-        swaylock = enabled;
-        hypridle = enabled;
-        waybar = enabled;
+        # Noctalia owns bar, notifications, launcher, session menu, wallpaper
+        # engine, lock and idle (the old waybar/mako/rofi/wlogout/hyprpaper/
+        # waypaper/swaylock/hypridle stack is gone from the repo).
+        noctalia = {
+          enable = true;
+          settings = {
+            # Same picker directory waypaper used; the default wallpaper still
+            # flows through the shared addons.wallpaper option below.
+            wallpaper.directory = "${wallpapers}/share/wallpapers";
+            # Parity with the old hypridle "laptop" profile: lock at 5 min,
+            # screen off at 10 min, suspend at 20 min. Complete entries only —
+            # noctalia drops partial [idle.behavior.*] tables.
+            idle.behavior = {
+              lock = {
+                enabled = true;
+                timeout = 300;
+                action = "lock";
+              };
+              screen-off = {
+                enabled = true;
+                timeout = 600;
+                action = "screen_off";
+              };
+              suspend = {
+                enabled = true;
+                timeout = 1200;
+                action = "suspend";
+              };
+            };
+            # Laptop with a backlight — keep the brightness OSD the module
+            # default turns off for the desktop host.
+            osd.kinds.brightness = true;
+          };
+        };
         hypr-scale = enabled;
-        wlogout = enabled;
-        hyprlock = disabled;
         wezterm = enabled;
         "wlr-which-key" = enabled;
         screenshot = enabled;
         woomer = enabled;
         wallpaper = "${wallpapers}/share/wallpapers/unorganized/vu_meter_code_neon.png";
-
-        waypaper = {
-          enable = true;
-          wallpaperDirectory = "${wallpapers}/share/wallpapers";
-        };
       };
     };
 
