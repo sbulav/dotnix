@@ -12,7 +12,7 @@
 #     (upstream's url-only selector fails validation without a debrid
 #     key); debrid streams keep working through the fallback chain.
 #   - default_opts gains "|limit=2" (max results per quality bucket).
-#     Torrentio goes direct (the v2rayA exit is Cloudflare-403'd) and
+#     Torrentio goes direct (the sing-box exits are Cloudflare-403'd) and
 #     the RU uplink throttles Cloudflare TLS streams to a stall after
 #     ~12-16 KB — a full-provider response for a popular title never
 #     finishes ("response ended prematurely (ResponseEnded)").

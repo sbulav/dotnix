@@ -57,8 +57,8 @@ let
       redsocks {
         local_ip = 0.0.0.0;
         local_port = ${toString cfg.listenPort};
-        ip = "${cfg.v2rayAHost}";
-        port = ${toString cfg.v2rayAPort};
+        ip = "${cfg.socksHost}";
+        port = ${toString cfg.socksPort};
         type = socks5;
       }
     '';
@@ -97,7 +97,7 @@ let
     )}
 
     # Never proxy traffic going TO the proxy host itself
-    ${iptables} -t nat -A ${natChain} -d ${cfg.v2rayAHost} -j RETURN
+    ${iptables} -t nat -A ${natChain} -d ${cfg.socksHost} -j RETURN
 
     # Optional ipset scoping ("desired sites")
     ${optionalString (cfg.ipset.enable) ''
@@ -176,7 +176,7 @@ let
         ${iptables} -t mangle -A ${mangleChain} -d ${cidr} -j RETURN
       '') (cfg.excludeCidrs ++ [ ])
     )}
-    ${iptables} -t mangle -A ${mangleChain} -d ${cfg.v2rayAHost} -j RETURN
+    ${iptables} -t mangle -A ${mangleChain} -d ${cfg.socksHost} -j RETURN
 
     # ipset scoping
     ${optionalString (cfg.ipset.enable) ''
@@ -240,7 +240,7 @@ let
         ${ip6tables} -t mangle -A ${mangleChain} -d ${cidr} -j RETURN
       '') cfg.ipv6.excludeCidrs
     )}
-    ${ip6tables} -t mangle -A ${mangleChain} -d ${cfg.v2rayAHost} -j RETURN 2>/dev/null || true
+    ${ip6tables} -t mangle -A ${mangleChain} -d ${cfg.socksHost} -j RETURN 2>/dev/null || true
 
     ${optionalString (cfg.ipset.enable && cfg.ipv6.enable) ''
       # If you need IPv6 ipsets, consider a separate v6 set. This example assumes v4-only ipset.
@@ -276,14 +276,14 @@ let
 in
 {
   options.${namespace}.services.linuxTransparentProxy = {
-    enable = mkBoolOpt false "Enable Linux transparent proxy helper using redsocks/v2rayA.";
+    enable = mkBoolOpt false "Enable Linux transparent proxy helper using redsocks.";
     mode = mkOpt (types.enum [
       "redirect"
       "tproxy"
     ]) "redirect" "Operating mode: NAT REDIRECT (redsocks) or true TPROXY with policy routing.";
 
-    v2rayAHost = mkOpt types.str "192.168.89.207" "Host IP of v2rayA (SOCKS5 endpoint).";
-    v2rayAPort = mkOpt types.port 20170 "Port of v2rayA SOCKS5 listener.";
+    socksHost = mkOpt types.str "192.168.89.207" "Host IP of the upstream SOCKS5 endpoint.";
+    socksPort = mkOpt types.port 20170 "Port of the upstream SOCKS5 listener.";
     listenPort = mkOpt types.port 12345 "Local port redsocks listens on for redirected traffic.";
     interface = mkOpt types.str "enp1s0" "Ingress interface for client traffic (PREROUTING match).";
     tcpPorts = mkOpt (types.listOf types.port) [ 80 443 ] "TCP ports to redirect (set [] for all TCP).";

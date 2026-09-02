@@ -29,7 +29,12 @@ let
 
     uris_file, out_file = sys.argv[1], sys.argv[2]
 
+    # Tags already claimed by the static config / the groups below; a
+    # colliding or duplicate tag makes sing-box reject the merged config.
+    RESERVED_TAGS = {"auto", "exit", "direct"}
+
     outbounds = []
+    seen_tags = set()
     with open(uris_file) as f:
         for line in f:
             uri = line.strip()
@@ -45,7 +50,24 @@ let
                 print(f"skipping non-reality server {u.hostname}",
                       file=sys.stderr)
                 continue
+            # Only bare-TCP REALITY is mapped; a ws/grpc URI would
+            # otherwise silently become a broken TCP outbound.
+            if q.get("type", "tcp") not in ("", "tcp", "none"):
+                print(f"skipping unsupported transport "
+                      f"{q['type']!r} for {u.hostname}",
+                      file=sys.stderr)
+                continue
+            # An accepted REALITY URI must be complete: an empty pbk/sni
+            # renders an invalid config and crash-loops the service.
+            if not q.get("pbk") or not q.get("sni"):
+                sys.exit(f"URI for {u.hostname} lacks pbk/sni — "
+                         "fix the sops entry")
             tag = unquote(u.fragment) or u.hostname
+            if tag in RESERVED_TAGS:
+                sys.exit(f"tag {tag!r} collides with a built-in tag")
+            if tag in seen_tags:
+                sys.exit(f"duplicate outbound tag {tag!r}")
+            seen_tags.add(tag)
             outbound = {
                 "type": "vless",
                 "tag": tag,
@@ -102,6 +124,19 @@ let
     os.rename(tmp, out_file)
     print(f"generated {len(tags)} exits: {', '.join(tags)}")
   '';
+
+  # metacubexd with the backend pre-filled via its config.js hook. The
+  # dashboard is reached through traefik on ${cfg.host}, so the clash API
+  # shares that HTTPS origin; the stock default (http://127.0.0.1:9090)
+  # is unreachable there and trips the browser's mixed-content block.
+  # Only the API secret is left for the user to paste (it lives in sops,
+  # not the store); metacubexd persists it in localStorage afterwards.
+  metacubexd = pkgs.runCommand "metacubexd-configured" { } ''
+    cp -r ${pkgs.metacubexd} $out
+    chmod +w $out $out/config.js
+    echo "window.__METACUBEXD_CONFIG__ = { defaultBackendURL: 'https://${cfg.host}' }" \
+      > $out/config.js
+  '';
 in
 {
   options.${namespace}.containers.sing-box = with types; {
@@ -118,9 +153,17 @@ in
       host = cfg.host;
       url = "http://${cfg.localAddress}:9090";
       route_enabled = cfg.enable;
+      # auth-chain (= secure-headers + authelia) keeps the dashboard SSO-gated
+      # like every other admin UI; allow-lan additionally pins it to LAN
+      # sources. The clash API secret alone is not enough — the dashboard can
+      # pin/unpin exits.
       middleware = [
-        "secure-headers"
+        "auth-chain"
         "allow-lan"
+        # The clash API root answers 401 to anything without the bearer
+        # secret; metacubexd is served under /ui/. Defined below, next to
+        # the traefik container gate.
+        "sing-box-ui-redirect"
       ];
     })
     (import ../shared/shared-adguard-dns-rewrite.nix {
@@ -157,6 +200,32 @@ in
       "d ${cfg.dataPath}/logs 0755 root root -"
       "d ${cfg.dataPath}/state 0755 root root -"
     ];
+
+    # tmpfiles alone is not enough on first activation: during a switch the
+    # tmpfiles pass and the container start land in the same transaction with
+    # no ordering, and nspawn hard-fails on a missing bind-mount *source*
+    # (it only auto-creates missing targets). Same pattern as opencloud's
+    # posix-storage-prepare oneshot.
+    systemd.services.sing-box-data-prepare = {
+      description = "Ensure sing-box data directories exist";
+      wantedBy = [ "container@sing-box.service" ];
+      before = [ "container@sing-box.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        ExecStart = "${pkgs.coreutils}/bin/mkdir -p ${cfg.dataPath}/logs ${cfg.dataPath}/state";
+      };
+    };
+
+    # Bounce the bare host to the dashboard: sing-box serves metacubexd at
+    # /ui/, and the API root it would otherwise hit is a 401 without the
+    # clash secret. Gated like shared-traefik-route so a traefik-less host
+    # doesn't grow a phantom traefik container.
+    containers.traefik = mkIf config.${namespace}.containers.traefik.enable {
+      config.services.traefik.dynamicConfigOptions.http.middlewares.sing-box-ui-redirect.redirectRegex = {
+        regex = "^https://${escapeRegex cfg.host}/$";
+        replacement = "https://${cfg.host}/ui/";
+      };
+    };
 
     containers.sing-box = {
       ephemeral = true;
@@ -266,6 +335,12 @@ in
                     ];
                     outbound = "direct";
                   }
+                  # xray's old IPIfNonMatch equivalent: resolve what the
+                  # domain rules didn't catch (socks5h clients send names)
+                  # so the IP rules below still see RU-hosted hosts on
+                  # foreign TLDs. Uses default_domain_resolver (adguard);
+                  # the outbound still dials by domain name.
+                  { action = "resolve"; }
                   {
                     ip_is_private = true;
                     outbound = "direct";
@@ -280,7 +355,7 @@ in
               experimental = {
                 clash_api = {
                   external_controller = "0.0.0.0:9090";
-                  external_ui = "${pkgs.metacubexd}";
+                  external_ui = "${metacubexd}";
                   secret._secret = config.sops.secrets."sing-box/admin_password".path;
                 };
                 cache_file.enabled = true;
@@ -294,6 +369,11 @@ in
             "+${outboundsGen}/bin/sing-box-outbounds-gen ${
               config.sops.secrets."sing-box/vless_uris".path
             } /run/sing-box/10-outbounds.json"
+            # Validate the merged config (module render + generated
+            # outbounds) so a bad sops edit fails with a readable message
+            # instead of a crash loop. Runs as the service user — same
+            # dirs as ExecStart.
+            "${getExe pkgs.sing-box} check -D /var/lib/sing-box -C /run/sing-box"
           ];
 
           # Bind mounts arrive root-owned; hand them to the service user.

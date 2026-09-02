@@ -296,8 +296,8 @@ in
     enable = true;
     mode = "redirect";
     interface = "enp3s0";
-    v2rayAHost = "172.16.64.108";
-    v2rayAPort = 20170;
+    socksHost = "172.16.64.108";
+    socksPort = 20170;
     # 12345 (module default) is taken by Grafana Alloy's HTTP listener
     listenPort = 12346;
     tcpPorts = [

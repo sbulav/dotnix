@@ -114,8 +114,8 @@ in
 
   # custom.services.linuxTransparentProxy = {
   #   enable = false;
-  #   v2rayAHost = "192.168.89.207";
-  #   v2rayAPort = 20170;
+  #   socksHost = "192.168.89.207";
+  #   socksPort = 20170;
   #   listenPort = 12345;
   #   interface = "enp1s0";
   #   tcpPorts = [80 443]; # Or [] for all TCP
