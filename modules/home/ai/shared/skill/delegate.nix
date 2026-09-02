@@ -82,7 +82,7 @@
     | `openai/gpt-5.6-terra` | 9 | 10 | 7 | 2 | personal sub; implementation, refactoring, debugging, and code review |
     | `hhdev-google/gemini-3.1-pro-preview` | 9 | 8 | 6 | 7 | work tokens; huge context window |
     | `hhdev-openai/gpt-5.5` | 9 | 9 | 6 | 7 | work tokens; legacy fallback only when fwdproxy is down |
-    | `hhdev-anthropic/claude-fable-5` | 10 | 10 | 6 | 8 | work tokens; orchestrator-equivalent — use ONLY for parallel heavyweight work |
+    | `hhdev-anthropic/claude-fable-5-1` | 10 | 10 | 6 | 8 | work tokens; orchestrator-equivalent — use ONLY for parallel heavyweight work |
     | `hhdev-anthropic/claude-opus-4-8` | 10 | 10 | 4 | 9 | work tokens; deep-debug delegate |
 
     **Not on the scorecard = not routed.** Deprecated models (gpt-4.1, gpt-5-mini,

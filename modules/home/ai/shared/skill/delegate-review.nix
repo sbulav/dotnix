@@ -134,7 +134,7 @@
     | `openai/gpt-5.6-terra` | 9 | 10 | 7 | 2 | openai/terra | correctness, tests, debugging, and code reviewer |
     | `hhdev-google/gemini-3.1-pro-preview` | 9 | 8 | 6 | 7 | google | large-context / huge-diff lens |
     | `hhdev-openai/gpt-5.5` | 9 | 9 | 6 | 7 | openai† | legacy fallback only when fwdproxy is down |
-    | `hhdev-anthropic/claude-fable-5` | 10 | 10 | 6 | 8 | anthropic | parallel heavyweight only |
+    | `hhdev-anthropic/claude-fable-5-1` | 10 | 10 | 6 | 8 | anthropic | parallel heavyweight only |
     | `hhdev-anthropic/claude-opus-4-8` | 10 | 10 | 4 | 9 | anthropic | deep / security / contested |
 
     ## Capability bars (review classes)
@@ -560,7 +560,7 @@
        - There is no exact Sol/Terra gateway mirror. Map either intended lane to
          legacy `hhdev-openai/gpt-5.5` only when it clears the bar (Cost 7), and
          state that profile specialization was lost.
-       - Pair with `hhdev-anthropic/claude-fable-5` or gemini for diversity.  
+        - Pair with `hhdev-anthropic/claude-fable-5-1` or gemini for diversity.  
        - If `hhdev-openai` also fails → treat as `openai-quota` ladder without
          personal openai.
 
@@ -574,7 +574,7 @@
 
     5. **Single-model failure (one ID 429, siblings OK)**  
        - Add only that ID to unavailable; pick next ranked clearer on the same
-          slot. Example: opus-4-8 429 → fable-5 (clears every bar), then
+           slot. Example: opus-4-8 429 → fable-5-1 (clears every bar), then
           `openai/gpt-5.6-sol` / `openai/gpt-5.6-terra`, or self-cover —
           **never** an off-scorecard substitute.
 

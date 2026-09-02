@@ -29,8 +29,8 @@
       "claude-opus-4-8" = {
         name = "Claude Opus 4.8";
       };
-      "claude-fable-5" = {
-        name = "Claude Fable 5";
+      "claude-fable-5-1" = {
+        name = "Claude Fable 5.1";
       };
     };
     options = {
