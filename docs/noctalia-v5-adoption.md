@@ -368,14 +368,14 @@ plugins use today.
 ## 8. The home-manager module has exactly six options
 
 `nix/home-module.nix` (148 lines, identical at both revisions):
-`enable`, `systemd.enable`, `package`, `validateConfig`, `settings`,
+`enable`, `systemd.enable`, `package`, `checkConfig`, `settings`,
 `customPalettes`. **There is no option for templates, plugins, greeter, or
 firefox-theme** — all of it goes through `settings`, which accepts an attrset, a
 raw TOML string, or a path.
 
 Two consequences:
 
-- `validateConfig = true` runs `noctalia config validate` against the generated
+- `checkConfig = true` runs `noctalia config validate` against the generated
   file only. Upstream documents that command as validating one file *"without
   scanning default locations or merging settings.toml"* — so it structurally
   cannot catch sidecar schema rot. Validating the *merged* config is a separate,

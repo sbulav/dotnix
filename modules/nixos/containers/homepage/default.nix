@@ -77,7 +77,7 @@ in
           };
 
           services.homepage-dashboard = {
-            environmentFile = config.sops.secrets.homepage-env.path;
+            environmentFiles = [ config.sops.secrets.homepage-env.path ];
             enable = true;
             widgets = [
               {

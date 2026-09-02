@@ -134,13 +134,13 @@ in
           environment.systemPackages = lib.optionals cfg.enableGPU [
             pkgs.jellyfin-ffmpeg
             pkgs.libva-utils # For vainfo
-            pkgs.mesa.drivers # AMD/Intel VAAPI drivers
+            pkgs.mesa # AMD/Intel VAAPI drivers
           ];
 
           # Create symlink for applications expecting standard path
           system.activationScripts.vaapiSetup = lib.mkIf cfg.enableGPU ''
             mkdir -p /run/opengl-driver/lib/dri
-            ln -sf ${pkgs.mesa.drivers}/lib/dri/* /run/opengl-driver/lib/dri/ 2>/dev/null || true
+            ln -sf ${pkgs.mesa}/lib/dri/* /run/opengl-driver/lib/dri/ 2>/dev/null || true
           '';
 
           services.jellyfin = {
@@ -157,13 +157,13 @@ in
             (lib.mkIf cfg.enableGPU {
               serviceConfig.Environment = [
                 "LIBVA_DRIVER_NAME=radeonsi"
-                "LIBVA_DRIVERS_PATH=${pkgs.mesa.drivers}/lib/dri"
+                "LIBVA_DRIVERS_PATH=${pkgs.mesa}/lib/dri"
               ];
 
               # Alternatively, use environment.extraConfig for NixOS 24.11+
               environment = {
                 LIBVA_DRIVER_NAME = "radeonsi";
-                LIBVA_DRIVERS_PATH = "${pkgs.mesa.drivers}/lib/dri";
+                LIBVA_DRIVERS_PATH = "${pkgs.mesa}/lib/dri";
               };
 
             })
