@@ -4,3 +4,6 @@
 # nix build output symlinks
 result
 result-*
+
+# python bytecode from local test runs
+__pycache__/

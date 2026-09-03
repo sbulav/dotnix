@@ -8,4 +8,10 @@
   # Dotless entries match the domain and all subdomains in curl, Go (kubectl),
   # and Node/Bun alike; leading-dot forms are subdomain-only in Go.
   noProxy = "localhost,127.0.0.1,::1,pyn.ru,hhdev.ru,hh.ru,sbulav.ru";
+  # The homelab sing-box mixed inbound (SOCKS5+HTTP) on zanoza, fronting the
+  # VLESS+REALITY exits with automatic failover. fwdproxy stalls CONNECT
+  # chatgpt.com and direct chatgpt.com is Cloudflare-challenged from this
+  # network, so the Codex limits collector routes its codex app-server child
+  # through here instead; socks5h so DNS resolves at the exit.
+  vlessProxy = "socks5h://192.168.89.207:20170";
 }

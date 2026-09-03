@@ -9,11 +9,11 @@ with lib.custom;
 let
   cfg = config.custom.ai.usage;
   proxy = import ../shared/proxy.nix;
-  # Codex reads subscription limits from chatgpt.com rather than api.openai.com.
-  # fwdproxy currently rejects or stalls that CONNECT, while the authenticated
-  # control-plane request succeeds directly. Keep model/API traffic proxied and
-  # carve out only the subscription host for this limits-only collector.
-  usageNoProxy = "${proxy.noProxy},chatgpt.com";
+  # The collector itself keeps fwdproxy (it only talks to api.anthropic.com).
+  # The codex app-server child it spawns must not: fwdproxy stalls CONNECT
+  # chatgpt.com and direct chatgpt.com is Cloudflare-challenged since
+  # 2026-09-02, so probe_codex pins the child to the homelab VLESS exits via
+  # AI_USAGE_CODEX_PROXY (see proxy.nix) while this parent env stays intact.
 
   # Single source of truth for the cache location: the wrapper env covers the
   # collector (service-spawned or manual), the substitution covers the reader.
@@ -27,12 +27,13 @@ let
       wrapProgram $out/bin/ai-usage-update \
         --set AI_USAGE_STATE_FILE '${stateFile}' \
         --set AI_USAGE_CODEX_BIN '${lib.getExe pkgs.unstable.codex}' \
+        --set AI_USAGE_CODEX_PROXY '${proxy.vlessProxy}' \
         --set HTTP_PROXY '${proxy.httpProxy}' \
         --set HTTPS_PROXY '${proxy.httpProxy}' \
         --set http_proxy '${proxy.httpProxy}' \
         --set https_proxy '${proxy.httpProxy}' \
-        --set NO_PROXY '${usageNoProxy}' \
-        --set no_proxy '${usageNoProxy}'
+        --set NO_PROXY '${proxy.noProxy}' \
+        --set no_proxy '${proxy.noProxy}'
     '';
   };
 

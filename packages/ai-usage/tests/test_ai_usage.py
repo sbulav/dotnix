@@ -2,11 +2,13 @@ from __future__ import annotations
 
 import datetime as dt
 import importlib.util
+import os
 import pathlib
 import stat
 import sys
 import tempfile
 import unittest
+from unittest import mock
 
 
 MODULE_PATH = pathlib.Path(__file__).parents[1] / "ai_usage.py"
@@ -93,6 +95,34 @@ class CodexLimitsTest(unittest.TestCase):
     self.assertEqual(weekly["percent"], 1.08)
     self.assertEqual(weekly["resetsAtMs"], 1788200000000)
     self.assertEqual(session["label"], "5h window")
+
+
+class CodexChildEnvTest(unittest.TestCase):
+  PARENT_ENV = {
+    "AI_USAGE_CODEX_PROXY": "socks5h://192.168.89.207:20170",
+    "HTTP_PROXY": "http://fwdproxy.pyn.ru:4443",
+    "HTTPS_PROXY": "http://fwdproxy.pyn.ru:4443",
+    "http_proxy": "http://fwdproxy.pyn.ru:4443",
+    "https_proxy": "http://fwdproxy.pyn.ru:4443",
+    "NO_PROXY": "localhost,127.0.0.1,::1,pyn.ru,chatgpt.com",
+    "no_proxy": "localhost,127.0.0.1,::1,pyn.ru,chatgpt.com",
+    "PATH": "/bin",
+  }
+
+  def test_override_pins_child_to_vless_and_drops_carve_outs(self) -> None:
+    with mock.patch.dict(os.environ, self.PARENT_ENV, clear=True):
+      child = ai_usage.codex_child_env()
+    for key in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"):
+      self.assertEqual(child[key], "socks5h://192.168.89.207:20170")
+    for key in ("NO_PROXY", "no_proxy"):
+      self.assertEqual(child[key], "localhost,127.0.0.1,::1")
+
+  def test_without_override_child_inherits_parent_env(self) -> None:
+    parent = {key: value for key, value in self.PARENT_ENV.items() if key != "AI_USAGE_CODEX_PROXY"}
+    with mock.patch.dict(os.environ, parent, clear=True):
+      child = ai_usage.codex_child_env()
+    self.assertEqual(child["HTTPS_PROXY"], "http://fwdproxy.pyn.ru:4443")
+    self.assertEqual(child["NO_PROXY"], "localhost,127.0.0.1,::1,pyn.ru,chatgpt.com")
 
 
 class CacheMergeTest(unittest.TestCase):

@@ -334,6 +334,25 @@ def codex_limit_window(window: Any) -> dict[str, Any] | None:
   }
 
 
+def codex_child_env() -> dict[str, str]:
+  """Environment for the codex app-server child.
+
+  fwdproxy stalls CONNECT chatgpt.com and direct chatgpt.com is
+  Cloudflare-challenged, so the wrapper pins AI_USAGE_CODEX_PROXY to the
+  homelab VLESS SOCKS exit and the child routes all of its OpenAI traffic
+  through it. The collector's own Anthropic probe keeps the parent env:
+  without the variable the child inherits it unchanged.
+  """
+  env = os.environ.copy()
+  codex_proxy = os.environ.get("AI_USAGE_CODEX_PROXY") or ""
+  if codex_proxy:
+    for key in ("HTTP_PROXY", "HTTPS_PROXY", "http_proxy", "https_proxy"):
+      env[key] = codex_proxy
+    for key in ("NO_PROXY", "no_proxy"):
+      env[key] = "localhost,127.0.0.1,::1"
+  return env
+
+
 def probe_codex(command: str | None = None) -> Probe:
   requested = command or os.environ.get("AI_USAGE_CODEX_BIN") or "codex"
   codex = shutil.which(requested)
@@ -347,7 +366,7 @@ def probe_codex(command: str | None = None) -> Probe:
       stdout=subprocess.PIPE,
       stderr=subprocess.DEVNULL,
       text=True,
-      env=os.environ.copy(),
+      env=codex_child_env(),
     )
   except OSError:
     return Probe(False, status_text="Codex unavailable", help_text="Could not start codex app-server.")
