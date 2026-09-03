@@ -34,7 +34,7 @@ in
         telegram = enabled;
         vlc = enabled;
         zathura = enabled;
-        pcmanfm = enabled;
+        pcmanfm-qt = enabled;
       };
     };
   };
