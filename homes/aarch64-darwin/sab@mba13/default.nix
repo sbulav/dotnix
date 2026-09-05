@@ -78,7 +78,6 @@ with lib.custom;
       };
       openconnect = {
         enable = true;
-        routes.lanGateway = "192.168.89.1";
       };
       sops = {
         enable = true;

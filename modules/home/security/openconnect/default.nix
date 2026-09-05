@@ -72,18 +72,52 @@ let
   '';
 
   darwinNetworkFunctions = ''
+    route_interface() {
+      "$ROUTE_BIN" -n get -net "$1" 2>/dev/null |
+        /usr/bin/awk '$1 == "interface:" { print $2; exit }'
+    }
+
+    default_gateway() {
+      "$ROUTE_BIN" -n get default 2>/dev/null |
+        /usr/bin/awk '$1 == "gateway:" { print $2; exit }'
+    }
+
     tunnel_ready() {
-      return 0
+      local interface
+      interface="$(route_interface "$LAN_CIDR")"
+      [[ "$interface" =~ ^utun[0-9]+$ ]]
     }
 
     route_up() {
-      "$SUDO_BIN" "$ROUTE_BIN" delete -net "$LAN_CIDR" >/dev/null 2>&1 || true
-      "$SUDO_BIN" "$ROUTE_BIN" delete -net "$VPN_HOST_ROUTE" "$LAN_GATEWAY" >/dev/null 2>&1 || true
-      "$SUDO_BIN" "$ROUTE_BIN" add -net "$VPN_HOST_ROUTE" "$LAN_GATEWAY"
+      local gateway
+      local interface
+
+      gateway="$(default_gateway)"
+      if [[ -z "$gateway" ]]; then
+        echo "ERROR: could not discover the current LAN gateway" >&2
+        return 1
+      fi
+
+      interface="$(route_interface "$LAN_CIDR")"
+      if [[ "$interface" =~ ^utun[0-9]+$ ]]; then
+        if ! "$SUDO_BIN" "$ROUTE_BIN" -n delete -net "$LAN_CIDR" >/dev/null; then
+          echo "ERROR: failed to remove VPN-pushed route $LAN_CIDR" >&2
+          return 1
+        fi
+      fi
+
+      interface="$(route_interface "$LAN_CIDR")"
+      if [[ "$interface" =~ ^utun[0-9]+$ ]]; then
+        echo "ERROR: $LAN_CIDR still points at $interface after route cleanup" >&2
+        return 1
+      fi
+
+      "$SUDO_BIN" "$ROUTE_BIN" -n delete -net "$VPN_HOST_ROUTE" >/dev/null 2>&1 || true
+      "$SUDO_BIN" "$ROUTE_BIN" -n add -net "$VPN_HOST_ROUTE" "$gateway"
     }
 
     route_down() {
-      "$SUDO_BIN" "$ROUTE_BIN" delete -net "$VPN_HOST_ROUTE" "$LAN_GATEWAY" >/dev/null 2>&1 || true
+      "$SUDO_BIN" "$ROUTE_BIN" -n delete -net "$VPN_HOST_ROUTE" >/dev/null 2>&1 || true
     }
 
     # A resolver file is ours if it carries the marker, or if it has no marker
@@ -209,7 +243,7 @@ let
       CREDENTIALS_FILE=${escapeShellArg cfg.credentialsFile}
       LAN_CIDR=${escapeShellArg cfg.routes.lanCidr}
       VPN_HOST_ROUTE=${escapeShellArg cfg.routes.vpnHostRoute}
-      LAN_GATEWAY=${escapeShellArg cfg.routes.lanGateway}
+      ${optionalString isLinux "LAN_GATEWAY=${escapeShellArg cfg.routes.lanGateway}"}
       STATE_DIR="${stateRoot}/myvpn-$UID"
       PID_FILE="$STATE_DIR/openconnect.pid"
       SPLIT_DNS_SERVERS=( ${splitDnsServers} )
@@ -323,7 +357,11 @@ let
 
         pid="$(read_pid)"
         if pid_is_ours "$pid"; then
-          echo "myvpn is already up (pid $pid)"
+          if ! network_up; then
+            echo "ERROR: myvpn is up, but route/DNS reconciliation failed" >&2
+            return 1
+          fi
+          echo "myvpn is already up (pid $pid); routes and DNS reconciled"
           return 0
         fi
 
@@ -453,8 +491,8 @@ in
       lanCidr = mkOpt str "192.168.0.0/16" "The VPN-pushed LAN route to remove after connecting.";
       vpnHostRoute = mkOpt str "10.8.0.1/32" "The host route to keep outside the VPN.";
       lanGateway = mkOpt str (
-        if isLinux then "192.168.90.1" else "192.168.89.1"
-      ) "The LAN gateway for the host route kept outside the VPN.";
+        if isLinux then "192.168.90.1" else ""
+      ) "The Linux LAN gateway for the host route kept outside the VPN; Darwin discovers it dynamically.";
     };
 
     splitDns = {
