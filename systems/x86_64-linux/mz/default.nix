@@ -93,6 +93,12 @@ in
       smartcard.enable = true;
     };
     scanning.enable = false;
+    # MSI MAG X870E Tomahawk fan headers + Lian Li Galahad II LCD AIO
+    sensors = {
+      enable = true;
+      nct6687d = true;
+      liquidctl = true;
+    };
     # XBOX Wireless controller
     xone.enable = true;
     xpadneo.enable = false;
