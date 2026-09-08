@@ -208,6 +208,12 @@ in
       # RO view of the arr-stack library (issue #39); add the "Anime"
       # library in the Jellyfin UI pointing at /var/lib/jellyfin/media.
       arrLibraryPath = "/tank/media/library";
+      # sing-box mixed inbound (see sing-box.localAddress below); TMDB is
+      # RKN-blocked and DNS-poisoned on this uplink.
+      httpProxy = "http://172.16.64.108:20170";
+      # IPCAM has realtime monitoring off (options.xml, set via the API);
+      # pick up new recordings every 15 minutes instead.
+      scheduledScan.libraries = [ "IPCAM" ];
     };
     # arr stack test playground (issue #39). Manual pre-steps, once:
     #   zfs create -o mountpoint=/tank/media tank/media

@@ -1,6 +1,7 @@
 {
   config,
   lib,
+  pkgs,
   namespace,
   ...
 }:
@@ -20,6 +21,18 @@ in
     enableGPU = mkBoolOpt false "Enable GPU device passthrough for hardware video acceleration";
     # Read-only view of the arr-stack library (issue #39). Empty = no mount.
     arrLibraryPath = mkOpt str "" "Host path of the arr media library to bind read-only";
+    # zanoza's uplink DNS-poisons RKN-blocked metadata hosts (TMDB). .NET
+    # honours HTTP(S)_PROXY, so point Jellyfin at sing-box's mixed inbound.
+    httpProxy =
+      mkOpt str ""
+        "HTTP proxy URL for Jellyfin's outbound requests (metadata, plugins); empty = direct";
+    # Libraries with realtime monitoring off (IPCAM: thousands of jpgs a day
+    # made the inotify watcher burn a core) are re-scanned from the host on a
+    # timer instead. Needs the "jellyfin/api_key" secret in secret_file.
+    scheduledScan = {
+      libraries = mkOpt (listOf str) [ ] "Jellyfin library names to refresh on the timer";
+      onCalendar = mkOpt str "*:0/15" "systemd OnCalendar expression for the library refresh";
+    };
   };
   imports = [
     (import ../shared/shared-traefik-clientip-route.nix {
@@ -54,6 +67,50 @@ in
       # OIDC client secret using standard template
       "jellyfin/oidc_client_secret" = lib.custom.secrets.containers.oidcClientSecret "jellyfin" // {
         sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
+      };
+    }
+    // lib.optionalAttrs (cfg.scheduledScan.libraries != [ ]) {
+      # Host-side only (read by the refresh timer below), not bind-mounted.
+      "jellyfin/api_key" = {
+        sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
+      };
+    };
+
+    systemd.services.jellyfin-library-refresh = mkIf (cfg.scheduledScan.libraries != [ ]) {
+      description = "Refresh selected Jellyfin libraries";
+      after = [ "container@jellyfin.service" ];
+      requisite = [ "container@jellyfin.service" ];
+      path = with pkgs; [
+        curl
+        jq
+      ];
+      serviceConfig = {
+        Type = "oneshot";
+        DynamicUser = true;
+        LoadCredential = "api_key:${config.sops.secrets."jellyfin/api_key".path}";
+      };
+      script = ''
+        base="http://${cfg.localAddress}:8096"
+        auth="Authorization: MediaBrowser Token=$(cat "$CREDENTIALS_DIRECTORY/api_key")"
+        folders=$(curl -sSf -m 30 -H "$auth" "$base/Library/VirtualFolders")
+        for name in ${lib.escapeShellArgs cfg.scheduledScan.libraries}; do
+          id=$(jq -r --arg n "$name" '.[] | select(.Name == $n) | .ItemId' <<<"$folders")
+          if [ -z "$id" ]; then
+            echo "library '$name' not found" >&2
+            continue
+          fi
+          curl -sSf -m 30 -o /dev/null -X POST -H "$auth" \
+            "$base/Items/$id/Refresh?Recursive=true&ImageRefreshMode=Default&MetadataRefreshMode=Default&ReplaceAllImages=false&ReplaceAllMetadata=false"
+          echo "refresh requested: $name ($id)"
+        done
+      '';
+    };
+    systemd.timers.jellyfin-library-refresh = mkIf (cfg.scheduledScan.libraries != [ ]) {
+      wantedBy = [ "timers.target" ];
+      timerConfig = {
+        OnCalendar = cfg.scheduledScan.onCalendar;
+        RandomizedDelaySec = "1m";
+        Persistent = true;
       };
     };
     networking.nat = {
@@ -125,26 +182,21 @@ in
         { pkgs, ... }:
         {
 
+          # Provides /run/opengl-driver/lib/dri (radeonsi_drv_video.so) for VAAPI.
           hardware.graphics.enable = true;
           systemd.tmpfiles.rules = [
             "d /var/lib/jellyfin 700 jellyfin jellyfin -"
           ];
 
-          # Install VAAPI drivers and utilities
           environment.systemPackages = lib.optionals cfg.enableGPU [
-            pkgs.jellyfin-ffmpeg
-            pkgs.libva-utils # For vainfo
-            pkgs.mesa # AMD/Intel VAAPI drivers
+            pkgs.libva-utils # vainfo, for debugging
           ];
-
-          # Create symlink for applications expecting standard path
-          system.activationScripts.vaapiSetup = lib.mkIf cfg.enableGPU ''
-            mkdir -p /run/opengl-driver/lib/dri
-            ln -sf ${pkgs.mesa}/lib/dri/* /run/opengl-driver/lib/dri/ 2>/dev/null || true
-          '';
 
           services.jellyfin = {
             enable = true;
+            # The container is ephemeral (tmpfs root): keep the image cache
+            # and the transcode dir on the persistent bind mount instead.
+            cacheDir = "/var/lib/jellyfin/cache";
           };
 
           # Add jellyfin user to video/render groups for device access
@@ -155,17 +207,21 @@ in
 
           systemd.services.jellyfin = lib.mkMerge [
             (lib.mkIf cfg.enableGPU {
-              serviceConfig.Environment = [
-                "LIBVA_DRIVER_NAME=radeonsi"
-                "LIBVA_DRIVERS_PATH=${pkgs.mesa}/lib/dri"
-              ];
-
-              # Alternatively, use environment.extraConfig for NixOS 24.11+
               environment = {
                 LIBVA_DRIVER_NAME = "radeonsi";
                 LIBVA_DRIVERS_PATH = "${pkgs.mesa}/lib/dri";
+                # jellyfin's home is /var/empty; without this RADV cannot
+                # write its shader cache and recompiles on every transcode.
+                XDG_CACHE_HOME = "/var/lib/jellyfin/cache";
               };
-
+            })
+            (lib.mkIf (cfg.httpProxy != "") {
+              environment = {
+                HTTP_PROXY = cfg.httpProxy;
+                HTTPS_PROXY = cfg.httpProxy;
+                # .NET no_proxy: hostnames and ".suffix" only, no CIDR.
+                NO_PROXY = "localhost,127.0.0.1,${cfg.hostAddress},.sbulav.ru";
+              };
             })
             {
               preStart =

@@ -341,6 +341,20 @@ in
                   # foreign TLDs. Uses default_domain_resolver (adguard);
                   # the outbound still dials by domain name.
                   { action = "resolve"; }
+                  # The uplink poisons plain DNS for RKN-blocked domains
+                  # (api.themoviedb.org -> 127.0.0.1) and adguard forwards
+                  # that answer, which the ip_is_private rule below would
+                  # send to "direct". A loopback/unspecified result is never
+                  # a real destination: hand it to the exit, which dials by
+                  # name and resolves remotely.
+                  {
+                    ip_cidr = [
+                      "127.0.0.0/8"
+                      "0.0.0.0/32"
+                      "::1/128"
+                    ];
+                    outbound = "exit";
+                  }
                   {
                     ip_is_private = true;
                     outbound = "direct";
