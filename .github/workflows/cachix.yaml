@@ -22,7 +22,7 @@ jobs:
       - uses: cachix/install-nix-action@v31
 
       - name: Check Nix flake inputs
-        uses: DeterminateSystems/flake-checker-action@v13
+        uses: DeterminateSystems/flake-checker-action@v14
 
       - name: Check formatting
         run: git ls-files -z '*.nix' | xargs -0 nix fmt -- --check
