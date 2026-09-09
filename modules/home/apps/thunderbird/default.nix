@@ -1,12 +1,20 @@
 {
   config,
   lib,
+  pkgs,
   ...
 }:
 with lib;
 with lib.custom;
 let
   cfg = config.custom.apps.thunderbird;
+  calendarEnabled = cfg.calendar.enable && config.custom.security.sops.enable;
+  # The mirror is a systemd user timer, so it is Linux-only by construction.
+  mirrorEnabled = calendarEnabled && cfg.calendar.mirror.enable && pkgs.stdenv.isLinux;
+  mirrorDir = "${config.home.homeDirectory}/${cfg.calendar.mirror.path}";
+  userJs = ".thunderbird/work/user.js";
+  # What Thunderbird sends with compatMode.firefox on; verified accepted by OWA.
+  firefoxUserAgent = "Mozilla/5.0 (X11; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0";
 in
 {
   options.custom.apps.thunderbird = {
@@ -26,6 +34,35 @@ in
       out to live in Exchange Online, IMAP/SMTP move to outlook.office365.com /
       smtp.office365.com and only work over the corporate VPN.
     '';
+
+    calendar = {
+      enable = mkBoolOpt true ''
+        Whether to subscribe to the published OWA calendar (read-only ICS).
+        Requires `custom.security.sops`: the URL embeds a bearer token, so it
+        lives in `secrets/sab/default.yaml` and is spliced into user.js at
+        activation instead of being written to the store.
+      '';
+      secret =
+        mkOpt types.str "thunderbird_calendar_url"
+          "SOPS secret holding the published-calendar ICS URL.";
+      name = mkOpt types.str "HH" "Display name of the calendar in consumers of the local mirror.";
+
+      mirror = {
+        enable = mkBoolOpt true ''
+          Whether to mirror the published calendar into a local vdir with
+          vdirsyncer, for consumers that cannot fetch it themselves. noctalia
+          is the one here: its libcurl client sends `curl/N` as User-Agent,
+          which the OWA endpoint rejects, and it has no UA knob. The
+          `custom.desktop.addons.noctalia` module picks up any
+          `accounts.calendar` account with `vdirsyncer.enable` as a vdir
+          account automatically.
+        '';
+        path =
+          mkOpt types.str ".local/share/calendars/hh"
+            "Mirror directory, relative to the home directory.";
+        frequency = mkOpt types.str "*:0/15" "systemd OnCalendar expression for the mirror sync.";
+      };
+    };
   };
 
   config = mkIf cfg.enable {
@@ -34,18 +71,28 @@ in
       profiles.work = {
         isDefault = true;
 
-        settings = mkIf cfg.owaStyle {
-          # Match OWA's light, vertical three-pane presentation. The card view
-          # keeps sender, subject, and preview on separate lines; userChrome
-          # turns the cards into OWA-like flat rows.
-          "browser.theme.content-theme" = 1;
-          "browser.theme.toolbar-theme" = 1;
-          "mail.pane_config.dynamic" = 2;
-          "mail.threadpane.cardsview.rowcount" = 3;
-          "mail.threadpane.listview" = 0;
-          "mail.uidensity" = 1;
-          "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
-        };
+        settings = mkMerge [
+          {
+            # Exchange's anonymous published-calendar endpoint sniffs the UA
+            # and 302s anything without a browser token to errorFE.aspx
+            # (httpCode=500). This makes Thunderbird send
+            # "... Gecko/20100101 Firefox/N Thunderbird/N", which OWA accepts;
+            # it only affects HTTP, not IMAP/SMTP.
+            "general.useragent.compatMode.firefox" = true;
+          }
+          (mkIf cfg.owaStyle {
+            # Match OWA's light, vertical three-pane presentation. The card view
+            # keeps sender, subject, and preview on separate lines; userChrome
+            # turns the cards into OWA-like flat rows.
+            "browser.theme.content-theme" = 1;
+            "browser.theme.toolbar-theme" = 1;
+            "mail.pane_config.dynamic" = 2;
+            "mail.threadpane.cardsview.rowcount" = 3;
+            "mail.threadpane.listview" = 0;
+            "mail.uidensity" = 1;
+            "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
+          })
+        ];
 
         userChrome = optionalString cfg.owaStyle ''
           /* Outlook Web Access-inspired chrome for Thunderbird's vertical mail view. */
@@ -311,6 +358,77 @@ in
       # Server settings are declarative; the password is not — Thunderbird
       # prompts on first connect and keeps it in its own store.
       thunderbird.enable = true;
+    };
+
+    # Published OWA calendar. The URL is a SOPS placeholder at eval time, so
+    # the store copy of user.js never carries the token: HM's generated
+    # user.js is disabled as a store symlink and re-emitted as a sops
+    # template at the same path, with the placeholder filled in on
+    # activation. Exchange publishes ICS one-way, so mark it read-only or
+    # Thunderbird PUTs on every edit and errors.
+    accounts.calendar.accounts.work = mkIf calendarEnabled {
+      remote = {
+        type = "http";
+        url = config.sops.placeholder.${cfg.calendar.secret};
+      };
+      thunderbird = {
+        enable = true;
+        readOnly = true;
+        settings = id: {
+          # HM hands `settings` the bare hash; its own keys are `calendar_${id}`.
+          "calendar.registry.calendar_${id}.refreshInterval" = 15;
+        };
+      };
+    };
+
+    # Local vdir mirror of the same ICS. A second HM account rather than
+    # vdirsyncer on `work`: HM rejects `url` and `urlCommand` on one storage,
+    # and Thunderbird needs the URL inline while vdirsyncer must read it from
+    # the decrypted secret at run time so the store copy of its config stays
+    # token-free. The remote is one-way, so the local side is a pure replica.
+    accounts.calendar.basePath = mkDefault ".local/share/calendars";
+    accounts.calendar.accounts.hh = mkIf mirrorEnabled {
+      remote.type = "http";
+      local.path = mirrorDir;
+      vdirsyncer = {
+        enable = true;
+        urlCommand = [
+          "${pkgs.coreutils}/bin/cat"
+          config.sops.secrets.${cfg.calendar.secret}.path
+        ];
+        userAgent = firefoxUserAgent;
+        conflictResolution = "remote wins";
+      };
+    };
+
+    programs.vdirsyncer.enable = mkIf mirrorEnabled true;
+
+    services.vdirsyncer = mkIf mirrorEnabled {
+      enable = true;
+      frequency = cfg.calendar.mirror.frequency;
+    };
+
+    # HM's unit runs only `metasync` + `sync`, and vdirsyncer refuses to sync
+    # a pair it has never discovered — even with collections = null — so a
+    # fresh home would fail on every tick. discover is idempotent.
+    systemd.user.services.vdirsyncer.Service.ExecStart = mkIf mirrorEnabled (mkBefore [
+      "${config.services.vdirsyncer.package}/bin/vdirsyncer discover"
+    ]);
+
+    # vdir collection metadata: readers (noctalia, khal) show this instead of
+    # the directory name. vdirsyncer only touches *.ics here, so it survives.
+    home.file."${cfg.calendar.mirror.path}/displayname" = mkIf mirrorEnabled {
+      text = cfg.calendar.name;
+    };
+
+    custom.security.sops.secrets.${cfg.calendar.secret} = mkIf calendarEnabled { };
+
+    home.file.${userJs}.enable = mkIf calendarEnabled false;
+
+    sops.templates."thunderbird-work-user.js" = mkIf calendarEnabled {
+      content = config.home.file.${userJs}.text;
+      path = "${config.home.homeDirectory}/${userJs}";
+      mode = "0600";
     };
   };
 }

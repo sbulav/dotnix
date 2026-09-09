@@ -276,12 +276,36 @@ let
     Hidden=true
   '';
 
+  # Calendar accounts that vdirsyncer mirrors into a local vdir (see
+  # custom.apps.thunderbird.calendar.mirror) become noctalia vdir accounts:
+  # noctalia watches the directory with inotify, so it needs no network, no
+  # User-Agent and no VPN timing of its own. Declared only when at least one
+  # such account exists, so hosts without one keep their GUI-managed calendar.
+  vdirAccounts = filterAttrs (_: a: a.vdirsyncer.enable) config.accounts.calendar.accounts;
+  calendarSettings = optionalAttrs (vdirAccounts != { }) {
+    calendar = {
+      enabled = true;
+      account = mapAttrs (_: a: {
+        type = "vdir";
+        inherit (a) name;
+        path = a.local.path;
+      }) vdirAccounts;
+    };
+  };
+
   # settings.toml (state dir) is deep-merged OVER the read-only config.toml
   # this module writes, so a runtime tweak to a table Nix declares wins
   # forever and makes later rebuilds look like no-ops. Drop exactly the
   # tables Nix owns on every activation and leave the rest — theme,
   # wallpaper.*, lockscreen_widgets and location are GUI-owned by decision,
   # as is the one key carved out of a Nix-owned table below (KEEP).
+  # `calendar` joins the list only when Nix declares it (calendarSettings),
+  # so the stale GUI-entered ICS account cannot shadow the vdir one.
+  pruneTables = [
+    "bar"
+    "widget"
+  ]
+  ++ optional (calendarSettings != { }) "calendar";
   prunePython = pkgs.python3.withPackages (ps: [ ps.tomli-w ]);
   pruneScript = pkgs.writeText "noctalia-prune-sidecar.py" ''
     import copy
@@ -291,7 +315,7 @@ let
 
     import tomli_w
 
-    PRUNE = ("bar", "widget")
+    PRUNE = (${concatMapStringsSep ", " (t: ''"${t}"'') pruneTables},)
 
     # Dotted keys inside a PRUNE table that the settings GUI owns anyway.
     # BarConfig has no background *colour* — only one background_opacity, and
@@ -1087,7 +1111,7 @@ in
       enable = true;
       systemd.enable = true;
       checkConfig = true;
-      settings = recursiveUpdate defaultSettings cfg.settings;
+      settings = recursiveUpdate (recursiveUpdate defaultSettings calendarSettings) cfg.settings;
       customPalettes = cfg.customPalettes;
     };
 
