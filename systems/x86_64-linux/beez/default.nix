@@ -176,6 +176,8 @@ in
   };
 
   users.users.sab.openssh.authorizedKeys.keys = [
+    # zanoza's root-run OpenCloud restic job: sftp only, nothing else.
+    "restrict,command=\"internal-sftp\" ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAIMvhXdwuj2DKXZBFC+1UeqJU3h3T0noFtgmB0Mrjdr restic-opencloud@zanoza"
     "ssh-rsa AAAAB3NzaC1yc2EAAAADAQABAAABAQDH2vxB14+ZGFFgtQ6UQ6zw33r/4e/vkMIzNKeaTnDRHmmfnjDSU5oXWt7OSCZQw8zPSbzPV7QPKC9MwEdsl9ZXr4kVxAvN/d/oI/cBU/77tMDW/m1d+SEqhztNrBfpSIavuCT+K9l1vMr/R4qoRxSfLRVsBhr3Xfk3bxZ2vh9dsefZXbL4/ebzW74RUoh1GccPqvBQJxP/+wYsyspn3lsmEi2AbIJprR6fN2Vb3pTW/D0E7k2iIcuBOd1hsw3mn5e2OpXOG2R0XcssBjlquS23up3sIujbw46gITIe1+kCLnmCfGXRDOmcUfB4ySwUlFma8RjcZg7vTGUe47PNJmo3 sab@fedoraz.sbulav.tk"
   ];
 

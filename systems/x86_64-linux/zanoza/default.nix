@@ -121,6 +121,8 @@ in
     restic = {
       enable = true;
       backup_host = "192.168.92.194";
+      # beez ed25519 host key (ssh-keyscan -t ed25519 192.168.92.194)
+      backup_host_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAjtFK9KhFpWd5YMhD+rw9T3w56gq7VnoIcag6++mH3n";
       secret_file = "secrets/zanoza/default.yaml";
     };
     ups = {
