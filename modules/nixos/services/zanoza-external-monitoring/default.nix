@@ -62,12 +62,25 @@ let
   prologue = monitor: ''
     metrics_tmp=$(mktemp ${escapeShellArg textfileDirectory}/.${monitor.metricsFile}.XXXXXX)
     results_tmp=$(mktemp)
-    trap 'rm -f "$metrics_tmp" "$results_tmp"' EXIT
+    stderr_tmp=$(mktemp)
+    scratch_dirs=()
+    # shellcheck disable=SC2329  # invoked through the EXIT trap
+    cleanup() {
+      rm -f "$metrics_tmp" "$results_tmp" "$stderr_tmp"
+      [ "''${#scratch_dirs[@]}" -eq 0 ] || rm -rf "''${scratch_dirs[@]}"
+    }
+    # systemd stops a unit with SIGTERM (TimeoutStartSec); bash skips the EXIT
+    # trap on an unhandled signal, so route the signals through exit.
+    trap cleanup EXIT
+    trap 'exit 143' TERM INT
     now=$(date +%s)
 
     record_result() {
-      # record_result <name> <1|0> <detail>
-      printf '%s\t%s\t%s\n' "$1" "$2" "$3" >>"$results_tmp"
+      # record_result <name> <1|0> <detail>; detail is one TSV field
+      local detail=$3
+      detail=''${detail//$'\t'/ }
+      detail=''${detail//$'\n'/ }
+      printf '%s\t%s\t%s\n' "$1" "$2" "$detail" >>"$results_tmp"
     }
   '';
   epilogue = monitor: ''
@@ -174,7 +187,7 @@ let
   resticCommand = concatStringsSep " " [
     "restic"
     "--repo ${escapeShellArg cfg.backup.repositoryPath}"
-    "--password-file ${config.sops.secrets.${cfg.backup.passwordSecret}.path}"
+    "--password-file ${escapeShellArg config.sops.secrets.${cfg.backup.passwordSecret}.path}"
     "--no-cache"
     "--quiet"
   ];
@@ -191,15 +204,17 @@ let
 
   # Accessing an autofs path triggers the mount; bound the wait so a dead USB
   # disk turns into a failed check instead of a hung unit.
-  repositoryProbe = checkName: ''
+  # The gauge carries the monitor's prefix: the same series in two textfiles
+  # would make node_exporter reject the duplicate.
+  repositoryProbe = monitor: checkName: ''
     repository_ok=0
-    if timeout ${toString cfg.backup.mountTimeoutSeconds} test -f ${escapeShellArg "${cfg.backup.repositoryPath}/config"}; then
+    if timeout -k 10 ${toString cfg.backup.mountTimeoutSeconds} test -f ${escapeShellArg "${cfg.backup.repositoryPath}/config"}; then
       repository_ok=1
       record_result ${checkName} 1 ok
     else
-      record_result ${checkName} 0 "restic repository unavailable at ${cfg.backup.repositoryPath} (backup disk not mounted?)"
+      record_result ${checkName} 0 ${escapeShellArg "restic repository unavailable at ${cfg.backup.repositoryPath} (backup disk not mounted?)"}
     fi
-    printf 'zanoza_backup_repository_available %s\n' "$repository_ok" >>"$metrics_tmp"
+    printf '${monitor.metricPrefix}_repository_available %s\n' "$repository_ok" >>"$metrics_tmp"
   '';
 
   backupScript = pkgs.writeShellApplication {
@@ -213,8 +228,8 @@ let
       ${prologue monitors.backup}
 
       cat >"$metrics_tmp" <<'EOF'
-      # HELP zanoza_backup_repository_available Whether the restic repository on the backup disk is readable.
-      # TYPE zanoza_backup_repository_available gauge
+      # HELP zanoza_backup_monitor_repository_available Whether the restic repository on the backup disk is readable.
+      # TYPE zanoza_backup_monitor_repository_available gauge
       # HELP zanoza_backup_job_snapshot_age_seconds Age of the newest snapshot of a backup job (-1 when unknown).
       # TYPE zanoza_backup_job_snapshot_age_seconds gauge
       # HELP zanoza_backup_job_fresh Whether the newest snapshot of a backup job is younger than its limit.
@@ -234,7 +249,8 @@ let
 
       check_job() {
         # check_job <job> <stale-after> <expected-paths...> -- <restic selector args...>
-        local job="$1" stale_after="$2" expected=() snapshot snapshot_time snapshot_epoch age path
+        local job="$1" stale_after="$2" expected=() snapshots snapshot snapshot_id snapshot_epoch age path
+        local candidate_time candidate_id candidate_epoch
         shift 2
         while [ "$#" -gt 0 ] && [ "$1" != -- ]; do
           expected+=("$1")
@@ -242,24 +258,34 @@ let
         done
         shift
 
-        if ! snapshot=$(timeout ${toString cfg.backup.queryTimeoutSeconds} \
-          ${resticCommand} snapshots --no-lock --json "$@" 2>&1); then
+        # stderr is kept apart: a restic warning on stdout would corrupt the
+        # JSON and abort the run with the previous metrics still published.
+        if ! snapshots=$(timeout -k 10 ${toString cfg.backup.queryTimeoutSeconds} \
+          ${resticCommand} snapshots --no-lock --json --latest 1 "$@" 2>"$stderr_tmp"); then
           job_metrics "$job" -1 0 0
-          record_result "backup_$job" 0 "restic snapshots failed: $(printf '%s' "$snapshot" | tail -n 1)"
+          record_result "backup_$job" 0 "restic snapshots failed: $(tail -n 1 "$stderr_tmp")"
           return
         fi
 
         # A snapshot only exists when the backup completed; its own timestamp
         # is the freshness signal, not a file mtime or a unit exit code.
-        snapshot=$(printf '%s' "$snapshot" | jq -c 'max_by(.time) // empty')
-        if [ -z "$snapshot" ]; then
+        # `--latest 1` still returns one snapshot per host/paths group, so pick
+        # the newest by epoch (string order would break across UTC offsets).
+        snapshot_epoch=0 snapshot_id=""
+        while IFS=$'\t' read -r candidate_time candidate_id; do
+          candidate_epoch=$(date -d "$candidate_time" +%s 2>/dev/null) || continue
+          if [ "$candidate_epoch" -gt "$snapshot_epoch" ]; then
+            snapshot_epoch=$candidate_epoch
+            snapshot_id=$candidate_id
+          fi
+        done < <(printf '%s' "$snapshots" | jq -r '.[]? | [.time, .id] | @tsv')
+
+        if [ -z "$snapshot_id" ]; then
           job_metrics "$job" -1 0 0
           record_result "backup_$job" 0 "no snapshot matches selector: $*"
           return
         fi
-
-        snapshot_time=$(printf '%s' "$snapshot" | jq -r '.time')
-        snapshot_epoch=$(date -d "$snapshot_time" +%s)
+        snapshot=$(printf '%s' "$snapshots" | jq -c --arg id "$snapshot_id" '.[] | select(.id == $id)')
         age=$((now - snapshot_epoch))
 
         for path in "''${expected[@]}"; do
@@ -281,7 +307,7 @@ let
         fi
       }
 
-      ${repositoryProbe "backup_repository"}
+      ${repositoryProbe monitors.backup "backup_repository"}
 
       if [ "$repository_ok" = 1 ]; then
         ${concatMapStringsSep "\n" (job: ''
@@ -311,11 +337,11 @@ let
     text = ''
       ${prologue monitors.verify}
       restore_root=$STATE_DIRECTORY/restore-test
-      trap 'rm -rf "$restore_root"; rm -f "$metrics_tmp" "$results_tmp"' EXIT
+      scratch_dirs+=("$restore_root")
 
       cat >"$metrics_tmp" <<'EOF'
-      # HELP zanoza_backup_repository_available Whether the restic repository on the backup disk is readable.
-      # TYPE zanoza_backup_repository_available gauge
+      # HELP zanoza_backup_verify_repository_available Whether the restic repository on the backup disk is readable.
+      # TYPE zanoza_backup_verify_repository_available gauge
       # HELP zanoza_backup_verify_success Result of a verification step (repository check or per-job restore).
       # TYPE zanoza_backup_verify_success gauge
       # HELP zanoza_backup_verify_restored_bytes Bytes restored by the per-job restore verification.
@@ -333,23 +359,23 @@ let
       }
 
       run_check() {
-        local started output
+        local started
         started=$(date +%s)
         # Integrity: structure plus a random sample of pack data. Needs the
         # exclusive repository lock, hence the schedule outside zanoza's
         # backup window.
-        if output=$(${resticCommand} check --read-data-subset=${escapeShellArg cfg.backup.verify.readDataSubset} 2>&1); then
+        if ${resticCommand} check --read-data-subset=${escapeShellArg cfg.backup.verify.readDataSubset} >"$stderr_tmp" 2>&1; then
           step_metrics check "" 1 $(($(date +%s) - started))
           record_result repository_check 1 ok
         else
           step_metrics check "" 0 $(($(date +%s) - started))
-          record_result repository_check 0 "restic check failed: $(printf '%s' "$output" | tail -n 1)"
+          record_result repository_check 0 "restic check failed: $(tail -n 1 "$stderr_tmp")"
         fi
       }
 
       run_restore() {
         # run_restore <job> <include> <expect-file> -- <selector args...>
-        local job="$1" include="$2" expect="$3" target started output files bytes
+        local job="$1" include="$2" expect="$3" target started files bytes
         shift 3
         shift
         target=$restore_root/$job
@@ -358,9 +384,9 @@ let
         started=$(date +%s)
         # Recoverability: a real restore of a small, meaningful subset into a
         # scratch directory, then check that files actually came back.
-        if ! output=$(${resticCommand} restore latest "$@" --target "$target" --include "$include" 2>&1); then
+        if ! ${resticCommand} restore latest "$@" --target "$target" --include "$include" >"$stderr_tmp" 2>&1; then
           step_metrics restore "$job" 0 $(($(date +%s) - started))
-          record_result "restore_$job" 0 "restic restore failed: $(printf '%s' "$output" | tail -n 1)"
+          record_result "restore_$job" 0 "restic restore failed: $(tail -n 1 "$stderr_tmp")"
           rm -rf "$target"
           return
         fi
@@ -380,7 +406,7 @@ let
         rm -rf "$target"
       }
 
-      ${repositoryProbe "verify_repository"}
+      ${repositoryProbe monitors.verify "verify_repository"}
 
       if [ "$repository_ok" = 1 ]; then
         run_check
@@ -391,6 +417,29 @@ let
       fi
 
       ${epilogue monitors.verify}
+    '';
+  };
+
+  # A monitor that dies before publishing (bug, killed by TimeoutStartSec)
+  # would otherwise leave its last metrics in place and nobody the wiser.
+  mkMonitorFailureService = monitor: {
+    description = "Notify that ${monitor.unit} failed";
+    serviceConfig = {
+      Type = "oneshot";
+    }
+    // telegramEnv;
+    path = [ pkgs.systemd ];
+    script = ''
+      message_file=$(mktemp)
+      trap 'rm -f "$message_file"' EXIT
+      unit=${monitor.unit}.service
+      {
+        printf '%s\n' "🔥 ${hostName} | ${monitor.friendlyName}: monitor unit failed"
+        printf 'Unit: %s\nResult: %s (exit status %s)\n\nLast journal lines:\n' \
+          "$unit" "$(systemctl show -p Result --value "$unit")" "$(systemctl show -p ExecMainStatus --value "$unit")"
+        journalctl -u "$unit" -n 15 -o cat --no-pager
+      } >"$message_file"
+      ${deliver} "$message_file" "[${hostName}] ${monitor.unit} failed" high
     '';
   };
 
@@ -641,6 +690,7 @@ in
         description = "Monitor zanoza independently from beez";
         after = [ "network-online.target" ];
         wants = [ "network-online.target" ];
+        onFailure = [ "${monitors.external.unit}-failure.service" ];
         serviceConfig =
           hardening
           // telegramEnv
@@ -652,7 +702,7 @@ in
 
       ${monitors.backup.unit} = mkIf (cfg.backup.jobs != [ ]) {
         description = "Check zanoza backup freshness per job";
-        after = [ "network-online.target" ];
+        onFailure = [ "${monitors.backup.unit}-failure.service" ];
         serviceConfig =
           resticHardening
           // telegramEnv
@@ -666,7 +716,7 @@ in
 
       ${monitors.verify.unit} = mkIf (cfg.backup.verify.enable && cfg.backup.jobs != [ ]) {
         description = "Verify the zanoza restic repository and restore a sample";
-        after = [ "network-online.target" ];
+        onFailure = [ "${monitors.verify.unit}-failure.service" ];
         serviceConfig =
           resticHardening
           // telegramEnv
@@ -678,6 +728,14 @@ in
           };
         script = "${verifyScript}/bin/${monitors.verify.unit}";
       };
+
+      "${monitors.external.unit}-failure" = mkMonitorFailureService monitors.external;
+      "${monitors.backup.unit}-failure" = mkIf (cfg.backup.jobs != [ ]) (
+        mkMonitorFailureService monitors.backup
+      );
+      "${monitors.verify.unit}-failure" = mkIf (cfg.backup.verify.enable && cfg.backup.jobs != [ ]) (
+        mkMonitorFailureService monitors.verify
+      );
 
       zanoza-external-monitor-notification-test = {
         description = "Test zanoza external monitoring notifications";

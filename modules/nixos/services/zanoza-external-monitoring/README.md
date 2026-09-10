@@ -29,6 +29,9 @@ Prometheus through beez's node exporter.
   (15m). A failed delivery is retried on the next run after that interval;
   the pending state is visible as `<prefix>_notification_pending 1` and the
   unit exits non-zero when its delivery attempt failed.
+- Each monitor unit has an `OnFailure=` handler (`<unit>-failure`) that
+  sends the unit result and journal tail, so a monitor that crashes before
+  publishing its metrics is reported instead of leaving stale gauges behind.
 - Delivery order: Telegram (`telegram.proxyUrl` when set) → email via msmtp
   (`email.recipient`). Both channels failing is the only way a message is
   lost, and the unit's exit status plus `<prefix>_last_notification_success 0`
@@ -56,6 +59,9 @@ decided by `timeout mountTimeoutSeconds test -f <repo>/config`; when the disk
 is not there the single `backup_repository` check fails and the jobs are
 reported as unknown (`zanoza_backup_job_snapshot_age_seconds -1`), so one
 root cause produces one alert. No `RequiresMountsFor=` is used anywhere.
+
+The 30-minute probe keeps the USB disk from spinning down; accepted, the
+disk is shared with other autofs users anyway and `checkInterval` is the knob.
 
 Job selectors on beez match what zanoza's restic module writes: `opencloud`
 by tag `job=opencloud` (the pre-tag `users/`-only snapshots must not count),
@@ -90,12 +96,13 @@ zanoza_external_monitor_notification_pending       1 when a message still has to
 zanoza_external_monitor_last_notification_success  1 ok / 0 failed / -1 never
 zanoza_external_monitor_last_run_timestamp_seconds
 
-zanoza_backup_repository_available
+zanoza_backup_monitor_repository_available
 zanoza_backup_job_snapshot_age_seconds{job}        -1 when unknown
 zanoza_backup_job_fresh{job}
 zanoza_backup_job_snapshot_timestamp_seconds{job}
 zanoza_backup_monitor_*                            same state-machine gauges as above
 
+zanoza_backup_verify_repository_available
 zanoza_backup_verify_success{step="check"}
 zanoza_backup_verify_success{step="restore",job}
 zanoza_backup_verify_restored_bytes{job}
@@ -104,7 +111,7 @@ zanoza_backup_verify_*                             same state-machine gauges as 
 ```
 
 Suggested Prometheus alerts: `zanoza_backup_job_fresh == 0 for 1h`,
-`zanoza_backup_repository_available == 0 for 2h`,
+`zanoza_backup_monitor_repository_available == 0 for 2h`,
 `time() - zanoza_backup_monitor_last_run_timestamp_seconds > 3*1800` (monitor
 itself stopped), `zanoza_backup_verify_success == 0`.
 
