@@ -424,20 +424,28 @@ let
   # would otherwise leave its last metrics in place and nobody the wiser.
   mkMonitorFailureService = monitor: {
     description = "Notify that ${monitor.unit} failed";
+    after = [ "network-online.target" ];
+    wants = [ "network-online.target" ];
     serviceConfig = {
       Type = "oneshot";
+      TimeoutStartSec = "10min";
     }
     // telegramEnv;
-    path = [ pkgs.systemd ];
+    path = [
+      pkgs.coreutils
+      pkgs.systemd
+    ];
     script = ''
       message_file=$(mktemp)
       trap 'rm -f "$message_file"' EXIT
+      trap 'exit 143' TERM INT
       unit=${monitor.unit}.service
+      show() { systemctl show -p "$1" --value "$unit" 2>/dev/null || echo unknown; }
       {
         printf '%s\n' "🔥 ${hostName} | ${monitor.friendlyName}: monitor unit failed"
-        printf 'Unit: %s\nResult: %s (exit status %s)\n\nLast journal lines:\n' \
-          "$unit" "$(systemctl show -p Result --value "$unit")" "$(systemctl show -p ExecMainStatus --value "$unit")"
-        journalctl -u "$unit" -n 15 -o cat --no-pager
+        printf 'Unit: %s\nResult: %s (main process %s, status %s)\n\nLast journal lines:\n' \
+          "$unit" "$(show Result)" "$(show ExecMainCode)" "$(show ExecMainStatus)"
+        journalctl -u "$unit" -n 15 -o cat --no-pager || true
       } >"$message_file"
       ${deliver} "$message_file" "[${hostName}] ${monitor.unit} failed" high
     '';
@@ -475,7 +483,8 @@ let
     ProtectSystem = "full";
   };
   telegramEnv = optionalAttrs cfg.telegram.enable {
-    EnvironmentFile = config.sops.secrets."telegram-notifications-bot-token".path;
+    # Leading dash: a missing token file must not stop the email fallback.
+    EnvironmentFile = "-${config.sops.secrets."telegram-notifications-bot-token".path}";
   };
 in
 {

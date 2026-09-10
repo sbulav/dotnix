@@ -35,7 +35,11 @@ Prometheus through beez's node exporter.
 - Delivery order: Telegram (`telegram.proxyUrl` when set) → email via msmtp
   (`email.recipient`). Both channels failing is the only way a message is
   lost, and the unit's exit status plus `<prefix>_last_notification_success 0`
-  show it.
+  show it; the undelivered text is then also in the unit's journal. Telegram
+  texts are cut at 3900 characters, the token file is optional for the units
+  (`EnvironmentFile=-…`, so a sops failure still leaves the email path), and
+  the failure handlers are bounded (10 min) and ordered after
+  `network-online.target`.
 
 ## Backup freshness
 

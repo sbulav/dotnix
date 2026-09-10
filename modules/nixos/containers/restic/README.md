@@ -187,7 +187,17 @@ and then the notifying unit exits non-zero and shows up in
   reason (`not run since boot`, `last run Nh ago`, or the failure result) and
   its journal tail. All green is sent with low priority.
 - **Timers are `Persistent=true`**, so a run missed during a reboot is made
-  up instead of silently skipped until the next night.
+  up instead of silently skipped until the next night. All four then fire at
+  once; the backups share the repository lock, and the prune (exclusive lock)
+  is ordered `After=` all three backup units, so it queues instead of failing.
+- **Delivery details.** Telegram texts are cut at 3900 characters (the API
+  limit is 4096), the bot token never appears on a command line, and the token
+  file is optional for the notifying units (`EnvironmentFile=-…`): with sops
+  broken the email fallback still runs. When both channels fail the whole
+  message is written to the unit's journal. Notifying units are bounded by a
+  10 minute start timeout and ordered after `network-online.target`.
+- A job that is still running when the summary fires is reported as ⏳, not
+  as failed; its own `OnFailure=` handler reports the outcome.
 - **Freshness from outside** (per job, from the repository itself, plus the
   weekly `restic check` and sample restore) lives on beez:
   `modules/nixos/services/zanoza-external-monitoring/README.md`. It does not

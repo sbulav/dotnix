@@ -103,42 +103,69 @@ let
     };
   };
   deliver = "${deliverScript}/bin/notify-deliver";
+  # The leading dash keeps a missing token file from failing the unit: the
+  # deliverer then falls back to email instead of sending nothing.
   telegramEnv = optionalAttrs cfg.telegram.enable {
-    EnvironmentFile = config.sops.secrets."telegram-notifications-bot-token".path;
+    EnvironmentFile = "-${config.sops.secrets."telegram-notifications-bot-token".path}";
   };
+  # Shared shape of every notifying unit: bounded, and never started before
+  # the network is up (a boot-time catch-up run can fail within seconds).
+  mkNotifyUnit =
+    extra:
+    {
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
+      serviceConfig = {
+        Type = "oneshot";
+        TimeoutStartSec = "10min";
+      }
+      // telegramEnv;
+    }
+    // extra;
 
   # One handler per job (OnFailure= on a shared unit makes systemd log
   # "multiple trigger source candidates" and the handler cannot tell which
   # job failed). The message carries the unit result and the tail of the
   # failed invocation's journal.
+  failureScript = pkgs.writeShellApplication {
+    name = "restic-notify-failure";
+    runtimeInputs = with pkgs; [
+      coreutils
+      systemd
+    ];
+    text = ''
+      unit="$1"
+      job="$2"
+      message_file=$(mktemp)
+      # shellcheck disable=SC2329
+      cleanup() { rm -f "$message_file"; }
+      trap cleanup EXIT
+      trap 'exit 143' TERM INT
+      # `systemctl show` must never abort the handler: an unknown value still
+      # produces a notification.
+      show() { systemctl show -p "$1" --value "$2" 2>/dev/null || echo unknown; }
+      result=$(show Result "$unit")
+      code=$(show ExecMainCode "$unit")
+      status=$(show ExecMainStatus "$unit")
+      invocation=$(show InvocationID "$unit")
+      {
+        printf '%s\n' "🔥 ${hostName} | Restic backup failed: $job"
+        printf 'Unit: %s\nResult: %s (main process %s, status %s)\n\n' "$unit" "$result" "$code" "$status"
+        printf 'Last %s journal lines:\n' ${toString cfg.telegram.errorLogLines}
+        if [ -n "$invocation" ] && [ "$invocation" != unknown ]; then
+          journalctl _SYSTEMD_INVOCATION_ID="$invocation" -n ${toString cfg.telegram.errorLogLines} -o cat --no-pager || true
+        else
+          journalctl -u "$unit" -n ${toString cfg.telegram.errorLogLines} -o cat --no-pager || true
+        fi
+        printf '\nInspect: journalctl -u %s\n' "$unit"
+      } >"$message_file"
+      ${deliver} "$message_file" "[${hostName}] restic $job failed" high
+    '';
+  };
   mkFailureService = service: {
-    "${service}-failure" = {
+    "${service}-failure" = mkNotifyUnit {
       description = "Notify about a failed ${service} run";
-      serviceConfig = {
-        Type = "oneshot";
-      }
-      // telegramEnv;
-      path = [ pkgs.systemd ];
-      script = ''
-        message_file=$(mktemp)
-        trap 'rm -f "$message_file"' EXIT
-        unit=${service}.service
-        result=$(systemctl show -p Result --value "$unit")
-        status=$(systemctl show -p ExecMainStatus --value "$unit")
-        invocation=$(systemctl show -p InvocationID --value "$unit")
-        {
-          printf '%s\n' "🔥 ${hostName} | Restic backup failed: ${jobLabel service}"
-          printf 'Unit: %s\nResult: %s (exit status %s)\n\n' "$unit" "$result" "$status"
-          printf 'Last %s journal lines:\n' ${toString cfg.telegram.errorLogLines}
-          if [ -n "$invocation" ]; then
-            journalctl _SYSTEMD_INVOCATION_ID="$invocation" -n ${toString cfg.telegram.errorLogLines} -o cat --no-pager
-          else
-            journalctl -u "$unit" -n ${toString cfg.telegram.errorLogLines} -o cat --no-pager
-          fi
-          printf '\nInspect: journalctl -u %s\n' "$unit"
-        } >"$message_file"
-        ${deliver} "$message_file" "[${hostName}] restic ${jobLabel service} failed" high
-      '';
+      script = "${failureScript}/bin/restic-notify-failure ${service}.service ${jobLabel service}";
     };
   };
 
@@ -164,10 +191,15 @@ let
         for unit in ${concatMapStringsSep " " (s: "${s}.service") allBackupServices}; do
           job=''${unit#restic-backups-tank_}
           job=''${job%.service}
-          result=$(systemctl show -p Result --value "$unit")
-          exit_us=$(systemctl show -p ExecMainExitTimestampMonotonic --value "$unit")
+          result=$(systemctl show -p Result --value "$unit" 2>/dev/null || echo unknown)
+          state=$(systemctl show -p ActiveState --value "$unit" 2>/dev/null || echo unknown)
+          exit_us=$(systemctl show -p ExecMainExitTimestampMonotonic --value "$unit" 2>/dev/null || echo 0)
           exit_us=''${exit_us:-0}
-          if [ "$exit_us" -eq 0 ]; then
+          if [ "$state" = activating ]; then
+            # Still running (oneshot units are "activating" until they exit);
+            # its own OnFailure= handler reports the outcome.
+            printf '  ⏳ %s (running)\n' "$job"
+          elif ! [ "$exit_us" -eq "$exit_us" ] 2>/dev/null || [ "$exit_us" -eq 0 ]; then
             printf '  ❌ %s (not run since boot)\n' "$job"
             all_ok=0
             failed_units+=("$unit")
@@ -185,7 +217,7 @@ let
         done
         for unit in "''${failed_units[@]}"; do
           printf '\nLast %s lines of %s:\n' ${toString cfg.telegram.errorLogLines} "$unit"
-          journalctl -u "$unit" -n ${toString cfg.telegram.errorLogLines} -o cat --no-pager
+          journalctl -u "$unit" -n ${toString cfg.telegram.errorLogLines} -o cat --no-pager || true
         done
       } >"$message_file"
 
@@ -200,6 +232,7 @@ let
   notificationTestScript = emailOnly: ''
     message_file=$(mktemp)
     trap 'rm -f "$message_file"' EXIT
+    trap 'exit 143' TERM INT
     printf '%s\n' \
       "🧪 ${hostName} | Restic backups" \
       "Notification test (${
@@ -429,8 +462,15 @@ in
           onFailure = mkIf notifyEnabled [ "restic-backups-tank_opencloud_prune-failure.service" ];
           # The backup may legally run until 05:05 (01:05 + 1h jitter + 3h);
           # queue the prune behind it instead of failing on the repo lock.
-          # oneshot units have no start timeout by default.
-          after = [ "restic-backups-tank_opencloud.service" ];
+          # prune takes the exclusive lock, so it also waits for the immich
+          # and photos backups (all four timers fire together after a boot
+          # because of Persistent=true). oneshot units have no start timeout
+          # by default.
+          after = [
+            "restic-backups-tank_opencloud.service"
+            "restic-backups-tank_immich.service"
+            "restic-backups-tank_photos.service"
+          ];
           serviceConfig = {
             TimeoutStartSec = "2h";
             NoNewPrivileges = true;
@@ -443,12 +483,8 @@ in
 
       # Daily summary service
       (mkIf notifyEnabled {
-        "restic-backups-summary" = {
+        "restic-backups-summary" = mkNotifyUnit {
           description = "Check restic backups and send daily summary";
-          serviceConfig = {
-            Type = "oneshot";
-          }
-          // telegramEnv;
           script = "${summaryScript}/bin/restic-backups-summary";
         };
       })
@@ -457,17 +493,14 @@ in
       # exercises Telegram with the automatic fallback, `-fallback-test`
       # skips Telegram and proves the msmtp path alone.
       (mkIf (notifyEnabled && cfg.telegram.enableTest) {
-        "restic-backups-notification-test" = {
+        "restic-backups-notification-test" = mkNotifyUnit {
           description = "Test restic backup notifications";
-          serviceConfig = {
-            Type = "oneshot";
-          }
-          // telegramEnv;
           script = notificationTestScript false;
         };
-        "restic-backups-fallback-test" = mkIf cfg.email.enable {
+      })
+      (mkIf (notifyEnabled && cfg.telegram.enableTest && cfg.email.enable) {
+        "restic-backups-fallback-test" = mkNotifyUnit {
           description = "Test restic backup email fallback";
-          serviceConfig.Type = "oneshot";
           script = notificationTestScript true;
         };
       })
