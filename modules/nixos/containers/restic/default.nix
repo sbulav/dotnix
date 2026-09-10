@@ -86,6 +86,131 @@ let
     CapabilityBoundingSet = [ "CAP_DAC_READ_SEARCH" ];
     NoNewPrivileges = true;
   };
+
+  # --- Notifications -------------------------------------------------------
+  notifyEnabled = cfg.telegram.enable || cfg.email.enable;
+  hostName = config.networking.hostName;
+  jobLabel = service: removePrefix "restic-backups-tank_" service;
+
+  deliverScript = lib.custom.notifications.mkDeliverScript pkgs {
+    inherit hostName;
+    telegram = {
+      inherit (cfg.telegram) enable chatId proxyUrl;
+    };
+    email = {
+      inherit (cfg.email) enable recipient;
+      fromName = "${hostName} restic backups";
+    };
+  };
+  deliver = "${deliverScript}/bin/notify-deliver";
+  telegramEnv = optionalAttrs cfg.telegram.enable {
+    EnvironmentFile = config.sops.secrets."telegram-notifications-bot-token".path;
+  };
+
+  # One handler per job (OnFailure= on a shared unit makes systemd log
+  # "multiple trigger source candidates" and the handler cannot tell which
+  # job failed). The message carries the unit result and the tail of the
+  # failed invocation's journal.
+  mkFailureService = service: {
+    "${service}-failure" = {
+      description = "Notify about a failed ${service} run";
+      serviceConfig = {
+        Type = "oneshot";
+      }
+      // telegramEnv;
+      path = [ pkgs.systemd ];
+      script = ''
+        message_file=$(mktemp)
+        trap 'rm -f "$message_file"' EXIT
+        unit=${service}.service
+        result=$(systemctl show -p Result --value "$unit")
+        status=$(systemctl show -p ExecMainStatus --value "$unit")
+        invocation=$(systemctl show -p InvocationID --value "$unit")
+        {
+          printf '%s\n' "🔥 ${hostName} | Restic backup failed: ${jobLabel service}"
+          printf 'Unit: %s\nResult: %s (exit status %s)\n\n' "$unit" "$result" "$status"
+          printf 'Last %s journal lines:\n' ${toString cfg.telegram.errorLogLines}
+          if [ -n "$invocation" ]; then
+            journalctl _SYSTEMD_INVOCATION_ID="$invocation" -n ${toString cfg.telegram.errorLogLines} -o cat --no-pager
+          else
+            journalctl -u "$unit" -n ${toString cfg.telegram.errorLogLines} -o cat --no-pager
+          fi
+          printf '\nInspect: journalctl -u %s\n' "$unit"
+        } >"$message_file"
+        ${deliver} "$message_file" "[${hostName}] restic ${jobLabel service} failed" high
+      '';
+    };
+  };
+
+  # Daily summary: a job counts as good only if its last run finished with
+  # Result=success within the last 26 hours (monotonic timestamps, so this
+  # also catches "never ran since boot" and timers that silently stopped).
+  summaryScript = pkgs.writeShellApplication {
+    name = "restic-backups-summary";
+    runtimeInputs = with pkgs; [
+      coreutils
+      systemd
+    ];
+    text = ''
+      message_file=$(mktemp)
+      trap 'rm -f "$message_file"' EXIT
+      uptime_us=$(( $(cut -d. -f1 /proc/uptime) * 1000000 ))
+      max_age_us=$((26 * 3600 * 1000000))
+      all_ok=1
+      failed_units=()
+
+      {
+        printf '%s\n' "🖥️ ${hostName} | Restic backups"
+        for unit in ${concatMapStringsSep " " (s: "${s}.service") allBackupServices}; do
+          job=''${unit#restic-backups-tank_}
+          job=''${job%.service}
+          result=$(systemctl show -p Result --value "$unit")
+          exit_us=$(systemctl show -p ExecMainExitTimestampMonotonic --value "$unit")
+          exit_us=''${exit_us:-0}
+          if [ "$exit_us" -eq 0 ]; then
+            printf '  ❌ %s (not run since boot)\n' "$job"
+            all_ok=0
+            failed_units+=("$unit")
+          elif [ $((uptime_us - exit_us)) -gt "$max_age_us" ]; then
+            printf '  ❌ %s (last run %sh ago)\n' "$job" $(( (uptime_us - exit_us) / 3600000000 ))
+            all_ok=0
+            failed_units+=("$unit")
+          elif [ "$result" != success ]; then
+            printf '  ❌ %s (%s)\n' "$job" "$result"
+            all_ok=0
+            failed_units+=("$unit")
+          else
+            printf '  ✅ %s\n' "$job"
+          fi
+        done
+        for unit in "''${failed_units[@]}"; do
+          printf '\nLast %s lines of %s:\n' ${toString cfg.telegram.errorLogLines} "$unit"
+          journalctl -u "$unit" -n ${toString cfg.telegram.errorLogLines} -o cat --no-pager
+        done
+      } >"$message_file"
+
+      if [ "$all_ok" = 1 ]; then
+        ${deliver} "$message_file" "[${hostName}] restic backups OK" low
+      else
+        ${deliver} "$message_file" "[${hostName}] restic backups need attention" high
+      fi
+    '';
+  };
+
+  notificationTestScript = emailOnly: ''
+    message_file=$(mktemp)
+    trap 'rm -f "$message_file"' EXIT
+    printf '%s\n' \
+      "🧪 ${hostName} | Restic backups" \
+      "Notification test (${
+        if emailOnly then "forced email fallback" else "Telegram with automatic email fallback"
+      })." \
+      >"$message_file"
+    ${optionalString emailOnly "FORCE_EMAIL_ONLY=true "}${deliver} \
+      "$message_file" \
+      "[${hostName}] restic notification test" \
+      low
+  '';
 in
 {
   options.${namespace}.containers.restic = with types; {
@@ -99,12 +224,21 @@ in
         "SSH host public key of backup_host, e.g. \"ssh-ed25519 AAAA...\". Required for the root-run OpenCloud job (strict host key checking)";
     secret_file = mkOpt str "secrets/zanoza/default.yaml" "SOPS secret to get creds from";
 
-    # Telegram notifications
+    # Notifications: Telegram first, email through msmtp when Telegram fails.
     telegram = {
-      enable = mkBoolOpt true "Enable telegram failure notifications";
+      enable = mkBoolOpt true "Try Telegram first for failure notifications and the daily summary";
       chatId = mkOpt str "681806836" "Telegram chat ID for notifications";
-      errorLogLines = mkOpt int 10 "Number of error log lines to include in notification";
-      enableTest = mkBoolOpt true "Enable manual test notification service";
+      proxyUrl =
+        mkOpt str ""
+          "Optional curl proxy URL for api.telegram.org (zanoza reaches it only through the sing-box SOCKS proxy)";
+      errorLogLines =
+        mkOpt int 10
+          "Number of journal lines from the failed unit to include in a notification";
+      enableTest = mkBoolOpt true "Provide manual notification test units";
+    };
+    email = {
+      enable = mkBoolOpt true "Fall back to email (custom.containers.msmtp) when Telegram delivery fails";
+      recipient = mkOpt str "bulavintsev.sergey@gmail.com" "Fallback notification recipient";
     };
   };
 
@@ -116,6 +250,10 @@ in
       {
         assertion = !opencloudCfg.enable || cfg.backup_host_key != "";
         message = "custom.containers.restic.backup_host_key must be set: the OpenCloud backup job runs as root with strict host key checking";
+      }
+      {
+        assertion = !cfg.email.enable || config.${namespace}.containers.msmtp.enable;
+        message = "custom.containers.restic.email.enable requires custom.containers.msmtp.enable (the fallback sends through msmtp)";
       }
     ];
 
@@ -134,9 +272,12 @@ in
       };
 
       # Shared telegram bot token for notifications (UID 1000 for user services)
-      "telegram-notifications-bot-token" = lib.custom.secrets.services.sharedTelegramBot 1000 // {
-        sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
-      };
+      "telegram-notifications-bot-token" = mkIf cfg.telegram.enable (
+        lib.custom.secrets.services.sharedTelegramBot 1000
+        // {
+          sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
+        }
+      );
     };
 
     # Pin the backup host key so the root job can use StrictHostKeyChecking=yes
@@ -179,6 +320,7 @@ in
         '';
         timerConfig = {
           OnCalendar = "01:05";
+          Persistent = true;
           RandomizedDelaySec = "1h";
         };
       };
@@ -192,6 +334,7 @@ in
         extraOptions = [ ''sftp.command="${opencloudSftpCommand}"'' ];
         timerConfig = {
           OnCalendar = "04:05";
+          Persistent = true;
           RandomizedDelaySec = "30m";
         };
         pruneOpts = [
@@ -212,6 +355,7 @@ in
         extraBackupArgs = commonBackupArgs ++ [ "--tag job=immich" ];
         timerConfig = {
           OnCalendar = "02:05";
+          Persistent = true;
           RandomizedDelaySec = "1h";
         };
         pruneOpts = [ "--path /tank/immich" ] ++ keepPolicy;
@@ -225,6 +369,7 @@ in
         extraBackupArgs = commonBackupArgs ++ [ "--tag job=photos" ];
         timerConfig = {
           OnCalendar = "03:05";
+          Persistent = true;
           RandomizedDelaySec = "1h";
         };
         # --keep-last n keep the n last (most recent) snapshots.
@@ -242,7 +387,7 @@ in
     };
 
     # Daily summary timer
-    systemd.timers = mkIf cfg.telegram.enable {
+    systemd.timers = mkIf notifyEnabled {
       "restic-backups-summary" = {
         description = "Daily Restic backup summary check";
         # After the worst case of the night: backup until 05:05 (01:05 + 1h
@@ -256,21 +401,21 @@ in
     };
 
     systemd.services = mkMerge [
-      # Restic backup services with failure hooks
+      # Restic backup services with per-job failure hooks
       {
         restic-backups-tank_immich = {
-          onFailure = [ "restic-backups-telegram-failure.service" ];
+          onFailure = mkIf notifyEnabled [ "restic-backups-tank_immich-failure.service" ];
           serviceConfig = readOnlyCapabilities;
         };
         restic-backups-tank_photos = {
-          onFailure = [ "restic-backups-telegram-failure.service" ];
+          onFailure = mkIf notifyEnabled [ "restic-backups-tank_photos-failure.service" ];
           serviceConfig = readOnlyCapabilities;
         };
       }
 
       (mkIf opencloudCfg.enable {
         restic-backups-tank_opencloud = {
-          onFailure = [ "restic-backups-telegram-failure.service" ];
+          onFailure = mkIf notifyEnabled [ "restic-backups-tank_opencloud-failure.service" ];
           # Never start a backup while the container is (re)starting, and
           # bound the outage: a hung sftp session must not keep OpenCloud
           # down until morning. postStop restarts the container on timeout.
@@ -281,7 +426,7 @@ in
           };
         };
         restic-backups-tank_opencloud_prune = {
-          onFailure = [ "restic-backups-telegram-failure.service" ];
+          onFailure = mkIf notifyEnabled [ "restic-backups-tank_opencloud_prune-failure.service" ];
           # The backup may legally run until 05:05 (01:05 + 1h jitter + 3h);
           # queue the prune behind it instead of failing on the repo lock.
           # oneshot units have no start timeout by default.
@@ -293,73 +438,37 @@ in
         };
       })
 
-      # Telegram notification services
-      (mkIf cfg.telegram.enable
-        (lib.custom.telegram.mkTelegramNotifications pkgs {
-          serviceName = "restic-backups";
-          friendlyName = "Restic Backup";
-          hostName = config.system.name;
-          chatId = cfg.telegram.chatId;
-          secretPath = config.sops.secrets."telegram-notifications-bot-token".path;
-          priority = "high";
-          errorLogLines = cfg.telegram.errorLogLines;
-          enableTest = cfg.telegram.enableTest;
-
-          # Custom detail extraction for restic
-          getDetailsScript = ''
-            output="Backup Status:"
-
-            # Check each backup service
-            for service in ${concatStringsSep " " allBackupServices}; do
-              # Get status in original format: "ExecMainStatus=0"
-              status=$(systemctl show $service.service --property=ExecMainStatus 2>/dev/null || echo "ExecMainStatus=unknown")
-
-              # Extract backup name (opencloud, opencloud_prune, immich, photos)
-              backup_name=$(echo "$service" | sed 's/restic-backups-tank_//')
-
-              # Check if status is success (ExecMainStatus=0)
-              if [[ "$status" == "ExecMainStatus=0" ]]; then
-                output=$(printf '%s\n  ✅ %s' "$output" "$backup_name")
-              else
-                output=$(printf '%s\n  ❌ %s (%s)' "$output" "$backup_name" "$status")
-              fi
-            done
-
-            printf '%s' "$output"
-          '';
-
-          # Identify which services failed for log extraction
-          getFailedServicesScript = ''
-            failed_services=""
-            for service in ${concatStringsSep " " allBackupServices}; do
-              status=$(systemctl show $service.service --property=ExecMainStatus --value 2>/dev/null || echo "unknown")
-              if [ "$status" != "0" ]; then
-                failed_services="$failed_services $service.service"
-              fi
-            done
-            printf '%s' "$failed_services"
-          '';
-        }).services
-      )
+      # One failure handler per job
+      (mkIf notifyEnabled (mkMerge (map mkFailureService allBackupServices)))
 
       # Daily summary service
-      (mkIf cfg.telegram.enable {
+      (mkIf notifyEnabled {
         "restic-backups-summary" = {
           description = "Check restic backups and send daily summary";
           serviceConfig = {
             Type = "oneshot";
-            EnvironmentFile = config.sops.secrets."telegram-notifications-bot-token".path;
-          };
-          script = lib.custom.telegram.mkTelegramSummaryScript pkgs {
-            serviceName = "restic-backups";
-            friendlyName = "Restic Backup";
-            hostName = config.system.name;
-            chatId = cfg.telegram.chatId;
-            backupServices = allBackupServices;
-            successPriority = "low";
-            failurePriority = "high";
-            errorLogLines = cfg.telegram.errorLogLines;
-          };
+          }
+          // telegramEnv;
+          script = "${summaryScript}/bin/restic-backups-summary";
+        };
+      })
+
+      # Manual delivery tests: `systemctl start restic-backups-notification-test`
+      # exercises Telegram with the automatic fallback, `-fallback-test`
+      # skips Telegram and proves the msmtp path alone.
+      (mkIf (notifyEnabled && cfg.telegram.enableTest) {
+        "restic-backups-notification-test" = {
+          description = "Test restic backup notifications";
+          serviceConfig = {
+            Type = "oneshot";
+          }
+          // telegramEnv;
+          script = notificationTestScript false;
+        };
+        "restic-backups-fallback-test" = mkIf cfg.email.enable {
+          description = "Test restic backup email fallback";
+          serviceConfig.Type = "oneshot";
+          script = notificationTestScript true;
         };
       })
     ];

@@ -124,6 +124,8 @@ in
       # beez ed25519 host key (ssh-keyscan -t ed25519 192.168.92.194)
       backup_host_key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIAjtFK9KhFpWd5YMhD+rw9T3w56gq7VnoIcag6++mH3n";
       secret_file = "secrets/zanoza/default.yaml";
+      # api.telegram.org is blocked directly; deliver through sing-box.
+      telegram.proxyUrl = "socks5h://172.16.64.108:20170";
     };
     ups = {
       enable = true;

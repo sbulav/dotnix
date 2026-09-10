@@ -678,4 +678,126 @@ in
         echo "Response: $response"
       '';
   };
+
+  # Notification delivery shared by the beez monitors and the zanoza restic
+  # jobs: Telegram first (optionally through a SOCKS/HTTP proxy, always with
+  # bounded timeouts), msmtp email as the fallback. The Telegram helpers above
+  # stay untouched until #50 consolidates them onto this.
+  notifications = {
+    # mkDeliverScript pkgs { ... } -> derivation with bin/notify-deliver
+    #   notify-deliver <message-file> <subject> [high|low]
+    # Environment: TELEGRAM_TOKEN (from an EnvironmentFile), FORCE_EMAIL_ONLY=true
+    # to skip Telegram. Exit 0 as soon as one channel accepted the message,
+    # exit 1 when every enabled channel failed.
+    mkDeliverScript =
+      pkgs:
+      {
+        hostName,
+        telegram ? { },
+        email ? { },
+      }:
+      let
+        tg = {
+          enable = true;
+          chatId = "681806836";
+          proxyUrl = "";
+          connectTimeoutSeconds = 10;
+          maxTimeSeconds = 30;
+        }
+        // telegram;
+        mail = {
+          enable = true;
+          recipient = "bulavintsev.sergey@gmail.com";
+          fromName = "${hostName} notifications";
+          fromAddress = "zppfan@gmail.com";
+          account = "gmail";
+        }
+        // email;
+      in
+      assert pkgs.lib.assertMsg (
+        tg.enable || mail.enable
+      ) "mkDeliverScript: enable Telegram, email or both";
+      pkgs.writeShellApplication {
+        name = "notify-deliver";
+        runtimeInputs =
+          with pkgs;
+          [
+            coreutils
+            curl
+            jq
+          ]
+          ++ pkgs.lib.optional mail.enable msmtp;
+        text = ''
+          message_file="$1"
+          subject="$2"
+          priority="''${3:-high}"
+
+          if [ ! -r "$message_file" ]; then
+            echo "notify-deliver: message file $message_file is not readable" >&2
+            exit 1
+          fi
+
+          ${pkgs.lib.optionalString tg.enable ''
+            if [ "''${FORCE_EMAIL_ONLY:-false}" != true ]; then
+              if [ -n "''${TELEGRAM_TOKEN:-}" ]; then
+                disable_notification=false
+                if [ "$priority" = low ]; then
+                  disable_notification=true
+                fi
+                payload=$(jq -n \
+                  --arg chat_id ${pkgs.lib.escapeShellArg tg.chatId} \
+                  --rawfile text "$message_file" \
+                  --argjson disable_notification "$disable_notification" \
+                  '{chat_id: $chat_id, text: $text, disable_notification: $disable_notification}')
+
+                response_file=$(mktemp)
+                trap 'rm -f "$response_file"' EXIT
+                proxy_args=()
+                ${pkgs.lib.optionalString (tg.proxyUrl != "") ''
+                  proxy_args=(--proxy ${pkgs.lib.escapeShellArg tg.proxyUrl})
+                ''}
+                if curl --fail-with-body --silent --show-error \
+                  --connect-timeout ${toString tg.connectTimeoutSeconds} \
+                  --max-time ${toString tg.maxTimeSeconds} \
+                  -H 'Content-Type: application/json' \
+                  -d "$payload" \
+                  -o "$response_file" \
+                  "''${proxy_args[@]}" \
+                  "https://api.telegram.org/bot''${TELEGRAM_TOKEN}/sendMessage" \
+                  && jq -e '.ok == true' "$response_file" >/dev/null; then
+                  echo "notify-deliver: delivered via Telegram"
+                  exit 0
+                fi
+                echo "notify-deliver: Telegram delivery failed${pkgs.lib.optionalString mail.enable "; using email fallback"}" >&2
+              else
+                echo "notify-deliver: TELEGRAM_TOKEN is unavailable${pkgs.lib.optionalString mail.enable "; using email fallback"}" >&2
+              fi
+            fi
+          ''}
+
+          ${
+            if mail.enable then
+              ''
+                if {
+                  printf 'From: %s <%s>\n' ${pkgs.lib.escapeShellArg mail.fromName} ${pkgs.lib.escapeShellArg mail.fromAddress}
+                  printf 'To: %s\n' ${pkgs.lib.escapeShellArg mail.recipient}
+                  printf 'Subject: %s\n' "$subject"
+                  printf 'Content-Type: text/plain; charset=UTF-8\n\n'
+                  cat "$message_file"
+                } | timeout 60 msmtp -a ${pkgs.lib.escapeShellArg mail.account} ${pkgs.lib.escapeShellArg mail.recipient}; then
+                  echo "notify-deliver: delivered via email"
+                  exit 0
+                fi
+                echo "notify-deliver: email delivery failed" >&2
+                exit 1
+              ''
+            else
+              ''
+                echo "notify-deliver: no notification channel delivered the message" >&2
+                exit 1
+              ''
+          }
+        '';
+      };
+  };
 }

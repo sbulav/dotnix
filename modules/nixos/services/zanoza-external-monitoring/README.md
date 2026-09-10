@@ -1,80 +1,140 @@
-# Zanoza external monitoring
+# zanoza external monitoring (runs on beez)
 
-This module runs a small independent probe loop on `beez`. It does not copy the
-Prometheus, Grafana, Loki, or Alertmanager stack from `zanoza`.
+Three independent systemd timers on beez watch zanoza from the outside. They
+share one alert state machine (`pkgs.custom.monitor-state-machine`, tested by
+`checks/monitor-state-machine`) and one delivery path
+(`lib.custom.notifications.mkDeliverScript`: Telegram first, msmtp email when
+Telegram fails), but keep separate state, metrics and schedules. A missing
+backup disk therefore never delays a "zanoza is down" alert, and a network
+outage never hides a stale backup.
 
-Every two minutes the timer checks:
+| Unit                       | Schedule                        | Checks                                                                 | State dir                          | Metrics file              |
+| -------------------------- | ------------------------------- | ---------------------------------------------------------------------- | ---------------------------------- | ------------------------- |
+| `zanoza-external-monitor`  | every `probeInterval` (2m)      | TCP targets, DNS through AdGuard on zanoza, HTTPS targets              | `/var/lib/zanoza-external-monitor` | `zanoza_external.prom`    |
+| `zanoza-backup-monitor`    | every `backup.checkInterval` (30m) | repository reachable, newest snapshot per backup job fresh and complete | `/var/lib/zanoza-backup-monitor`   | `zanoza_backup.prom`      |
+| `zanoza-backup-verify`     | `backup.verify.onCalendar` (Sun 08:00) | `restic check --read-data-subset`, sample restore per job         | `/var/lib/zanoza-backup-verify`    | `zanoza_backup_verify.prom` |
 
-- TCP/22 on zanoza's LAN address, as the host reachability signal;
-- an A-record lookup through the AdGuard container on zanoza;
-- Traefik and selected user-facing HTTPS routes;
-- the age of the newest Restic snapshot stored in
-  `/mnt/ext/backup_zanoza/snapshots` on beez.
+Metrics land in the node exporter textfile directory
+(`/var/lib/node_exporter/textfile_collector`) and are scraped by zanoza's
+Prometheus through beez's node exporter.
 
-Two consecutive failed batches produce one grouped alert. No further failure
-alerts are sent while the monitor remains unhealthy. The first fully healthy
-batch sends one recovery notification. Notification attempts are rate-limited
-to one every 15 minutes.
+## Alerting rules (all monitors)
 
-Telegram is attempted first. A timeout, HTTP error, invalid Telegram response,
-or missing token falls back to the existing `msmtp` Gmail relay. Both secrets
-remain in `secrets/beez/default.yaml` and are materialized by SOPS.
-`beez` uses zanoza's SOCKS5 listener for Telegram because direct API access is
-blocked; if zanoza or that proxy is unavailable, the email fallback remains
-independent and delivers the alert.
+- A check must fail `failureThreshold` (2) consecutive runs before it alerts;
+  the weekly verification alerts on the first failure.
+- Notifications are grouped per monitor: one message lists every alerting
+  check. A new failure while others are already alerting sends an updated
+  message (🆕 markers), and a full recovery sends one ✅ message.
+- At most one notification attempt per `notificationMinIntervalSeconds`
+  (15m). A failed delivery is retried on the next run after that interval;
+  the pending state is visible as `<prefix>_notification_pending 1` and the
+  unit exits non-zero when its delivery attempt failed.
+- Delivery order: Telegram (`telegram.proxyUrl` when set) → email via msmtp
+  (`email.recipient`). Both channels failing is the only way a message is
+  lost, and the unit's exit status plus `<prefix>_last_notification_success 0`
+  show it.
+
+## Backup freshness
+
+Freshness is read from the restic repository itself, not from file mtimes or
+unit results on zanoza: a snapshot exists only when a backup completed. For
+every `backup.jobs` entry the monitor runs
+
+```sh
+restic -r <repositoryPath> --password-file <passwordSecret> --no-cache --no-lock \
+  snapshots --json [--tag …] [--path …]
+```
+
+takes the newest matching snapshot and requires
+
+- its age below `staleAfterSeconds` (job override or the 36h default), and
+- every `expectedPaths` entry to be present in the snapshot's `paths`
+  (catches a job that "succeeded" with half its inputs missing).
+
+The repository lives on an NTFS USB disk under autofs. Availability is
+decided by `timeout mountTimeoutSeconds test -f <repo>/config`; when the disk
+is not there the single `backup_repository` check fails and the jobs are
+reported as unknown (`zanoza_backup_job_snapshot_age_seconds -1`), so one
+root cause produces one alert. No `RequiresMountsFor=` is used anywhere.
+
+Job selectors on beez match what zanoza's restic module writes: `opencloud`
+by tag `job=opencloud` (the pre-tag `users/`-only snapshots must not count),
+`immich` and `photos` by path, because tags exist only after zanoza runs the
+tagged configuration.
+
+## Backup verification
+
+Weekly, in a window where zanoza's backup/prune units are idle (`restic check`
+takes the exclusive repository lock; the prune can run until 06:35):
+
+1. `restic check --read-data-subset=<readDataSubset>` — structure plus a
+   random 5% of the pack data.
+2. Per job with `verify.include`: `restic restore latest <selectors> --target
+   <state>/restore-test/<job> --include <include>`, then require at least one
+   regular file and, when set, `verify.expectFile`. The restored tree is
+   removed afterwards. Metrics: `zanoza_backup_verify_success{step,job}`,
+   `zanoza_backup_verify_restored_bytes{job}`,
+   `zanoza_backup_verify_duration_seconds{step,job}`.
+
+The restore proves the snapshot is readable end to end with the password beez
+holds; it is not a full restore rehearsal (see the restic module README for
+the recovery procedures).
 
 ## Metrics
 
-The service atomically writes
-`/var/lib/node_exporter/textfile_collector/zanoza_external.prom`. The existing
-Prometheus scrape of `beez:9100` therefore exposes:
+```
+zanoza_external_probe_success{probe,kind}          1/0 per probe
+zanoza_external_monitor_healthy                    1 when no check is alerting
+zanoza_external_monitor_alerting_checks            number of alerting checks
+zanoza_external_monitor_notification_pending       1 when a message still has to be (re)sent
+zanoza_external_monitor_last_notification_success  1 ok / 0 failed / -1 never
+zanoza_external_monitor_last_run_timestamp_seconds
 
-- `zanoza_external_probe_success{probe=...,kind=...}`;
-- `zanoza_external_backup_age_seconds`;
-- `zanoza_external_monitor_healthy`;
-- `zanoza_external_monitor_last_run_timestamp_seconds`.
+zanoza_backup_repository_available
+zanoza_backup_job_snapshot_age_seconds{job}        -1 when unknown
+zanoza_backup_job_fresh{job}
+zanoza_backup_job_snapshot_timestamp_seconds{job}
+zanoza_backup_monitor_*                            same state-machine gauges as above
 
-Prometheus and Grafana stop receiving new samples when zanoza is completely
-down, but the beez-local timer and notifications continue independently.
-
-## Operational checks
-
-Inspect the timer and latest result:
-
-```bash
-systemctl status zanoza-external-monitor.timer
-journalctl -u zanoza-external-monitor.service --since today
-cat /var/lib/node_exporter/textfile_collector/zanoza_external.prom
+zanoza_backup_verify_success{step="check"}
+zanoza_backup_verify_success{step="restore",job}
+zanoza_backup_verify_restored_bytes{job}
+zanoza_backup_verify_duration_seconds{step,job}
+zanoza_backup_verify_*                             same state-machine gauges as above
 ```
 
-Test normal Telegram delivery with automatic email fallback:
+Suggested Prometheus alerts: `zanoza_backup_job_fresh == 0 for 1h`,
+`zanoza_backup_repository_available == 0 for 2h`,
+`time() - zanoza_backup_monitor_last_run_timestamp_seconds > 3*1800` (monitor
+itself stopped), `zanoza_backup_verify_success == 0`.
 
-```bash
-sudo systemctl start zanoza-external-monitor-notification-test.service
+## Operations
+
+```sh
+systemctl list-timers 'zanoza-*'
+systemctl start zanoza-backup-monitor.service && journalctl -u zanoza-backup-monitor -n 30
+cat /var/lib/node_exporter/textfile_collector/zanoza_backup.prom
+cat /var/lib/zanoza-backup-monitor/notified-failures   # currently alerting checks
+systemctl start zanoza-backup-verify.service            # manual verification (minutes, exclusive lock)
 ```
 
-Force and verify the email fallback without contacting Telegram:
+Notification tests (they send real messages; run only when the owner agreed):
 
-```bash
-sudo systemctl start zanoza-external-monitor-fallback-test.service
+```sh
+systemctl start zanoza-external-monitor-notification-test.service   # Telegram, falls back to email
+systemctl start zanoza-external-monitor-fallback-test.service       # email only
 ```
 
-For an end-to-end alert/recovery test, temporarily firewall one configured test
-endpoint or replace it with an unused port. Leave it unavailable for two probe
-batches, confirm one grouped alert, restore it, and confirm one recovery. Do not
-firewall zanoza's DNS or all HTTPS routes at once unless a full-host outage test
-is intended.
+Simulating failures without touching zanoza: add a bogus `httpTargets` entry
+on a test branch, or set a job's `staleAfterSeconds = 1` and start the backup
+monitor twice (threshold 2); the second run alerts, reverting recovers.
 
 ## Failure boundaries
 
-- If zanoza is lost, beez detects TCP, DNS, HTTP, and eventually backup failures
-  and sends a single grouped alert.
-- If beez is lost, the external signal and backup destination are both lost;
-  zanoza's existing local Prometheus/Grafana and Restic service alerts remain the
-  only signals.
-- If Telegram is lost, beez sends the same message through email.
-- If both notification providers are unavailable, the service exits non-zero and
-  retries the state transition after the notification rate limit.
-- A missing or unmounted backup repository is a failed backup-freshness probe;
-  no Restic password is copied to beez because repository file timestamps are
-  sufficient for staleness detection.
+- beez down → nothing from this module; zanoza's own Prometheus loses the
+  beez node exporter target (alert on `up{instance=~"beez.*"} == 0` there).
+- Backup disk unmounted → `backup_repository` alert only; probes unaffected.
+- Telegram unreachable → email; both unreachable → retried every 15m while the
+  condition persists, visible in the metrics and unit status.
+- zanoza's restic timers stopped → snapshots age out → `backup_<job>` alerts
+  after 36h + 2 runs, independently of anything zanoza reports.
