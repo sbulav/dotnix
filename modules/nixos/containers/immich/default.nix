@@ -20,34 +20,6 @@ in
     secret_file = mkOpt str "secrets/serverz/default.yaml" "SOPS secret to get creds from";
   };
   imports = [
-    (import ../shared/shared-traefik-clientip-route.nix {
-      app = "immich";
-      host = cfg.host;
-      url = "http://${cfg.localAddress}:2283";
-      route_enabled = cfg.enable;
-      middleware = [
-        "secure-headers"
-        "allow-lan"
-      ];
-      clientips = "ClientIP(`172.16.64.0/24`) || ClientIP(`192.168.80.0/20`)";
-    })
-    # TODO: fix this workaround for accessing mobile devices
-    # https://github.com/immich-app/immich/discussions/3118
-    (import ../shared/shared-traefik-bypass-route.nix {
-      app = "immich";
-      host = cfg.host;
-      url = "http://${cfg.localAddress}:2283";
-      route_enabled = cfg.enable;
-      middleware = [ "secure-headers" ];
-      # pathregexp = "/api/(albums|assets|users|partners)|/api/.well-known/immich|^/api/(auth|oauth|socket.io|sync|assets|server)/";
-      pathregexp = "^/api/|^/.well-known/immich";
-    })
-    (import ../shared/shared-traefik-route.nix {
-      app = "immich";
-      host = cfg.host;
-      url = "http://${cfg.localAddress}:2283";
-      route_enabled = cfg.enable;
-    })
     (import ../shared/shared-adguard-dns-rewrite.nix {
       host = cfg.host;
       rewrite_enabled = cfg.enable;
@@ -55,6 +27,36 @@ in
   ];
 
   config = mkIf cfg.enable {
+    custom.containers.traefik.routes = {
+      immich = {
+        host = cfg.host;
+        url = "http://${cfg.localAddress}:2283";
+      };
+      "allowedips-immich" = {
+        service = "immich";
+        host = cfg.host;
+        url = "http://${cfg.localAddress}:2283";
+        middlewares = [
+          "secure-headers"
+          "allow-lan"
+        ];
+        clientIPs = [
+          "172.16.64.0/24"
+          "192.168.80.0/20"
+        ];
+      };
+      # TODO: fix this workaround for accessing mobile devices
+      # https://github.com/immich-app/immich/discussions/3118
+      "bypass-immich" = {
+        service = "immich";
+        host = cfg.host;
+        url = "http://${cfg.localAddress}:2283";
+        middlewares = [ "secure-headers" ];
+        # pathRegexp = "/api/(albums|assets|users|partners)|/api/.well-known/immich|^/api/(auth|oauth|socket.io|sync|assets|server)/";
+        pathRegexp = "^/api/|^/.well-known/immich";
+      };
+    };
+
     custom.security.sops.secrets = {
       # Application config using template
       "immich_config" = lib.custom.secrets.containers.appConfig "immich" // {

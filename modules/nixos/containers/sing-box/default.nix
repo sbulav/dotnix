@@ -148,24 +148,6 @@ in
     secret_file = mkOpt str "secrets/zanoza/default.yaml" "SOPS secret file for sing-box credentials";
   };
   imports = [
-    (import ../shared/shared-traefik-route.nix {
-      app = "sing-box";
-      host = cfg.host;
-      url = "http://${cfg.localAddress}:9090";
-      route_enabled = cfg.enable;
-      # auth-chain (= secure-headers + authelia) keeps the dashboard SSO-gated
-      # like every other admin UI; allow-lan additionally pins it to LAN
-      # sources. The clash API secret alone is not enough — the dashboard can
-      # pin/unpin exits.
-      middleware = [
-        "auth-chain"
-        "allow-lan"
-        # The clash API root answers 401 to anything without the bearer
-        # secret; metacubexd is served under /ui/. Defined below, next to
-        # the traefik container gate.
-        "sing-box-ui-redirect"
-      ];
-    })
     (import ../shared/shared-adguard-dns-rewrite.nix {
       host = cfg.host;
       rewrite_enabled = cfg.enable;
@@ -173,6 +155,29 @@ in
   ];
 
   config = mkIf cfg.enable {
+    custom.containers.traefik = {
+      # This module defines sing-box-ui-redirect below; register it so routes
+      # may name it.
+      knownMiddlewares = [ "sing-box-ui-redirect" ];
+
+      routes.sing-box = {
+        host = cfg.host;
+        url = "http://${cfg.localAddress}:9090";
+        # auth-chain (= secure-headers + authelia) keeps the dashboard SSO-gated
+        # like every other admin UI; allow-lan additionally pins it to LAN
+        # sources. The clash API secret alone is not enough — the dashboard can
+        # pin/unpin exits.
+        middlewares = [
+          "auth-chain"
+          "allow-lan"
+          # The clash API root answers 401 to anything without the bearer
+          # secret; metacubexd is served under /ui/. Defined below, next to
+          # the traefik container gate.
+          "sing-box-ui-redirect"
+        ];
+      };
+    };
+
     # Secrets are decrypted on the host and bind-mounted into the container.
     # restartUnits: a changed secret must restart the container so the
     # outbounds are regenerated; fires only on content change.
@@ -218,8 +223,8 @@ in
 
     # Bounce the bare host to the dashboard: sing-box serves metacubexd at
     # /ui/, and the API root it would otherwise hit is a 401 without the
-    # clash secret. Gated like shared-traefik-route so a traefik-less host
-    # doesn't grow a phantom traefik container.
+    # clash secret. Gated on the traefik host so a traefik-less host doesn't
+    # grow a phantom traefik container.
     containers.traefik = mkIf config.${namespace}.containers.traefik.enable {
       config.services.traefik.dynamicConfigOptions.http.middlewares.sing-box-ui-redirect.redirectRegex = {
         regex = "^https://${escapeRegex cfg.host}/$";

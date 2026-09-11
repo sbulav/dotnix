@@ -19,29 +19,32 @@ in
   };
 
   imports = [
-    (import ../shared/shared-traefik-clientip-route.nix {
-      app = "homepage";
-      host = "${cfg.host}";
-      url = "http://${cfg.localAddress}:8082";
-      route_enabled = cfg.enable;
-      middleware = [
-        "secure-headers"
-        "allow-lan"
-      ];
-      clientips = "ClientIP(`172.16.64.0/24`) || ClientIP(`192.168.80.0/20`)";
-    })
-    (import ../shared/shared-traefik-route.nix {
-      app = "homepage";
-      host = "${cfg.host}";
-      url = "http://${cfg.localAddress}:8082";
-      route_enabled = cfg.enable;
-    })
     (import ../shared/shared-adguard-dns-rewrite.nix {
       host = "${cfg.host}";
       rewrite_enabled = cfg.enable;
     })
   ];
   config = mkIf cfg.enable {
+    custom.containers.traefik.routes = {
+      homepage = {
+        host = "${cfg.host}";
+        url = "http://${cfg.localAddress}:8082";
+      };
+      "allowedips-homepage" = {
+        service = "homepage";
+        host = "${cfg.host}";
+        url = "http://${cfg.localAddress}:8082";
+        middlewares = [
+          "secure-headers"
+          "allow-lan"
+        ];
+        clientIPs = [
+          "172.16.64.0/24"
+          "192.168.80.0/20"
+        ];
+      };
+    };
+
     custom.security.sops.secrets = {
       # Environment file using template
       "homepage-env" = lib.custom.secrets.containers.envFileWithRestart "homepage" // {

@@ -44,17 +44,6 @@ in
     localAddress = mkOpt str "172.16.64.114" "With privateNetwork, which address to use in container";
   };
   imports = [
-    (import ../shared/shared-traefik-clientip-route.nix {
-      app = "sonarr";
-      host = cfg.host;
-      url = "http://${cfg.localAddress}:8989";
-      route_enabled = cfg.enable;
-      middleware = [
-        "secure-headers"
-        "allow-lan"
-      ];
-      clientips = "ClientIP(`172.16.64.0/24`) || ClientIP(`192.168.80.0/20`)";
-    })
     (import ../shared/shared-adguard-dns-rewrite.nix {
       host = cfg.host;
       rewrite_enabled = cfg.enable;
@@ -62,6 +51,20 @@ in
   ];
 
   config = mkIf cfg.enable {
+    custom.containers.traefik.routes."allowedips-sonarr" = {
+      service = "sonarr";
+      host = cfg.host;
+      url = "http://${cfg.localAddress}:8989";
+      middlewares = [
+        "secure-headers"
+        "allow-lan"
+      ];
+      clientIPs = [
+        "172.16.64.0/24"
+        "192.168.80.0/20"
+      ];
+    };
+
     networking.nat = {
       enable = true;
       internalInterfaces = [ "ve-sonarr" ];

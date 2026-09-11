@@ -38,13 +38,6 @@ in
   };
 
   imports = [
-    (import ../shared/shared-traefik-route.nix {
-      app = "opencloud";
-      host = cfg.host;
-      url = "http://${cfg.localAddress}:9200";
-      route_enabled = cfg.enable;
-      middleware = [ "secure-headers-opencloud" ];
-    })
     (import ../shared/shared-adguard-dns-rewrite.nix {
       host = cfg.host;
       rewrite_enabled = cfg.enable;
@@ -52,6 +45,12 @@ in
   ];
 
   config = mkIf cfg.enable {
+    custom.containers.traefik.routes.opencloud = {
+      host = cfg.host;
+      url = "http://${cfg.localAddress}:9200";
+      middlewares = [ "secure-headers-opencloud" ];
+    };
+
     networking.nat = {
       enable = true;
       internalInterfaces = [ "ve-opencloud" ];

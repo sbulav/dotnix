@@ -41,17 +41,6 @@ in
     torrentingPort = mkOpt port 56881 "qBittorrent peer port (forwarded from host)";
   };
   imports = [
-    (import ../shared/shared-traefik-clientip-route.nix {
-      app = "qbittorrent";
-      host = cfg.host;
-      url = "http://${cfg.localAddress}:8080";
-      route_enabled = cfg.enable;
-      middleware = [
-        "secure-headers"
-        "allow-lan"
-      ];
-      clientips = "ClientIP(`172.16.64.0/24`) || ClientIP(`192.168.80.0/20`)";
-    })
     (import ../shared/shared-adguard-dns-rewrite.nix {
       host = cfg.host;
       rewrite_enabled = cfg.enable;
@@ -59,6 +48,20 @@ in
   ];
 
   config = mkIf cfg.enable {
+    custom.containers.traefik.routes."allowedips-qbittorrent" = {
+      service = "qbittorrent";
+      host = cfg.host;
+      url = "http://${cfg.localAddress}:8080";
+      middlewares = [
+        "secure-headers"
+        "allow-lan"
+      ];
+      clientIPs = [
+        "172.16.64.0/24"
+        "192.168.80.0/20"
+      ];
+    };
+
     networking.nat = {
       enable = true;
       internalInterfaces = [ "ve-qbittorrent" ];
