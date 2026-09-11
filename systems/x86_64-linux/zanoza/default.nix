@@ -89,12 +89,15 @@ in
     ipcamJpegFix.enable = true;
     logrotate = {
       enable = true;
-      logFiles = [
-        "/tank/authelia/logs/*.log"
-        "/tank/torrents/log/*.log"
-        "/tank/traefik/logs/*.log"
-        "/tank/sing-box/logs/*.log"
-      ];
+      # These log directories are owned by container uids that have no host user
+      # names, so rotation stays as root and `su root root` (the default) is
+      # what silences logrotate's parent-directory permission check.
+      rules = {
+        authelia.files = [ "/tank/authelia/logs/*.log" ];
+        qbittorrent.files = [ "/tank/torrents/log/*.log" ];
+        traefik.files = [ "/tank/traefik/logs/*.log" ];
+        sing-box.files = [ "/tank/sing-box/logs/*.log" ];
+      };
     };
   };
 
@@ -102,6 +105,8 @@ in
     # {{{ Services on OS
     loki = {
       enable = true;
+      # 30 days; see modules/nixos/containers/loki/README.md before the first deploy
+      retention.enable = true;
     };
     prometheus = {
       enable = true;

@@ -13,9 +13,28 @@ in
 {
   options.${namespace}.containers.loki = with types; {
     enable = mkBoolOpt false "Enable the loki monitoring service ;";
+
+    retention = {
+      enable = mkBoolOpt false "Delete index entries and chunks older than `retention.period` via the compactor. Off by default so enabling it is an explicit, reviewable per-host decision (the first pass deletes all history older than the period).";
+
+      period =
+        mkOpt str "720h"
+          "Retention period (Loki duration, must be a multiple of the 24h index period). 720h = 30 days.";
+    };
   };
 
   config = mkIf cfg.enable {
+    assertions = [
+      {
+        assertion = cfg.retention.enable -> (cfg.retention.period != "0s" && cfg.retention.period != "0");
+        message = ''
+          custom.containers.loki.retention.period is "${cfg.retention.period}", which Loki reads as
+          "keep forever". Retention is enabled, so set a real period (a multiple of the 24h index
+          period, e.g. "720h" for 30 days) or set retention.enable = false instead.
+        '';
+      }
+    ];
+
     # Allow grafana to read Loki DS via trusted interface
     networking.firewall.trustedInterfaces = [ "ve-grafana" ];
     services.loki = {
@@ -74,20 +93,22 @@ in
         limits_config = {
           reject_old_samples = true;
           reject_old_samples_max_age = "168h";
-        };
+        }
+        // optionalAttrs cfg.retention.enable { retention_period = cfg.retention.period; };
 
-        table_manager = {
-          retention_deletes_enabled = false;
-          retention_period = "0s";
-        };
-
+        # Loki 3 drops `table_manager`: the compactor owns retention for TSDB.
         compactor = {
-          working_directory = "/var/lib/loki";
-          compactor_ring = {
-            kvstore = {
-              store = "inmemory";
-            };
-          };
+          working_directory = "/var/lib/loki/compactor";
+          compaction_interval = "10m";
+          compactor_ring.kvstore.store = "inmemory";
+        }
+        // optionalAttrs cfg.retention.enable {
+          retention_enabled = true;
+          # Chunks are only deleted this long after they were marked, which is the
+          # window for disabling retention again without data loss.
+          retention_delete_delay = "2h";
+          retention_delete_worker_count = 150;
+          delete_request_store = "filesystem";
         };
       };
     };
