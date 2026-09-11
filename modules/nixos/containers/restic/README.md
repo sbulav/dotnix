@@ -196,13 +196,14 @@ and then the notifying unit exits non-zero and shows up in
   broken the email fallback still runs. When both channels fail the whole
   message is written to the unit's journal. Notifying units are bounded by a
   10 minute start timeout and ordered after `network-online.target`. Every
-  restic command runs with `--retry-lock` (30 minutes for backups, 1 hour for
-  forget/prune), so jobs that meet on the shared repository wait for the lock
-  instead of failing.
+  restic command runs with `--retry-lock 1h`, so jobs that meet on the shared
+  repository wait for the lock instead of failing.
 - A job that is still running when the summary fires is reported as ⏳, not
   as failed; its own `OnFailure=` handler reports the outcome. So is a job
-  whose timer will fire within 90 minutes: a `Persistent=true` catch-up after
-  a boot is pending, not missed.
+  that has not run since a boot less than 26 hours ago, as long as its timer
+  is scheduled: it may simply not have been due yet, and a `Persistent=true`
+  catch-up is pending rather than missed. Past 26 hours of uptime with no run
+  at all, it is ❌.
 - **Freshness from outside** (per job, from the repository itself, plus the
   weekly `restic check` and sample restore) lives on beez:
   `modules/nixos/services/zanoza-external-monitoring/README.md`. It does not

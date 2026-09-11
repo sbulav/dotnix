@@ -66,12 +66,13 @@ let
   ];
 
   # All four jobs share one repository and forget/prune takes the exclusive
-  # lock, so every restic invocation waits for the lock instead of failing.
+  # lock, so every restic invocation waits up to an hour for it instead of
+  # failing (a full prune of this repository can take well over 30 minutes).
   commonBackupArgs = [
     "--exclude-caches"
     "--compression=max"
     "--one-file-system"
-    "--retry-lock 30m"
+    "--retry-lock 1h"
   ];
 
   keepPolicy = [
@@ -186,9 +187,6 @@ let
       trap 'rm -f "$message_file"' EXIT
       uptime_us=$(( $(cut -d. -f1 /proc/uptime) * 1000000 ))
       max_age_us=$((26 * 3600 * 1000000))
-      # Wall clock, for comparing against a timer's next realtime elapse
-      # (`date` comes from coreutils, already in runtimeInputs).
-      now_s=$(date +%s)
       all_ok=1
       failed_units=()
 
@@ -206,17 +204,23 @@ let
             # its own OnFailure= handler reports the outcome.
             printf '  ⏳ %s (running)\n' "$job"
           elif ! [ "$exit_us" -eq "$exit_us" ] 2>/dev/null || [ "$exit_us" -eq 0 ]; then
-            # Not run yet, but a Persistent=true timer that is still inside
-            # its jitter window after a boot is pending, not broken.
+            # Never ran since this boot. That is only evidence of a problem
+            # once the host has been up longer than the job's own period:
+            # before that the job may simply not have been due yet, and a
+            # Persistent=true catch-up can still be waiting in its jitter
+            # window (its next elapse then even reads in the past).
             timer="''${unit%.service}.timer"
-            # An empty value (monotonic-only or unloaded timer) must not reach
-            # `date -d`: it parses "" as today's midnight instead of failing.
+            # An empty or zero value (monotonic-only, unloaded or stopped
+            # timer) must not reach `date -d`: it parses "" as today's
+            # midnight instead of failing. `date` comes from coreutils and
+            # LC_ALL=C matches systemd's always-English timestamps.
             next=$(systemctl show -p NextElapseUSecRealtime --value "$timer" 2>/dev/null || true)
             next_s=0
-            [ -z "$next" ] || next_s=$(date -d "$next" +%s 2>/dev/null || echo 0)
-            due_in=$((next_s - now_s))
-            if [ "$next_s" -gt 0 ] && [ "$due_in" -ge 0 ] && [ "$due_in" -le 5400 ]; then
-              printf '  ⏳ %s (pending, runs within 90 min)\n' "$job"
+            if [ -n "$next" ] && [ "$next" != 0 ]; then
+              next_s=$(LC_ALL=C date -d "$next" +%s 2>/dev/null || echo 0)
+            fi
+            if [ "$next_s" -gt 0 ] && [ "$uptime_us" -lt "$max_age_us" ]; then
+              printf '  ⏳ %s (scheduled, no run since boot %sh ago)\n' "$job" $((uptime_us / 3600000000))
             else
               printf '  ❌ %s (not run since boot)\n' "$job"
               all_ok=0
