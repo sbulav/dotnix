@@ -155,18 +155,25 @@ in
     enable = true;
     # Touch this volatile file to force the next cache run to build locally.
     remoteBuilderDisableFile = "/run/nix-cache-builder-local-only";
+    # Build order: the servers first, so a long desktop build cannot starve
+    # them out of the total budget.
     hosts = [
-      "nz"
       "zanoza"
-      "mz"
       "beez"
+      "nz"
+      "mz"
     ];
     cacheServer.enable = true;
+    # Serve the candidate lock and per-host status for `sys adopt`.
+    publish.enable = true;
 
     # Telegram notifications
     telegram = {
       enable = true;
       chatId = "681806836";
+      # beez reaches api.telegram.org only through the router's SOCKS proxy,
+      # the same one its other notifiers use.
+      proxyUrl = "socks5h://192.168.89.207:20170";
       notifyOnSuccess = true;
       notifyOnPartialSuccess = true;
       notifyOnFailure = true;
@@ -174,13 +181,10 @@ in
       failurePriority = "high"; # Sound for any failures
     };
 
-    # Email fallback when Telegram is blocked/unavailable
+    # Email fallback when Telegram delivery fails
     email = {
       enable = true;
       recipient = "bulavintsev.sergey@gmail.com";
-      notifyOnSuccess = false; # Don't spam on success
-      notifyOnFailure = true; # Email on any failures
-      sendOnTelegramFailure = true; # Always email if TG fails
     };
   };
 
