@@ -168,7 +168,55 @@ sudo -E restic-tank_opencloud ls latest --tag job=opencloud | grep opencloud.yam
 
 ## Notifications
 
-Per-job monitoring and delivery fixes (Telegram via the sing-box proxy, email
-fallback, per-job freshness from beez) are tracked in #43. Today a failure of
-any job triggers `restic-backups-telegram-failure.service` and a daily summary
-runs at 07:15, after the worst-case end of the prune.
+Delivery is shared with beez's external monitoring
+(`lib.custom.notifications.mkDeliverScript`): Telegram first, through
+`telegram.proxyUrl` (api.telegram.org is blocked directly from zanoza, the
+sing-box SOCKS proxy is not), then email via `custom.containers.msmtp` to
+`email.recipient` when Telegram fails. A message is lost only when both fail,
+and then the notifying unit exits non-zero and shows up in
+`systemctl --failed`.
+
+- **Per-job failure alerts.** Every backup unit has its own
+  `restic-backups-tank_<job>-failure.service` (`OnFailure=`), so one failing
+  job alerts even when the other jobs in the same repository succeed, and the
+  message names the job, the unit result and the last `telegram.errorLogLines`
+  journal lines of that invocation.
+- **Daily summary** at 07:15 (`restic-backups-summary`, after the worst-case
+  end of the prune). A job is ✅ only if its unit finished with
+  `Result=success` within the last 26 hours; otherwise it is ❌ with the
+  reason (`not run since boot`, `last run Nh ago`, or the failure result) and
+  its journal tail. All green is sent with low priority.
+- **Timers are `Persistent=true`**, so a run missed during a reboot is made
+  up instead of silently skipped until the next night. All four then fire at
+  once; the backups share the repository lock, and the prune (exclusive lock)
+  is ordered `After=` all three backup units, so it queues instead of failing.
+- **Delivery details.** Telegram texts are cut at 3900 characters (the API
+  limit is 4096), the bot token never appears on a command line, and the token
+  file is optional for the notifying units (`EnvironmentFile=-…`): with sops
+  broken the email fallback still runs. When both channels fail the whole
+  message is written to the unit's journal. Notifying units are bounded by a
+  10 minute start timeout and ordered after `network-online.target`. Every
+  restic command runs with `--retry-lock 1h`, so jobs that meet on the shared
+  repository wait for the lock instead of failing.
+- A job that is still running when the summary fires is reported as ⏳, not
+  as failed; its own `OnFailure=` handler reports the outcome. So is a job
+  that has not run since a boot less than 26 hours ago, as long as its timer
+  is scheduled: it may simply not have been due yet, and a `Persistent=true`
+  catch-up is pending rather than missed. Past 26 hours of uptime with no run
+  at all, it is ❌.
+- **Freshness from outside** (per job, from the repository itself, plus the
+  weekly `restic check` and sample restore) lives on beez:
+  `modules/nixos/services/zanoza-external-monitoring/README.md`. It does not
+  depend on anything zanoza reports.
+
+Manual tests (they send real messages):
+
+```sh
+sudo systemctl start restic-backups-notification-test.service   # Telegram → email fallback
+sudo systemctl start restic-backups-fallback-test.service       # email only (FORCE_EMAIL_ONLY)
+sudo systemctl start restic-backups-summary.service             # today's summary
+```
+
+Simulating a failure without breaking anything:
+`sudo systemctl start restic-backups-tank_photos-failure.service` sends the
+failure message for the photos job as if it had just failed.

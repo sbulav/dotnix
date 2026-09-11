@@ -19,6 +19,9 @@
       "gpt-5.6-luna" = {
         name = "ChatGPT 5.6 Luna";
       };
+      "gpt-6-astra" = {
+        name = "ChatGPT 6 Astra";
+      };
     };
   };
 
@@ -28,6 +31,9 @@
     models = {
       "claude-opus-4-8" = {
         name = "Claude Opus 4.8";
+      };
+      "claude-opus-5" = {
+        name = "Claude Opus 5";
       };
       "claude-fable-5-1" = {
         name = "Claude Fable 5.1";
@@ -50,15 +56,15 @@
     name = "HHDev DeepSeek Gateway";
     npm = "@ai-sdk/openai-compatible";
     models = {
-      "deepseek-chat" = {
-        name = "DeepSeek Chat";
+      "deepseek-flash" = {
+        name = "DeepSeek Flash";
         options = {
           max_tokens = 2048;
           temperature = 0.3;
         };
       };
-      "deepseek-coder" = {
-        name = "DeepSeek Coder";
+      "deepseek-v4-pro" = {
+        name = "DeepSeek V4 Pro";
         options = {
           max_tokens = 4096;
           temperature = 0.3;
@@ -82,6 +88,9 @@
     models = {
       "gemini-3.1-pro-preview" = {
         name = "Gemini 3.1 Pro Preview";
+      };
+      "gemini-3.8-flash" = {
+        name = "Gemini 3.8 Flash";
       };
     };
   };

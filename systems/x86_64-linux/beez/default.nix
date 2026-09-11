@@ -108,6 +108,37 @@ in
     backup = {
       repositoryPath = "/mnt/ext/backup_zanoza";
       staleAfterSeconds = 36 * 60 * 60;
+      # Selectors match how zanoza's restic module writes snapshots. The
+      # immich/photos jobs select by path because the `job=` tags only exist
+      # once zanoza runs the tagged configuration; opencloud selects by tag so
+      # the pre-tag users/-only snapshots do not count as fresh backups.
+      jobs = [
+        {
+          name = "opencloud";
+          matchTags = [ "job=opencloud" ];
+          expectedPaths = [
+            "/tank/opencloud"
+            "/var/lib/nixos-containers/opencloud/etc/opencloud"
+          ];
+          verify = {
+            include = "/var/lib/nixos-containers/opencloud/etc/opencloud";
+            expectFile = "/var/lib/nixos-containers/opencloud/etc/opencloud/opencloud.yaml";
+          };
+        }
+        {
+          name = "immich";
+          matchPaths = [ "/tank/immich" ];
+          verify = {
+            include = "/tank/immich/profile";
+            expectFile = "/tank/immich/profile/.immich";
+          };
+        }
+        {
+          name = "photos";
+          matchPaths = [ "/tank/photos" ];
+          verify.include = "/tank/photos/Ideas";
+        }
+      ];
     };
     telegram.proxyUrl = "socks5h://192.168.89.207:20170";
   };

@@ -678,4 +678,191 @@ in
         echo "Response: $response"
       '';
   };
+
+  # Notification delivery shared by the beez monitors and the zanoza restic
+  # jobs: Telegram first (optionally through a SOCKS/HTTP proxy, always with
+  # bounded timeouts), msmtp email as the fallback. The Telegram helpers above
+  # stay untouched until #50 consolidates them onto this.
+  notifications = {
+    # mkDeliverScript pkgs { ... } -> derivation with bin/notify-deliver
+    #   notify-deliver <message-file> <subject> [high|low]
+    #
+    # Delivery order: Telegram (optional SOCKS proxy, prefer socks5h:// so DNS
+    # is resolved remotely) and then email through msmtp when Telegram failed or
+    # is unavailable. Exit 0 as soon as one channel accepted the message, exit 1
+    # when every enabled channel failed; in that case the whole message is also
+    # written to stderr so it survives in the journal of the calling unit.
+    #
+    # Contract for the calling systemd unit:
+    #   - TELEGRAM_TOKEN comes from `EnvironmentFile = "-<sops path>"` (leading
+    #     dash: a missing token file must not prevent the email fallback);
+    #     without the variable Telegram is treated as failed.
+    #   - FORCE_EMAIL_ONLY=true skips Telegram (fallback tests). With email
+    #     disabled this always exits 1.
+    #   - order the unit After=/Wants=network-online.target and give it a
+    #     TimeoutStartSec; curl and msmtp are bounded, but the unit should not
+    #     rely on that alone.
+    mkDeliverScript =
+      pkgs:
+      {
+        hostName,
+        telegram ? { },
+        email ? { },
+      }:
+      let
+        tg = {
+          enable = true;
+          chatId = "";
+          proxyUrl = "";
+          connectTimeoutSeconds = 10;
+          maxTimeSeconds = 30;
+        }
+        // telegram;
+        mail = {
+          enable = true;
+          recipient = "";
+          fromName = "${hostName} notifications";
+          # Matches the shared custom.containers.msmtp module (account `gmail`).
+          fromAddress = "zppfan@gmail.com";
+          account = "gmail";
+        }
+        // email;
+        # Telegram sendMessage rejects texts longer than 4096 characters.
+        telegramTextLimit = 3900;
+      in
+      assert pkgs.lib.assertMsg (
+        tg.enable || mail.enable
+      ) "mkDeliverScript: enable Telegram, email or both";
+      assert pkgs.lib.assertMsg (
+        !tg.enable || tg.chatId != ""
+      ) "mkDeliverScript: telegram.chatId is required when Telegram is enabled";
+      assert pkgs.lib.assertMsg (
+        !mail.enable || mail.recipient != ""
+      ) "mkDeliverScript: email.recipient is required when email is enabled";
+      assert pkgs.lib.assertMsg (
+        tg.connectTimeoutSeconds > 0 && tg.maxTimeSeconds > 0
+      ) "mkDeliverScript: curl timeouts must be positive (0 means unlimited)";
+      pkgs.writeShellApplication {
+        name = "notify-deliver";
+        runtimeInputs =
+          with pkgs;
+          [
+            coreutils
+            curl
+            jq
+          ]
+          ++ pkgs.lib.optional mail.enable msmtp;
+        text = ''
+          if [ "$#" -lt 2 ] || [ "$#" -gt 3 ]; then
+            echo "usage: notify-deliver <message-file> <subject> [high|low]" >&2
+            exit 2
+          fi
+          message_file="$1"
+          subject="$2"
+          priority="''${3:-high}"
+          case "$priority" in
+            high | low) ;;
+            *)
+              echo "notify-deliver: priority must be high or low, got '$priority'" >&2
+              exit 2
+              ;;
+          esac
+          # Header injection guard: a subject is a single line.
+          subject=''${subject//$'\r'/}
+          subject=''${subject//$'\n'/ }
+
+          if [ ! -r "$message_file" ]; then
+            echo "notify-deliver: message file $message_file is not readable" >&2
+            exit 1
+          fi
+
+          work=$(mktemp -d)
+          # shellcheck disable=SC2329
+          cleanup() { rm -rf "$work"; }
+          trap cleanup EXIT
+          trap 'exit 143' TERM INT
+
+          ${pkgs.lib.optionalString tg.enable ''
+            telegram_attempted=false
+            if [ "''${FORCE_EMAIL_ONLY:-false}" != true ]; then
+              if [ -n "''${TELEGRAM_TOKEN:-}" ]; then
+                telegram_attempted=true
+                disable_notification=false
+                if [ "$priority" = low ]; then
+                  disable_notification=true
+                fi
+                # The token stays out of argv: curl reads URL and proxy from a
+                # 0600 config file; the payload is streamed from a file so a
+                # long journal tail cannot overflow the argument limit.
+                if ! (
+                  umask 077
+                  {
+                    printf 'url = "https://api.telegram.org/bot%s/sendMessage"\n' "$TELEGRAM_TOKEN"
+                    ${pkgs.lib.optionalString (tg.proxyUrl != "") ''
+                      printf 'proxy = "%s"\n' ${pkgs.lib.escapeShellArg tg.proxyUrl}
+                    ''}
+                  } >"$work/curl.cfg"
+                ); then
+                  echo "notify-deliver: could not write the curl config" >&2
+                elif jq -n \
+                  --arg chat_id ${pkgs.lib.escapeShellArg tg.chatId} \
+                  --rawfile text "$message_file" \
+                  --argjson disable_notification "$disable_notification" \
+                  --argjson limit ${toString telegramTextLimit} \
+                  '{chat_id: $chat_id,
+                    text: ($text | if length > $limit then .[0:$limit] + "\n… [truncated]" else . end),
+                    disable_notification: $disable_notification}' \
+                  >"$work/payload.json"; then
+                  if curl --fail-with-body --silent --show-error \
+                    --connect-timeout ${toString tg.connectTimeoutSeconds} \
+                    --max-time ${toString tg.maxTimeSeconds} \
+                    -K "$work/curl.cfg" \
+                    -H 'Content-Type: application/json' \
+                    --data-binary @"$work/payload.json" \
+                    -o "$work/response.json" \
+                    && jq -e '.ok == true' "$work/response.json" >/dev/null; then
+                    echo "notify-deliver: delivered via Telegram"
+                    exit 0
+                  fi
+                else
+                  echo "notify-deliver: could not build the Telegram payload (invalid UTF-8?)" >&2
+                fi
+                echo "notify-deliver: Telegram delivery failed${pkgs.lib.optionalString mail.enable "; using email fallback"}" >&2
+              else
+                echo "notify-deliver: TELEGRAM_TOKEN is unavailable${pkgs.lib.optionalString mail.enable "; using email fallback"}" >&2
+              fi
+            fi
+          ''}
+
+          ${
+            if mail.enable then
+              ''
+                if {
+                  printf 'From: %s <%s>\n' ${pkgs.lib.escapeShellArg mail.fromName} ${pkgs.lib.escapeShellArg mail.fromAddress}
+                  printf 'To: %s\n' ${pkgs.lib.escapeShellArg mail.recipient}
+                  printf 'Subject: %s\n' "$subject"
+                  printf 'Content-Type: text/plain; charset=UTF-8\n\n'
+                  cat "$message_file"
+                } | timeout 60 msmtp -a ${pkgs.lib.escapeShellArg mail.account} ${pkgs.lib.escapeShellArg mail.recipient}; then
+                  echo "notify-deliver: delivered via email"
+                  exit 0
+                fi
+                echo "notify-deliver: email delivery failed" >&2
+              ''
+            else
+              ''
+                echo "notify-deliver: no notification channel delivered the message" >&2
+              ''
+          }
+          ${pkgs.lib.optionalString tg.enable ''
+            if [ "$telegram_attempted" = false ] && [ "''${FORCE_EMAIL_ONLY:-false}" = true ]; then
+              echo "notify-deliver: Telegram was skipped (FORCE_EMAIL_ONLY)" >&2
+            fi
+          ''}
+          echo "notify-deliver: undelivered message follows (subject: $subject)" >&2
+          cat "$message_file" >&2
+          exit 1
+        '';
+      };
+  };
 }
