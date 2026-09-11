@@ -163,6 +163,11 @@ in
       "nz"
       "mz"
     ];
+    # Builders run in nix-daemon.service's cgroup, out of reach of the unit's
+    # own limits, so bound them here: one derivation at a time on three of
+    # beez's four cores.
+    maxJobs = 1;
+    buildCores = 3;
     cacheServer.enable = true;
     # Serve the candidate lock and per-host status for `sys adopt`.
     publish.enable = true;

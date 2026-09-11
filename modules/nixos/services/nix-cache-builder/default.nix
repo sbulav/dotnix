@@ -378,6 +378,8 @@ let
           --out-link "$out_link" \
           "path:$src_dir#nixosConfigurations.$host.config.system.build.toplevel" \
           --substituters ${escapeShellArg buildSubstituters} \
+          --max-jobs ${toString cfg.maxJobs} \
+          --cores ${toString cfg.buildCores} \
           --print-build-logs \
           --keep-going \
           "''${build_args[@]}" || rc=$?
@@ -946,6 +948,15 @@ in
       mkOpt str "10h"
         "Wall-clock budget for the whole batch; hosts that no longer fit are recorded as skipped-budget";
 
+    # Builds run inside nix-daemon.service's cgroup, not this unit's, so the
+    # unit's CPUQuota/MemoryMax cannot reach them. These two are the only
+    # levers the caller has over how much of the machine a build consumes.
+    maxJobs = mkOpt int 1 "Derivations to build concurrently (nix --max-jobs)";
+
+    buildCores =
+      mkOpt int 0
+        "Cores offered to each build job (nix --cores); 0 means every core on the machine";
+
     # Scheduling
     buildTime = mkOpt str "*-*-* 02:00:00" "When to run daily builds (systemd OnCalendar format)";
 
@@ -1032,6 +1043,14 @@ in
         {
           assertion = cfg.keepCandidates >= 1;
           message = "custom.services.nix-cache-builder.keepCandidates must keep at least one candidate";
+        }
+        {
+          assertion = cfg.maxJobs >= 1;
+          message = "custom.services.nix-cache-builder.maxJobs must be at least 1";
+        }
+        {
+          assertion = cfg.buildCores >= 0;
+          message = "custom.services.nix-cache-builder.buildCores must be 0 (all cores) or positive";
         }
         {
           assertion = hasPrefix "${cfg.stateDir}/" cfg.flakePath;
@@ -1156,16 +1175,20 @@ in
           # the whole point: the 2026-09-10 timeout reported nothing.
           ExecStopPost = "${reportScript}/bin/nix-cache-report";
 
-          # Reserve capacity for beez's backup and monitoring duties: the
-          # builder yields CPU and IO under contention and runs at a low
-          # priority, but may use three of four cores when nothing competes.
+          # These bound the *client* only. Compilation happens in
+          # nix-daemon.service's cgroup (measured: a build's `sleep` sat in
+          # /system.slice/nix-daemon.service while the client sat in the
+          # caller's slice), so no unit-level limit here can reach a builder;
+          # `--max-jobs`/`--cores` above do that instead. What the client
+          # actually does is evaluate four NixOS closures, which is where the
+          # gigabytes go, so the memory limits are still the right ones.
           CPUWeight = 20;
           IOWeight = 20;
           Nice = 10;
           CPUQuota = "300%";
           # Begin reclaiming at 6 GiB but permit another 4 GiB before the hard
-          # limit: a run peaked at 8 GiB, and MemoryMax kills while MemoryHigh
-          # only throttles.
+          # limit: evaluation peaked at 8 GiB, and MemoryMax kills while
+          # MemoryHigh only throttles.
           MemoryHigh = "6G";
           MemoryMax = "10G";
 

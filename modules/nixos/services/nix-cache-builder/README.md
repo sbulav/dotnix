@@ -273,23 +273,50 @@ mv flake.lock.candidate flake.lock
 
 ## Resource reservation
 
-beez is a small machine that also backs up and monitors. The builder therefore
-runs deliberately subordinate:
+beez is a small machine that also backs up and monitors, so the builder runs
+deliberately subordinate. The work splits across two cgroups, and this matters
+more than it looks:
 
-| Setting | Value | Why |
-| --- | --- | --- |
-| `CPUWeight` / `IOWeight` | 20 | a fifth of the systemd default of 100 |
-| `Nice` | 10 | yields to interactive and scheduled work |
-| `CPUQuota` | 300% | leaves a core free even when nothing else runs |
-| `MemoryHigh` | 6G | start reclaiming here |
-| `MemoryMax` | 10G | hard ceiling; `MemoryHigh` throttles, `MemoryMax` kills |
+- **Evaluation** happens in the `nix build` client, inside
+  `nix-cache-builder.service`. Evaluating four NixOS closures is where the
+  gigabytes go, so the unit's memory limits land exactly where the memory is.
+- **Compilation** happens in builders forked by the nix daemon, inside
+  `system.slice/nix-daemon.service`. Nothing set on this unit reaches them —
+  measured directly: a build's process sat in
+  `/system.slice/nix-daemon.service` while the client sat in the caller's own
+  slice.
+
+So the limits are split too:
+
+| Setting | Value | Applies to | Why |
+| --- | --- | --- | --- |
+| `--max-jobs` | 1 | builders | one derivation at a time, not four |
+| `--cores` | 3 (on beez) | builders | leaves a core free even when nothing else runs |
+| `CPUWeight` / `IOWeight` | 20 | client | a fifth of the systemd default of 100 |
+| `Nice` | 10 | client | yields to interactive and scheduled work |
+| `CPUQuota` | 300% | client | evaluation cannot monopolise the machine either |
+| `MemoryHigh` | 6G | client | start reclaiming here |
+| `MemoryMax` | 10G | client | hard ceiling; `MemoryHigh` throttles, `MemoryMax` kills |
 
 The sync and cleanup units carry the same weights and `Nice`.
+
+beez additionally sets `nix.daemonCPUSchedPolicy = "batch"` and
+`nix.daemonIOSchedClass = "best-effort"` host-wide, which is what keeps the
+daemon-side builders themselves out of the way of interactive work.
 
 Because beez's backup and monitoring timers run at the default weight of 100,
 they outrank the builder under contention: when a restic job or a monitoring
 probe wants CPU or disk at the same time as a build, it gets it first, and the
 build simply takes longer.
+
+### The per-host timeout does stop the build
+
+`timeout --signal=TERM --kill-after=1m` kills the `nix build` client, and the
+daemon tears the build down with it: when the client connection drops, the
+daemon worker and its builder exit. Verified on this Nix (Determinate 3.19.1)
+by SIGTERMing a client mid-build — the builder was gone within seconds and
+`nix-daemon.service`'s cgroup returned to idle. A timed-out host therefore
+costs the next host nothing.
 
 ## Options
 
@@ -309,6 +336,8 @@ custom.services.nix-cache-builder = {
   hosts          = [ "nz" "zanoza" "mz" "beez" ];  # build order
   perHostTimeout = "4h";
   totalBudget    = "10h";
+  maxJobs        = 1;     # nix --max-jobs: derivations built concurrently
+  buildCores     = 0;     # nix --cores per job; 0 = every core
   buildTime      = "*-*-* 02:00:00";               # OnCalendar, +5m jitter
   remoteBuilderDisableFile = null;                 # touch it to force local builds
 
@@ -403,6 +432,7 @@ sudo rm /tmp/cache-priv-key.pem /tmp/cache-pub-key.pem
 custom.services.nix-cache-builder = {
   enable = true;
   hosts = [ "zanoza" "beez" "nz" "mz" ];
+  buildCores = 3;  # four-core machine; leave one for everything else
   cacheServer.enable = true;
   publish.enable = true;
   telegram = {
