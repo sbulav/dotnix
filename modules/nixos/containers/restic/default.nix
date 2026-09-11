@@ -65,10 +65,13 @@ let
     "-s sftp"
   ];
 
+  # All four jobs share one repository and forget/prune takes the exclusive
+  # lock, so every restic invocation waits for the lock instead of failing.
   commonBackupArgs = [
     "--exclude-caches"
     "--compression=max"
     "--one-file-system"
+    "--retry-lock 30m"
   ];
 
   keepPolicy = [
@@ -183,6 +186,9 @@ let
       trap 'rm -f "$message_file"' EXIT
       uptime_us=$(( $(cut -d. -f1 /proc/uptime) * 1000000 ))
       max_age_us=$((26 * 3600 * 1000000))
+      # Wall clock, for comparing against a timer's next realtime elapse
+      # (`date` comes from coreutils, already in runtimeInputs).
+      now_s=$(date +%s)
       all_ok=1
       failed_units=()
 
@@ -200,9 +206,22 @@ let
             # its own OnFailure= handler reports the outcome.
             printf '  ⏳ %s (running)\n' "$job"
           elif ! [ "$exit_us" -eq "$exit_us" ] 2>/dev/null || [ "$exit_us" -eq 0 ]; then
-            printf '  ❌ %s (not run since boot)\n' "$job"
-            all_ok=0
-            failed_units+=("$unit")
+            # Not run yet, but a Persistent=true timer that is still inside
+            # its jitter window after a boot is pending, not broken.
+            timer="''${unit%.service}.timer"
+            # An empty value (monotonic-only or unloaded timer) must not reach
+            # `date -d`: it parses "" as today's midnight instead of failing.
+            next=$(systemctl show -p NextElapseUSecRealtime --value "$timer" 2>/dev/null || true)
+            next_s=0
+            [ -z "$next" ] || next_s=$(date -d "$next" +%s 2>/dev/null || echo 0)
+            due_in=$((next_s - now_s))
+            if [ "$next_s" -gt 0 ] && [ "$due_in" -ge 0 ] && [ "$due_in" -le 5400 ]; then
+              printf '  ⏳ %s (pending, runs within 90 min)\n' "$job"
+            else
+              printf '  ❌ %s (not run since boot)\n' "$job"
+              all_ok=0
+              failed_units+=("$unit")
+            fi
           elif [ $((uptime_us - exit_us)) -gt "$max_age_us" ]; then
             printf '  ❌ %s (last run %sh ago)\n' "$job" $(( (uptime_us - exit_us) / 3600000000 ))
             all_ok=0
@@ -229,21 +248,37 @@ let
     '';
   };
 
-  notificationTestScript = emailOnly: ''
-    message_file=$(mktemp)
-    trap 'rm -f "$message_file"' EXIT
-    trap 'exit 143' TERM INT
-    printf '%s\n' \
-      "🧪 ${hostName} | Restic backups" \
-      "Notification test (${
-        if emailOnly then "forced email fallback" else "Telegram with automatic email fallback"
-      })." \
-      >"$message_file"
-    ${optionalString emailOnly "FORCE_EMAIL_ONLY=true "}${deliver} \
-      "$message_file" \
-      "[${hostName}] restic notification test" \
-      low
-  '';
+  notificationTestScript = pkgs.writeShellApplication {
+    name = "restic-notification-test";
+    runtimeInputs = with pkgs; [ coreutils ];
+    text = ''
+      mode=''${1:-}
+      case "$mode" in
+        telegram) channel="Telegram with automatic email fallback" ;;
+        email-only) channel="forced email fallback" ;;
+        *)
+          echo "usage: restic-notification-test <telegram|email-only>" >&2
+          exit 2
+          ;;
+      esac
+      message_file=$(mktemp)
+      # shellcheck disable=SC2329
+      cleanup() { rm -f "$message_file"; }
+      trap cleanup EXIT
+      trap 'exit 143' TERM INT
+      printf '%s\n' \
+        "🧪 ${hostName} | Restic backups" \
+        "Notification test ($channel)." \
+        >"$message_file"
+      if [ "$mode" = email-only ]; then
+        export FORCE_EMAIL_ONLY=true
+      fi
+      ${deliver} \
+        "$message_file" \
+        "[${hostName}] restic notification test" \
+        low
+    '';
+  };
 in
 {
   options.${namespace}.containers.restic = with types; {
@@ -373,6 +408,7 @@ in
         pruneOpts = [
           "--tag job=opencloud"
           "--group-by host,tags"
+          "--retry-lock 1h"
         ]
         ++ keepPolicy;
       };
@@ -391,7 +427,11 @@ in
           Persistent = true;
           RandomizedDelaySec = "1h";
         };
-        pruneOpts = [ "--path /tank/immich" ] ++ keepPolicy;
+        pruneOpts = [
+          "--path /tank/immich"
+          "--retry-lock 1h"
+        ]
+        ++ keepPolicy;
       };
 
       tank_photos = {
@@ -412,6 +452,7 @@ in
         # --keep-monthly n for the last n months which have one or more snapshots, keep only the most recent one for each month.
         pruneOpts = [
           "--path /tank/photos"
+          "--retry-lock 1h"
           "--keep-daily 3"
           "--keep-weekly 2"
           "--keep-monthly 6"
@@ -462,10 +503,11 @@ in
           onFailure = mkIf notifyEnabled [ "restic-backups-tank_opencloud_prune-failure.service" ];
           # The backup may legally run until 05:05 (01:05 + 1h jitter + 3h);
           # queue the prune behind it instead of failing on the repo lock.
-          # prune takes the exclusive lock, so it also waits for the immich
-          # and photos backups (all four timers fire together after a boot
-          # because of Persistent=true). oneshot units have no start timeout
-          # by default.
+          # After= is the fast path: it only orders units that are started
+          # together. Timers are Persistent=true with RandomizedDelaySec, so
+          # after a boot they elapse at different moments and ordering alone
+          # cannot serialize them; `--retry-lock` covers that case, on every
+          # job. oneshot units have no start timeout by default.
           after = [
             "restic-backups-tank_opencloud.service"
             "restic-backups-tank_immich.service"
@@ -495,13 +537,13 @@ in
       (mkIf (notifyEnabled && cfg.telegram.enableTest) {
         "restic-backups-notification-test" = mkNotifyUnit {
           description = "Test restic backup notifications";
-          script = notificationTestScript false;
+          script = "${notificationTestScript}/bin/restic-notification-test telegram";
         };
       })
       (mkIf (notifyEnabled && cfg.telegram.enableTest && cfg.email.enable) {
         "restic-backups-fallback-test" = mkNotifyUnit {
           description = "Test restic backup email fallback";
-          script = notificationTestScript true;
+          script = "${notificationTestScript}/bin/restic-notification-test email-only";
         };
       })
     ];

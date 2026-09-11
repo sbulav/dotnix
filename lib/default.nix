@@ -794,7 +794,7 @@ in
                 # The token stays out of argv: curl reads URL and proxy from a
                 # 0600 config file; the payload is streamed from a file so a
                 # long journal tail cannot overflow the argument limit.
-                (
+                if ! (
                   umask 077
                   {
                     printf 'url = "https://api.telegram.org/bot%s/sendMessage"\n' "$TELEGRAM_TOKEN"
@@ -802,8 +802,9 @@ in
                       printf 'proxy = "%s"\n' ${pkgs.lib.escapeShellArg tg.proxyUrl}
                     ''}
                   } >"$work/curl.cfg"
-                )
-                if jq -n \
+                ); then
+                  echo "notify-deliver: could not write the curl config" >&2
+                elif jq -n \
                   --arg chat_id ${pkgs.lib.escapeShellArg tg.chatId} \
                   --rawfile text "$message_file" \
                   --argjson disable_notification "$disable_notification" \

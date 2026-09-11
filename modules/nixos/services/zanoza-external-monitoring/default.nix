@@ -422,6 +422,33 @@ let
 
   # A monitor that dies before publishing (bug, killed by TimeoutStartSec)
   # would otherwise leave its last metrics in place and nobody the wiser.
+  monitorFailureScript = pkgs.writeShellApplication {
+    name = "zanoza-monitor-failure";
+    runtimeInputs = with pkgs; [
+      coreutils
+      systemd
+    ];
+    text = ''
+      unit="$1"
+      friendly="$2"
+      message_file=$(mktemp)
+      # shellcheck disable=SC2329
+      cleanup() { rm -f "$message_file"; }
+      trap cleanup EXIT
+      trap 'exit 143' TERM INT
+      # `systemctl show` must never abort the handler: an unknown value still
+      # produces a notification.
+      show() { systemctl show -p "$1" --value "$unit" 2>/dev/null || echo unknown; }
+      {
+        printf '%s\n' "🔥 ${hostName} | $friendly: monitor unit failed"
+        printf 'Unit: %s\nResult: %s (main process %s, status %s)\n\nLast journal lines:\n' \
+          "$unit" "$(show Result)" "$(show ExecMainCode)" "$(show ExecMainStatus)"
+        journalctl -u "$unit" -n 15 -o cat --no-pager || true
+      } >"$message_file"
+      ${deliver} "$message_file" "[${hostName}] ''${unit%.service} failed" high
+    '';
+  };
+
   mkMonitorFailureService = monitor: {
     description = "Notify that ${monitor.unit} failed";
     after = [ "network-online.target" ];
@@ -431,40 +458,54 @@ let
       TimeoutStartSec = "10min";
     }
     // telegramEnv;
-    path = [
-      pkgs.coreutils
-      pkgs.systemd
-    ];
-    script = ''
+    script = "${monitorFailureScript}/bin/zanoza-monitor-failure ${monitor.unit}.service ${lib.escapeShellArg monitor.friendlyName}";
+  };
+
+  notificationTestScript = pkgs.writeShellApplication {
+    name = "zanoza-monitor-notification-test";
+    runtimeInputs = with pkgs; [ coreutils ];
+    text = ''
+      mode=''${1:-}
+      case "$mode" in
+        telegram) channel="Telegram with automatic email fallback" ;;
+        email-only) channel="forced email fallback" ;;
+        *)
+          echo "usage: zanoza-monitor-notification-test <telegram|email-only>" >&2
+          exit 2
+          ;;
+      esac
       message_file=$(mktemp)
-      trap 'rm -f "$message_file"' EXIT
+      # shellcheck disable=SC2329
+      cleanup() { rm -f "$message_file"; }
+      trap cleanup EXIT
       trap 'exit 143' TERM INT
-      unit=${monitor.unit}.service
-      show() { systemctl show -p "$1" --value "$unit" 2>/dev/null || echo unknown; }
-      {
-        printf '%s\n' "🔥 ${hostName} | ${monitor.friendlyName}: monitor unit failed"
-        printf 'Unit: %s\nResult: %s (main process %s, status %s)\n\nLast journal lines:\n' \
-          "$unit" "$(show Result)" "$(show ExecMainCode)" "$(show ExecMainStatus)"
-        journalctl -u "$unit" -n 15 -o cat --no-pager || true
-      } >"$message_file"
-      ${deliver} "$message_file" "[${hostName}] ${monitor.unit} failed" high
+      printf '%s\n' \
+        "🧪 ${hostName} | External zanoza monitor" \
+        "Notification test ($channel)." \
+        >"$message_file"
+      if [ "$mode" = email-only ]; then
+        export FORCE_EMAIL_ONLY=true
+      fi
+      ${deliver} \
+        "$message_file" \
+        "[${hostName}] external monitor notification test" \
+        low
     '';
   };
 
-  notificationTestScript = emailOnly: ''
-    message_file=$(mktemp)
-    trap 'rm -f "$message_file"' EXIT
-    printf '%s\n' \
-      "🧪 ${hostName} | External zanoza monitor" \
-      "Notification test (${
-        if emailOnly then "forced email fallback" else "Telegram with automatic email fallback"
-      })." \
-      >"$message_file"
-    ${optionalString emailOnly "FORCE_EMAIL_ONLY=true "}${deliver} \
-      "$message_file" \
-      "[${hostName}] external monitor notification test" \
-      low
-  '';
+  # Notifying units: bounded, ordered after the network, token file optional.
+  mkNotifyTestUnit =
+    extra:
+    {
+      after = [ "network-online.target" ];
+      wants = [ "network-online.target" ];
+      serviceConfig = {
+        Type = "oneshot";
+        TimeoutStartSec = "10min";
+      }
+      // telegramEnv;
+    }
+    // extra;
 
   hardening = {
     Type = "oneshot";
@@ -746,19 +787,14 @@ in
         mkMonitorFailureService monitors.verify
       );
 
-      zanoza-external-monitor-notification-test = {
+      zanoza-external-monitor-notification-test = mkNotifyTestUnit {
         description = "Test zanoza external monitoring notifications";
-        serviceConfig = {
-          Type = "oneshot";
-        }
-        // telegramEnv;
-        script = notificationTestScript false;
+        script = "${notificationTestScript}/bin/zanoza-monitor-notification-test telegram";
       };
 
-      zanoza-external-monitor-fallback-test = {
+      zanoza-external-monitor-fallback-test = mkNotifyTestUnit {
         description = "Test zanoza external monitoring email fallback";
-        serviceConfig.Type = "oneshot";
-        script = notificationTestScript true;
+        script = "${notificationTestScript}/bin/zanoza-monitor-notification-test email-only";
       };
     };
   };
