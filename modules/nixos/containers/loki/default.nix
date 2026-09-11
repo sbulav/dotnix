@@ -9,6 +9,11 @@ with lib;
 with lib.custom;
 let
   cfg = config.${namespace}.containers.loki;
+
+  # Loki reads a zero duration as "keep forever", and "0s", "0h", "0m" and
+  # "0m0s" are all zero. Accept only a single positive Go duration.
+  periodMatch = builtins.match "([0-9]+)(s|m|h|d|w)" cfg.retention.period;
+  periodIsPositive = periodMatch != null && toInt (elemAt periodMatch 0) > 0;
 in
 {
   options.${namespace}.containers.loki = with types; {
@@ -19,18 +24,19 @@ in
 
       period =
         mkOpt str "720h"
-          "Retention period (Loki duration, must be a multiple of the 24h index period). 720h = 30 days.";
+          "Retention period: a single positive Go duration (e.g. `720h` = 30 days, `30d`). Retention is applied per index table, so the effective granularity is the 24h index period regardless of the exact value.";
     };
   };
 
   config = mkIf cfg.enable {
     assertions = [
       {
-        assertion = cfg.retention.enable -> (cfg.retention.period != "0s" && cfg.retention.period != "0");
+        assertion = cfg.retention.enable -> periodIsPositive;
         message = ''
-          custom.containers.loki.retention.period is "${cfg.retention.period}", which Loki reads as
-          "keep forever". Retention is enabled, so set a real period (a multiple of the 24h index
-          period, e.g. "720h" for 30 days) or set retention.enable = false instead.
+          custom.containers.loki.retention.period is "${cfg.retention.period}", which is not a single
+          positive Go duration. A zero duration ("0s", "0h", "0m0s", ...) means "keep forever" to Loki,
+          which silently defeats the option. Retention is enabled, so set a real period — e.g. "720h"
+          (30 days) or "30d" — or set retention.enable = false instead.
         '';
       }
     ];
@@ -96,7 +102,9 @@ in
         }
         // optionalAttrs cfg.retention.enable { retention_period = cfg.retention.period; };
 
-        # Loki 3 drops `table_manager`: the compactor owns retention for TSDB.
+        # Loki still parses a `table_manager` block, but its retention never
+        # applied to the TSDB single-store path, so those settings did nothing.
+        # For TSDB, retention is the compactor's job.
         compactor = {
           working_directory = "/var/lib/loki/compactor";
           compaction_interval = "10m";

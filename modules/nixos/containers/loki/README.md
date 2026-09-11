@@ -14,25 +14,35 @@ custom.containers.loki = {
 
 ## Design
 
-Retention is the **compactor's** job. Loki 3 dropped `table_manager` (the old
-`retention_deletes_enabled` / `retention_period` pair), which never worked for the
-TSDB store this instance uses anyway; that block has been removed.
+Retention is the **compactor's** job. Loki still parses a `table_manager` block
+(`loki -verify-config` accepts one), but `table_manager` retention — the old
+`retention_deletes_enabled` / `retention_period` pair — never applied to the TSDB
+single-store path this instance uses. That is why the store kept growing: the
+settings were accepted and did nothing. The block has been removed.
 
 The mechanism, per 24h index table (`schema_config.configs[0].index.period = 24h`,
 prefix `index_`):
 
-1. Every `compaction_interval` (10m) the compactor compacts each table and, when
-   `retention_enabled`, applies `limits_config.retention_period` to it.
+1. Every `compaction_interval` (10m) the compactor compacts each table. Applying
+   retention is a separate cadence: `apply_retention_interval` defaults to
+   `compaction_interval`, and because the two are then equal Loki jitters it —
+   `loki -verify-config -print-config-stderr` on this exact config prints
+   `apply_retention_interval: 15m0s`. So `limits_config.retention_period` is
+   applied every **15m**, not every 10m.
 2. Index entries older than the period are dropped, and the chunks they referenced
    are **marked** for deletion — written as marker files, not deleted yet.
 3. A sweeper deletes marked chunks only after `retention_delete_delay` (**2h**).
    That delay is the safety window (see rollback below).
-4. `retention_delete_worker_count = 150` bounds the sweeper's parallelism.
+4. `retention_delete_worker_count = 150` bounds the sweeper's parallelism. It is
+   the upstream default written out explicitly, not a tuning decision.
 
-Because the unit of retention is the 24h index table, `retention.period` must be a
-multiple of 24h. `720h` = 30 days. A period of `0s`/`0` means "never delete" in
-Loki, which would silently defeat the option — the module asserts against it when
-`retention.enable` is set.
+`retention.period` must be a single positive Go duration; `720h` = 30 days.
+There is no requirement that it be a multiple of 24h (`12h` and `30h` both
+validate) — but because retention is applied per index table, the 24h index
+period is the effective granularity whatever you write. A zero duration (`0s`,
+`0h`, `0m0s`, ...) means "never delete" in Loki, which would silently defeat the
+option — the module asserts against every spelling of it when `retention.enable`
+is set.
 
 `delete_request_store = "filesystem"` tells the compactor where to keep delete
 requests and markers. It reuses the configured object store, so this state lands
@@ -71,16 +81,21 @@ nothing here rotates or deletes anything at build time.
 history older than the cut-off matters. The cut-off is the deploy date minus
 `retention.period`: deploying on 2026-09-11 with the default 720h keeps back to
 roughly 2026-08-12 and deletes everything before it — about 20 months, back to
-the oldest data from 2025-01. If that history matters, copy it first:
+the oldest data from 2025-01.
+
+Say it plainly: **the first activation with `retention.enable = true` deletes
+everything older than the period.** No restic job covers `/var/lib/loki` (the jobs in
+`modules/nixos/containers/restic` back up opencloud, `/tank/immich` and
+`/tank/photos` only), so the copy below is the only backup that will exist:
 
 ```
 sudo systemctl stop loki
-sudo cp -a /var/lib/loki /var/lib/loki.pre-retention
+sudo cp -a /var/lib/loki /tank/loki-pre-retention   # ~2.6 GB
 sudo systemctl start loki
 ```
 
-or take a restic snapshot of `/var/lib/loki`. There is no way to recover the data
-afterwards.
+Beyond the 2h delete delay described below, that copy is the *only* rollback —
+once the sweeper has run there is no way to recover the data.
 
 The rollback window is narrow and one-sided:
 
@@ -136,10 +151,11 @@ accumulating without a bound exactly as zanoza did.
 
 Order of operations there:
 
-1. Copy the chunk and index directories (`/var/lib/loki/chunks`,
-   `/var/lib/loki/boltdb-shipper-active`, `/var/lib/loki/boltdb-shipper-cache`)
-   to beez **before** enabling retention, so the migration is a plain data move
-   and the retention pass is not racing it.
+1. Copy the chunks and the active index directory (`/var/lib/loki/chunks`,
+   `/var/lib/loki/boltdb-shipper-active`) to beez **before** enabling retention,
+   so the migration is a plain data move and the retention pass is not racing it.
+   `boltdb-shipper-cache` does not need to move — it is a cache with
+   `cache_ttl = 24h` and rebuilds itself.
 2. Verify beez serves the migrated history.
 3. Only then set `retention.enable = true` (and `retention.period`, if it should
    differ) on beez and deploy, applying the same pre-deploy copy and the same 2h

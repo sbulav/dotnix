@@ -8,7 +8,9 @@
 # One logrotate block per application instead of a single shared rule.
 #
 # logrotate refuses to rotate a file whose parent directory is world-writable
-# or writable by a group that is not "root", and aborts the whole run:
+# or writable by a group that is not "root". That refusal is per path, not per
+# run: logrotate skips that one log, still rotates everything else, and exits
+# non-zero.
 #
 #   error: skipping "/tank/sing-box/logs/sing-box.log" because parent directory
 #   has insecure permissions (It's world writable or writable by group which is
@@ -24,16 +26,24 @@
 # Set a real `user`/`group` only when the rotating host has a **named** account
 # that owns the directory. logrotate resolves `su` through getpwnam/getgrnam and
 # then getpwuid/getgrgid, so a bare numeric id works only if some account or
-# group actually holds that number; otherwise logrotate errors
-# "unknown user '<id>'" / "unknown group '<id>'" and skips the whole block.
-# Verified on zanoza: the /tank container uids (999, 998, 997) have no host
-# entries, so numeric ids there silently dropped three of the four rules.
-# See README.md.
+# group actually holds that number. An unresolvable id is a *config-parse*
+# error, not a runtime one: logrotate prints
+# `error: <file>:<line> unknown group '<id>'`, then "found error in ...,
+# skipping" and "removing last 1 log configs", drops that one rule, rotates the
+# remaining rules normally, and exits 1.
+#
+# Verified with logrotate 3.22.0 on zanoza: the /tank container uids (999, 998,
+# 997) have no host entries, so numeric ids there dropped three of the four
+# rules. The errors are printed loudly; what went unnoticed was the unit's
+# non-zero exit. See README.md.
 let
   inherit (lib)
     types
     mkIf
     mkRemovedOptionModule
+    attrNames
+    concatStringsSep
+    intersectLists
     mapAttrs
     mapAttrsToList
     optionalAttrs
@@ -81,14 +91,19 @@ in
 
         postrotate =
           mkOpt (nullOr lines) null
-            "Shell run after rotation (e.g. a reopen signal). Only useful with `copytruncate = false`.";
+            "Shell run after rotation. With `copytruncate = false` this is where the application is told to reopen its log; with `copytruncate = true` it does not need a reopen signal, so a hook is only needed for other side effects (reloading a sidecar, shipping a metric, kicking a sync). Combining the two is legal in logrotate and is not asserted against.";
 
-        extraSettings = mkOpt (attrsOf (oneOf [
-          bool
-          int
-          str
-          (listOf str)
-        ])) { } "Extra logrotate directives merged into the block (override the defaults).";
+        extraSettings =
+          mkOpt
+            (attrsOf (
+              nullOr (oneOf [
+                bool
+                int
+                str
+              ])
+            ))
+            { }
+            "Extra logrotate directives merged into the block (override the defaults). The type mirrors the upstream `services.logrotate.settings.<name>` freeform type, so list values are rejected; `null` removes one of the directives this module sets (e.g. `dateformat = null`).";
       };
     })) { } "Per-application rotation rules, one logrotate block each.";
   };
@@ -99,15 +114,24 @@ in
         assertion = rule.files != [ ];
         message = "custom.services.logrotate.rules.${name}.files is empty: a rule with no files rotates nothing.";
       }) cfg.rules)
-      ++ (mapAttrsToList (name: rule: {
-        assertion = rule.postrotate != null -> !rule.copytruncate;
-        message = ''
-          custom.services.logrotate.rules.${name} sets `postrotate` together with `copytruncate = true`.
-          With copytruncate logrotate truncates the original file itself, so the application never reopens
-          it and the hook only fires a redundant signal. Set `copytruncate = false` when the application
-          reopens its log on a signal (that is what makes the hook necessary), or drop `postrotate`.
-        '';
-      }) cfg.rules);
+      ++ (mapAttrsToList (
+        name: rule:
+        let
+          reserved = intersectLists (attrNames rule.extraSettings) [
+            "files"
+            "su"
+          ];
+        in
+        {
+          assertion = reserved == [ ];
+          message = ''
+            custom.services.logrotate.rules.${name}.extraSettings sets ${concatStringsSep ", " reserved},
+            which this module owns. Use the typed options instead: `files` for the rotated paths (setting it
+            here bypasses the non-empty check) and `user`/`group` for the `su` directive (setting `su` here
+            bypasses them entirely).
+          '';
+        }
+      ) cfg.rules);
 
     services.logrotate.settings = mapAttrs (
       _name: rule:

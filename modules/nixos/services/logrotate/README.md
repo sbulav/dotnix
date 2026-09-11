@@ -6,8 +6,8 @@ application, each with its own `su` line. It replaces the single shared
 
 ## Why the shared rule failed
 
-Every night on zanoza, `logrotate.service` exited non-zero (most recently
-**2026-09-10**) with:
+`logrotate.timer` is `OnCalendar=hourly`, so on zanoza `logrotate.service`
+exited non-zero roughly 24 times a day (most recently **2026-09-10**) with:
 
 ```
 error: skipping "/tank/sing-box/logs/sing-box.log" because parent directory has
@@ -17,12 +17,9 @@ should be used for rotation.
 ```
 
 Only sing-box triggers it. `/tank/sing-box/logs` is owned by a container uid and
-is group-writable — and the reason it is group-writable is the ACLs: the
-`alloy-log-acls` oneshot in `modules/nixos/containers/loki` runs
-`setfacl -R -m g:logreaders:rX` on that directory so Alloy can read the logs.
-Adding a named ACL entry raises the ACL **mask**, and the mask is what the group
-permission bits report — so the directory reads as `0775` with a non-root gid,
-even though no real group was granted write access.
+is group-writable: `ls -ld` / `stat -c %a` report mode `0775` with a non-root
+gid. That is exactly the shape logrotate rejects, and it is what makes an `su`
+directive mandatory for that path.
 
 logrotate refuses to touch a log whose parent directory is world-writable or
 group-writable by a group other than `root`, because rotating there as root is a
@@ -33,10 +30,12 @@ logrotate skips only the offending path: it finishes the remaining patterns in
 the shared rule and then exits non-zero. So the other three applications kept
 rotating normally throughout — `/tank/authelia/logs/authelia.log-2026-09-11.zst`
 and `/tank/traefik/logs/access.log-2026-09-11.zst` were both produced on the
-morning of the last failure. The cost was therefore not a stalled rotation but a
-unit failing every single day, and one log — `sing-box.log` — growing unbounded
-behind it, to 42 MB by the time this was fixed. The daily alert was real and
-specific, not noise.
+morning of the last failure. (What happens once a day is the *rotation*, because
+every block sets `frequency = "daily"`; the unit itself wakes hourly and, until
+this fix, failed on every wake-up.) The cost was therefore not a stalled
+rotation but a unit failing around the clock, and one log — `sing-box.log` —
+growing unbounded behind it, to 42 MB by the time this was fixed. The alert was
+real and specific, not noise.
 
 ## `su root root`, and why not numeric ids
 
@@ -49,20 +48,24 @@ These are `nixos-containers` *without* user namespaces: a container's uid 999 is
 literally uid 999 on the host, but the *name* is not shared — the container has
 its own `/etc/passwd`. logrotate resolves `su` through the name database and then
 confirms the id with `getpwuid`/`getgrgid`; a bare number that no account holds is
-rejected, not passed through. Verified on zanoza with `logrotate -d -f` as root:
+rejected, not passed through. Checked with logrotate 3.22.0: the failure is a
+config-parse error, so each message carries a `<file>:<line>` prefix, and when
+*neither* half of `su <uid> <gid>` resolves only the **group** is reported —
+`su 65123 65124` prints one `unknown group '65124'`, `su 65123 0` prints
+`unknown user '65123'`, `su 0 65123` prints `unknown group '65123'`. Each bad
+block is then dropped and the rest of the run continues. One error, shaped as it
+really appears:
 
 ```
-error: /tmp/lr.conf:13 unknown user '999'
-error: found error in "/tank/authelia/logs/*.log", skipping
-error: unknown group '998'
-error: found error in "/tank/torrents/log/*.log", skipping
-error: unknown group '998'
+error: /tmp/lr.conf:13 unknown group '998'
 error: found error in "/tank/sing-box/logs/*.log", skipping
+removing last 1 log configs
 ```
 
-`getent passwd 999` and `getent group 998` are empty on zanoza. Three of the four
-rules were silently dropped. Only traefik's `su 997 995` survived, and only by
-accident — both numbers happen to be held by `systemd-oom`.
+`getent passwd 999` and `getent group 998` are empty on zanoza, so three of the
+four numeric-id rules were dropped — loudly, with an error each, and with the
+run exiting 1. Only traefik's `su 997 995` survived, and only by accident — both
+numbers happen to be held by `systemd-oom`.
 
 So the rules use the default, `su root root`, which processes every pattern with
 no permission error at all:
@@ -97,9 +100,8 @@ Rotating as root inside a directory writable by a container's group is precisely
 what upstream's check warns about: whoever can write to that directory could, in
 principle, race logrotate into touching a path it did not intend.
 
-We accept it. The containers are ours, the directories are service-owned rather
-than user-writable, and the group-writable bit is an artifact of the ACL mask we
-set ourselves for Alloy. The alternative — inventing host accounts whose only
+We accept it. The containers are ours, and the directories are service-owned
+rather than user-writable. The alternative — inventing host accounts whose only
 purpose is to hold uid 999 and uid 998 so `su` can name them — adds a real,
 permanent identity to the host to satisfy a check we would then be satisfying
 nominally anyway. Revisit this if these containers ever gain user namespaces, at
@@ -122,16 +124,25 @@ The alternative is `copytruncate = false` plus a `postrotate` hook that signals 
 application to reopen its log:
 
 ```nix
-traefik = {
-  files = [ "/tank/traefik/logs/*.log" ];
+some-host-service = {
+  files = [ "/var/log/some-host-service/*.log" ];
   copytruncate = false;
-  postrotate = "systemctl kill -s USR1 container@traefik.service";  # not yet used
+  postrotate = "systemctl reload some-host-service.service";
+  extraSettings.sharedscripts = true;  # run the hook once per rule, not per file
 };
 ```
 
-The module asserts that `postrotate` is only set with `copytruncate = false`, since
-with copytruncate the application never needs to reopen anything and the signal is
-pure noise.
+Two things to get right in a hook. `systemctl kill` defaults to
+`--kill-whom=all`, so `systemctl kill -s USR1 container@traefik.service` would
+signal the nspawn container's PID 1 as well as traefik — reach the process
+directly, or use a plain reload of a host unit as above. And with a glob in
+`files` and no `sharedscripts`, logrotate runs the hook **once per rotated
+file**; `extraSettings.sharedscripts = true` collapses that to once per rule.
+
+The module does *not* forbid `postrotate` together with `copytruncate = true`.
+logrotate allows the combination, and with copytruncate the application simply
+does not need a reopen signal — a hook there is for other side effects (reload a
+sidecar, ship a metric, kick a sync).
 
 Where each application stands today:
 
@@ -154,30 +165,40 @@ it stays on copytruncate until someone can verify a real rotation.
   `<name>.log-YYYY-MM-DD.zst` (`dateext` + `dateformat -%Y-%m-%d` + `compressext
   .zst`), which does not match Alloy's `*.log` globs, so rotated copies are not
   picked up as new targets and lines are not duplicated into Loki.
-- **Rotated copies stay readable.** `alloy-log-acls` sets *default* ACLs on the log
-  directories, so files created there — including the rotated copies — inherit
-  `g:logreaders:r`. (Those same ACLs are what makes the sing-box directory look
-  group-writable; see above.)
+- **Rotated-copy permissions do not matter to Alloy**, precisely because of the
+  previous point: Alloy never opens the `.zst` files. (`alloy-log-acls` covers
+  the authelia, grafana, jellyfin and sing-box directories only — not
+  `/tank/traefik/logs` or `/tank/torrents/log` — so it was never the reason
+  rotation works.)
 
 ## Validating a change without rotating anything
 
 Debug mode parses the config, runs the directory-permission check, and decides
-what *would* rotate, but changes nothing on disk:
+what *would* rotate, but changes nothing on disk.
 
-```
-sudo logrotate -d -f -s /tmp/logrotate.state /etc/logrotate.conf
+NixOS has no `/etc/logrotate.conf` — the module hands the generated store path
+straight to `ExecStart`, so read it off the unit:
+
+```sh
+conf=$(systemctl show -p ExecStart --value logrotate.service | grep -o '/nix/store/[^ ";]*logrotate\.conf')
+sudo logrotate -d -f -s /tmp/logrotate.state "$conf"
 ```
 
 Use a throwaway state file so the real `/var/lib/logrotate.status` is untouched.
 `-f` forces the decision so every rule is considered even when it is not due.
 
+NixOS already runs a narrower version of this for you: `logrotate-checkconf.service`
+executes `logrotate --debug <configFile>` at every boot and on every activation,
+so a config that cannot parse fails the switch rather than the next hourly run.
+
 What to look for:
 
 - No `insecure permissions` errors — that is the bug this module exists to fix.
-- No `unknown user` / `unknown group` errors — see above. logrotate drops the
-  whole rule ("removing last 1 log configs", then a lower `Handling N logs`) and
-  exits 1, so the log stops rotating while the unit keeps failing daily — the
-  same symptom this change fixes, with a different cause.
+- No `unknown user` / `unknown group` errors — see above. logrotate drops that
+  one rule ("removing last 1 log configs", then a lower `Handling N logs`),
+  still rotates the others, and exits 1, so that log stops rotating while the
+  unit keeps failing every hour — the same symptom this change fixes, with a
+  different cause.
 - `Handling N logs` with N equal to the number of rules plus the NixOS defaults
   (`/var/log/btmp`, `/var/log/wtmp`).
 
