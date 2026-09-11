@@ -174,8 +174,10 @@ Use a throwaway state file so the real `/var/lib/logrotate.status` is untouched.
 What to look for:
 
 - No `insecure permissions` errors — that is the bug this module exists to fix.
-- No `unknown user` / `unknown group` errors — see above; these mean a rule was
-  skipped entirely, which looks like success in the exit code.
+- No `unknown user` / `unknown group` errors — see above. logrotate drops the
+  whole rule ("removing last 1 log configs", then a lower `Handling N logs`) and
+  exits 1, so the log stops rotating while the unit keeps failing daily — the
+  same symptom this change fixes, with a different cause.
 - `Handling N logs` with N equal to the number of rules plus the NixOS defaults
   (`/var/log/btmp`, `/var/log/wtmp`).
 
