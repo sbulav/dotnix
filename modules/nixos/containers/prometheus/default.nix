@@ -17,17 +17,6 @@ in
   };
 
   imports = [
-    (import ../shared/shared-traefik-route.nix {
-      app = "prometheus";
-      host = cfg.host;
-      # url = "http://${cfg.localAddress}:9090";
-      url = "http://127.0.0.1:9090";
-      route_enabled = cfg.enable;
-      middlewares = [
-        "secure-headers"
-        "allow-lan"
-      ];
-    })
     (import ../shared/shared-adguard-dns-rewrite.nix {
       host = cfg.host;
       rewrite_enabled = cfg.enable;
@@ -35,6 +24,19 @@ in
   ];
 
   config = mkIf cfg.enable {
+    # Prometheus runs on the host itself, not in a container.
+    # NOTE: this list used to be passed as `middlewares` to a helper that only
+    # accepted `middleware`, so the route silently fell back to `auth-chain`
+    # (issue #48). It is now applied as intended.
+    custom.containers.traefik.routes.prometheus = {
+      host = cfg.host;
+      url = "http://127.0.0.1:9090";
+      middlewares = [
+        "secure-headers"
+        "allow-lan"
+      ];
+    };
+
     services.prometheus = {
       port = 9090;
       enable = true;

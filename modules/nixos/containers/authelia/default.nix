@@ -25,13 +25,6 @@ in
   };
 
   imports = [
-    (import ../shared/shared-traefik-route.nix {
-      app = "authelia";
-      host = cfg.host;
-      url = "http://${cfg.localAddress}:9091";
-      middleware = "secure-headers";
-      route_enabled = cfg.enable;
-    })
     (import ../shared/shared-adguard-dns-rewrite.nix {
       host = cfg.host;
       rewrite_enabled = cfg.enable;
@@ -39,6 +32,13 @@ in
   ];
 
   config = mkIf cfg.enable {
+    # Authelia itself must stay reachable without authelia in front of it.
+    custom.containers.traefik.routes.authelia = {
+      host = cfg.host;
+      url = "http://${cfg.localAddress}:9091";
+      middlewares = [ "secure-headers" ];
+    };
+
     custom.security.sops.secrets = lib.mapAttrs (
       name: template:
       template

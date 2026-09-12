@@ -36,26 +36,6 @@ in
   };
 
   imports = [
-    (import ../shared/shared-traefik-route.nix {
-      app = "herdr-web";
-      host = cfg.host;
-      url = cfg.webUrl;
-      route_enabled = cfg.enable;
-    })
-    (import ../shared/shared-traefik-bypass-route.nix {
-      app = "herdr-relay-mobile";
-      host = cfg.relayHost;
-      url = cfg.mobileRelayUrl;
-      middleware = [ "secure-headers" ];
-      pathregexp = "^/native/ws$";
-      route_enabled = cfg.enable;
-    })
-    (import ../shared/shared-traefik-route.nix {
-      app = "herdr-relay";
-      host = cfg.relayHost;
-      url = cfg.relayUrl;
-      route_enabled = cfg.enable;
-    })
     (import ../shared/shared-adguard-dns-rewrite.nix {
       host = cfg.host;
       rewrite_enabled = cfg.enable;
@@ -65,4 +45,28 @@ in
       rewrite_enabled = cfg.enable;
     })
   ];
+
+  config = mkIf cfg.enable {
+    # Route-only module: the backends are plain URLs, so nothing forces them to
+    # run on the Traefik host.
+    custom.containers.traefik.routes = {
+      herdr-web = {
+        host = cfg.host;
+        url = cfg.webUrl;
+      };
+      # The native mobile client authenticates with its own token, so this one
+      # path bypasses authelia.
+      "bypass-herdr-relay-mobile" = {
+        service = "herdr-relay-mobile";
+        host = cfg.relayHost;
+        url = cfg.mobileRelayUrl;
+        middlewares = [ "secure-headers" ];
+        pathRegexp = "^/native/ws$";
+      };
+      herdr-relay = {
+        host = cfg.relayHost;
+        url = cfg.relayUrl;
+      };
+    };
+  };
 }

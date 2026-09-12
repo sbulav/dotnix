@@ -18,12 +18,6 @@ in
     localAddress = mkOpt str "172.16.64.111" "With privateNetwork, which address to use in container";
   };
   imports = [
-    (import ../shared/shared-traefik-route.nix {
-      app = "cockpit";
-      host = "${cfg.host}";
-      url = "http://${cfg.localAddress}:9090";
-      route_enabled = cfg.enable;
-    })
     (import ../shared/shared-adguard-dns-rewrite.nix {
       host = "${cfg.host}";
       rewrite_enabled = cfg.enable;
@@ -31,6 +25,11 @@ in
   ];
 
   config = mkIf cfg.enable {
+    custom.containers.traefik.routes.cockpit = {
+      host = "${cfg.host}";
+      url = "http://${cfg.localAddress}:9090";
+    };
+
     networking.nat = {
       enable = true;
       internalInterfaces = [ "ve-cockpit" ];

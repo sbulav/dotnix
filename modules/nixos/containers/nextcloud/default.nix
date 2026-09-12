@@ -22,43 +22,45 @@ in
   };
 
   imports = [
-    (import ../shared/shared-traefik-clientip-route.nix {
-      app = "nextcloud";
-      host = cfg.host;
-      url = "http://${cfg.localAddress}:80";
-      route_enabled = cfg.enable;
-      middleware = [
-        "secure-headers"
-        "allow-lan"
-      ];
-      clientips = "ClientIP(`172.16.64.0/24`) || ClientIP(`192.168.80.0/20`)";
-    })
-    # TODO: fix this workaround for accessing mobile devices
-    (import ../shared/shared-traefik-bypass-route.nix {
-      app = "nextcloud";
-      host = "${cfg.host}";
-      url = "http://${cfg.localAddress}:80";
-      route_enabled = cfg.enable;
-      middleware = [ "nextcloud-redirect" ];
-      pathregexp = "/api/|/status.php|/remote.php/(dav|direct)/|/ocs/v2.php/|/index.php/|/core|/apps";
-    })
-    (import ../shared/shared-traefik-route.nix {
-      app = "nextcloud";
-      host = "${cfg.host}";
-      url = "http://${cfg.localAddress}:80";
-      route_enabled = cfg.enable;
-      middleware = [
-        "nextcloud-redirect"
-        "secure-headers"
-        "authelia"
-      ];
-    })
     (import ../shared/shared-adguard-dns-rewrite.nix {
       host = "${cfg.host}";
       rewrite_enabled = cfg.enable;
     })
   ];
   config = mkIf cfg.enable {
+    custom.containers.traefik.routes = {
+      nextcloud = {
+        host = "${cfg.host}";
+        url = "http://${cfg.localAddress}:80";
+        middlewares = [
+          "nextcloud-redirect"
+          "secure-headers"
+          "authelia"
+        ];
+      };
+      "allowedips-nextcloud" = {
+        service = "nextcloud";
+        host = cfg.host;
+        url = "http://${cfg.localAddress}:80";
+        middlewares = [
+          "secure-headers"
+          "allow-lan"
+        ];
+        clientIPs = [
+          "172.16.64.0/24"
+          "192.168.80.0/20"
+        ];
+      };
+      # TODO: fix this workaround for accessing mobile devices
+      "bypass-nextcloud" = {
+        service = "nextcloud";
+        host = "${cfg.host}";
+        url = "http://${cfg.localAddress}:80";
+        middlewares = [ "nextcloud-redirect" ];
+        pathRegexp = "/api/|/status.php|/remote.php/(dav|direct)/|/ocs/v2.php/|/index.php/|/core|/apps";
+      };
+    };
+
     networking.nat = {
       enable = true;
       internalInterfaces = [ "ve-nextcloud" ];

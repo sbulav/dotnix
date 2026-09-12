@@ -26,27 +26,27 @@ in
     })) [ ] "Static host DNS mappings (A records)";
   };
 
-  imports = [
-    (import ../shared/shared-traefik-clientip-route.nix {
-      app = "adguard";
-      host = cfg.host;
-      url = "http://${cfg.localAddress}:3000";
-      route_enabled = cfg.enable;
-      middleware = [
-        "secure-headers"
-        "allow-lan"
-      ];
-      clientips = "ClientIP(`172.16.64.0/24`) || ClientIP(`192.168.80.0/20`)";
-    })
-    (import ../shared/shared-traefik-route.nix {
-      app = "adguard";
-      host = cfg.host;
-      url = "http://${cfg.localAddress}:3000";
-      route_enabled = cfg.enable;
-    })
-  ];
-
   config = mkIf cfg.enable {
+    custom.containers.traefik.routes = {
+      adguard = {
+        host = cfg.host;
+        url = "http://${cfg.localAddress}:3000";
+      };
+      "allowedips-adguard" = {
+        service = "adguard";
+        host = cfg.host;
+        url = "http://${cfg.localAddress}:3000";
+        middlewares = [
+          "secure-headers"
+          "allow-lan"
+        ];
+        clientIPs = [
+          "172.16.64.0/24"
+          "192.168.80.0/20"
+        ];
+      };
+    };
+
     networking.nat = {
       enable = true;
       internalInterfaces = [ "ve-adguard" ];
