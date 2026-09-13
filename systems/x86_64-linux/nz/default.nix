@@ -20,7 +20,7 @@ let
 
       case "$addresses" in
         *" inet 192.168.8"[0-9].*|*" inet 192.168.9"[0-5].*)
-          ${pkgs.systemd}/bin/resolvectl dns "$iface" 172.16.64.104 || true
+          ${pkgs.systemd}/bin/resolvectl dns "$iface" ${lib.concatStringsSep " " lib.custom.dns.resolvers} || true
           ${pkgs.systemd}/bin/resolvectl domain "$iface" '~sbulav.ru' sbulav.ru || true
           ${pkgs.systemd}/bin/resolvectl default-route "$iface" no || true
           ${pkgs.systemd}/bin/resolvectl flush-caches || true

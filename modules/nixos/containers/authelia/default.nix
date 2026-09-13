@@ -7,6 +7,7 @@
 with lib;
 with lib.custom;
 let
+  householdDnsSettings = lib.custom.dns.resolvedSettings;
   cfg = config.${namespace}.containers.authelia;
   # Reference OpenCloud's host directly so the redirect URIs follow the OpenCloud
   # module if its host option ever changes (instead of silently desyncing from
@@ -442,7 +443,7 @@ in
           };
           services.resolved = {
             enable = true;
-            settings.Resolve.DNS = "172.16.64.104";
+            settings.Resolve = householdDnsSettings;
           };
           system.stateVersion = "24.11";
         };

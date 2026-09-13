@@ -8,6 +8,7 @@
 with lib;
 with lib.custom;
 let
+  householdDnsSettings = lib.custom.dns.resolvedSettings;
   cfg = config.${namespace}.containers.opencloud;
   issuerUrl = "https://${cfg.oidcIssuerHost}";
   opencloudUrl = "https://${cfg.host}";
@@ -373,7 +374,7 @@ in
 
           services.resolved = {
             enable = true;
-            settings.Resolve.DNS = "172.16.64.104";
+            settings.Resolve = householdDnsSettings;
           };
 
           system.stateVersion = "25.11";

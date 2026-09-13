@@ -15,6 +15,7 @@
 with lib;
 with lib.custom;
 let
+  householdDnsSettings = lib.custom.dns.resolvedSettings;
   cfg = config.${namespace}.containers.sing-box;
 
   # Parses the sops-provided vless:// URI list into sing-box outbounds plus
@@ -282,9 +283,9 @@ in
               };
               dns.servers = [
                 {
-                  type = "udp";
+                  # The system resolver handles household resolver failover.
+                  type = "local";
                   tag = "adguard";
-                  server = "172.16.64.104";
                 }
               ];
               inbounds = [
@@ -410,7 +411,7 @@ in
           };
           services.resolved = {
             enable = true;
-            settings.Resolve.DNS = "172.16.64.104";
+            settings.Resolve = householdDnsSettings;
           };
           system.stateVersion = "26.05";
         };

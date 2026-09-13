@@ -169,24 +169,7 @@ in
       rewriteAddress = "192.168.89.207";
       hostAddress = "172.16.64.10";
       localAddress = "172.16.64.104";
-      hostMappings = [
-        {
-          hostname = "beez";
-          ip = "192.168.92.194";
-        }
-        {
-          hostname = "beez.sbulav.ru";
-          ip = "192.168.92.194";
-        }
-        {
-          hostname = "mz";
-          ip = "192.168.89.200";
-        }
-        {
-          hostname = "mz.sbulav.ru";
-          ip = "192.168.89.200";
-        }
-      ];
+      hostMappings = lib.custom.dns.hostMappings;
     };
     flood = {
       enable = true;

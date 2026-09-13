@@ -6,10 +6,7 @@
   container_name,
   adguard_ip ? "172.16.64.104",
   use_adguard_dns ? true,
-  fallback_dns ? [
-    "1.1.1.1"
-    "1.0.0.1"
-  ],
+  fallback_dns ? [ "192.168.92.194" ],
   ...
 }:
 {
