@@ -7,6 +7,7 @@
 with lib;
 with lib.custom;
 let
+  householdDnsSettings = lib.custom.dns.resolvedSettings;
   cfg = config.${namespace}.containers.homepage;
 in
 {
@@ -195,7 +196,7 @@ in
 
           services.resolved = {
             enable = true;
-            settings.Resolve.DNS = "172.16.64.104";
+            settings.Resolve = householdDnsSettings;
           };
           system.stateVersion = "24.11";
         };

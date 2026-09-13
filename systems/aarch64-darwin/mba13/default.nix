@@ -1,4 +1,4 @@
-{ ... }:
+{ lib, ... }:
 {
   networking.hostName = "mba13";
 
@@ -35,7 +35,7 @@
   # on and off the corporate VPN — macOS equivalent of the Linux split DNS.
   custom.networking.split-dns = {
     enable = true;
-    resolvers."sbulav.ru" = [ "172.16.64.104" ];
+    resolvers."sbulav.ru" = lib.custom.dns.resolvers;
     hosts = {
       # The arr UIs (issue #39) are pinned here, not just left to the
       # resolver above: their traefik routers are LAN-only

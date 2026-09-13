@@ -54,6 +54,16 @@ in
   #   };
   # };
 
+  custom.containers.adguard = {
+    enable = true;
+    publishWeb = false;
+    externalInterface = "enp1s0";
+    hostAddress = "172.16.65.10";
+    localAddress = "172.16.65.104";
+    listenAddress = "192.168.92.194";
+    hostMappings = lib.custom.dns.hostMappings;
+  };
+
   custom.services.prometheus-exporters = {
     enable = true;
     node = {

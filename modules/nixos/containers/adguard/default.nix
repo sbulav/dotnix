@@ -12,6 +12,11 @@ in
 {
   options.${namespace}.containers.adguard = with types; {
     enable = mkBoolOpt false "Enable adguard nixos-container;";
+    publishWeb = mkBoolOpt true "Publish the AdGuard UI through local Traefik";
+    externalInterface = mkOpt str "enp3s0" "Host uplink interface for container NAT";
+    listenAddress =
+      mkOpt (nullOr str) null
+        "Optional host IPv4 address forwarding TCP/UDP DNS to the container";
     host = mkOpt str "adguard.sbulav.ru" "The host to serve adguard on";
     hostAddress = mkOpt str "172.16.64.10" "With private network, which address to use on Host";
     localAddress = mkOpt str "172.16.64.104" "With privateNetwork, which address to use in container";
@@ -27,7 +32,20 @@ in
   };
 
   config = mkIf cfg.enable {
-    custom.containers.traefik.routes = {
+    # Host lookups prefer its own resolver; DHCP must not append a public bypass.
+    networking.nameservers = [
+      cfg.localAddress
+    ]
+    ++ filter (
+      address: address != cfg.localAddress && address != cfg.listenAddress
+    ) lib.custom.dns.resolvers;
+    networking.dhcpcd.extraConfig = "nohook resolv.conf";
+    # A pre-switch DHCP lease can leave cached resolvconf entries behind.
+    # These resolver hosts accept only the declarative static resolver list.
+    networking.resolvconf.extraConfig = "allow_keys='static'";
+    services.resolved.settings.Resolve.FallbackDNS = "";
+
+    custom.containers.traefik.routes = mkIf cfg.publishWeb {
       adguard = {
         host = cfg.host;
         url = "http://${cfg.localAddress}:3000";
@@ -50,7 +68,22 @@ in
     networking.nat = {
       enable = true;
       internalInterfaces = [ "ve-adguard" ];
-      externalInterface = "enp3s0";
+      externalInterface = cfg.externalInterface;
+      externalIP = cfg.listenAddress;
+      forwardPorts = optionals (cfg.listenAddress != null) (
+        map
+          (proto: {
+            inherit proto;
+            sourcePort = 53;
+            # Local containers also use the advertised LAN resolver address.
+            loopbackIPs = [ cfg.listenAddress ];
+            destination = "${cfg.localAddress}:53";
+          })
+          [
+            "tcp"
+            "udp"
+          ]
+      );
     };
     containers.adguard = {
       ephemeral = true;
@@ -66,6 +99,7 @@ in
         {
           services.adguardhome = {
             enable = true;
+            mutableSettings = false;
             host = cfg.localAddress;
             port = 3000;
             settings = {
@@ -78,6 +112,8 @@ in
                   "quic://dns.adguard-dns.com"
                   "77.88.8.8"
                 ];
+                # Never ask another household resolver, including for reverse DNS.
+                use_private_ptr_resolvers = false;
                 upstream_mode = "parallel";
                 use_http3_upstreams = true;
                 bootstrap_dns = [
@@ -90,6 +126,15 @@ in
 
                 enable_dnssec = true;
               };
+              filters = [
+                {
+                  enabled = true;
+                  url = "https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt";
+                  name = "AdGuard DNS filter";
+                  id = 1;
+                }
+              ];
+              user_rules = [ ];
               filtering = {
                 protection_enabled = true;
                 filtering_enabled = true;
@@ -121,11 +166,14 @@ in
               ];
               allowedUDPPorts = [ 53 ];
             };
-            # Use systemd-resolved inside the container
-            # Workaround for bug https://github.com/NixOS/nixpkgs/issues/162686
+            # Bootstrap downloads use numeric external DNS, never host DHCP DNS.
+            nameservers = [
+              "1.1.1.2"
+              "1.0.0.2"
+            ];
             useHostResolvConf = lib.mkForce false;
           };
-          services.resolved.enable = true;
+          services.resolved.enable = false;
           system.stateVersion = "24.11";
         };
     };

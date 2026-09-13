@@ -24,15 +24,22 @@ let
   adguard = config.${namespace}.containers.adguard;
 in
 {
-  config = lib.mkIf (rewrite_enabled && adguard.enable) {
-    containers.adguard.config.services.adguardhome.settings.filtering = {
-      rewrites = [
-        {
-          domain = host;
-          answer = if url != null then url else adguard.rewriteAddress;
-          enabled = true;
-        }
-      ];
-    };
-  };
+  config =
+    lib.mkIf
+      (
+        rewrite_enabled
+        && adguard.enable
+        && !(builtins.any (entry: entry.hostname == host) adguard.hostMappings)
+      )
+      {
+        containers.adguard.config.services.adguardhome.settings.filtering = {
+          rewrites = [
+            {
+              domain = host;
+              answer = if url != null then url else adguard.rewriteAddress;
+              enabled = true;
+            }
+          ];
+        };
+      };
 }

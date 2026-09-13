@@ -31,6 +31,7 @@
 with lib;
 with lib.custom;
 let
+  householdDnsSettings = lib.custom.dns.resolvedSettings;
   cfg = config.${namespace}.containers.sonarr;
   mediaGid = 2000;
 in
@@ -126,7 +127,7 @@ in
 
           services.resolved = {
             enable = true;
-            settings.Resolve.DNS = "172.16.64.104";
+            settings.Resolve = householdDnsSettings;
           };
           system.stateVersion = "26.05";
         };
