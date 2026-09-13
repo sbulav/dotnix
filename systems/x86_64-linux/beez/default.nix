@@ -64,6 +64,112 @@ in
     hostMappings = lib.custom.dns.hostMappings;
   };
 
+  custom.containers = {
+    prometheus = {
+      enable = true;
+      publishWeb = false;
+      scrapeConfigs =
+        let
+          target = host: address: {
+            targets = [ address ];
+            labels = {
+              inherit host;
+              instance = host;
+            };
+          };
+        in
+        [
+          {
+            job_name = "node";
+            static_configs = [
+              (target "beez" "127.0.0.1:9100")
+              (target "zanoza" "192.168.89.207:3021")
+              (target "mz" "mz:9100")
+            ];
+          }
+          {
+            job_name = "smartctl";
+            static_configs = [
+              (target "beez" "127.0.0.1:9633")
+              (target "zanoza" "192.168.89.207:9633")
+              (target "mz" "mz:9633")
+            ];
+          }
+          {
+            job_name = "nut";
+            metrics_path = "/ups_metrics";
+            static_configs = [
+              {
+                targets = [ "192.168.89.207:9199" ];
+                labels = {
+                  host = "zanoza";
+                  instance = "zanoza";
+                  ups = "ups";
+                };
+              }
+            ];
+          }
+          {
+            job_name = "authelia";
+            static_configs = [ (target "zanoza" "172.16.64.102:9959") ];
+          }
+        ];
+    };
+    loki = {
+      enable = true;
+      retention.enable = true;
+    };
+    grafana = {
+      enable = true;
+      publishWeb = false;
+      remoteDashboards = true;
+      dataPath = "/var/lib/grafana";
+      hostAddress = "172.16.65.10";
+      localAddress = "172.16.65.112";
+      secret_file = "secrets/beez/monitoring.yaml";
+    };
+  };
+  custom.services.alloy.enable = true;
+
+  # All monitoring state is on the root NVMe; no zanoza or USB mount dependency.
+  systemd.tmpfiles.rules = [ "d /var/lib/grafana/data 0750 196 999 -" ];
+  # DNAT through the existing container NAT, restricted to zanoza's ingress.
+  networking.firewall.extraCommands = ''
+    iptables -t nat -A PREROUTING -s 192.168.89.207 -d 192.168.92.194 -p tcp --dport 3000 -j DNAT --to-destination 172.16.65.112:3000
+    iptables -A nixos-fw -s 192.168.89.207 -p tcp -m multiport --dports 9090,3030 -j nixos-fw-accept
+    iptables -A nixos-fw -s 172.16.64.0/24 -p tcp -m multiport --dports 9090,3030 -j nixos-fw-accept
+  '';
+  networking.firewall.extraStopCommands = ''
+    iptables -t nat -D PREROUTING -s 192.168.89.207 -d 192.168.92.194 -p tcp --dport 3000 -j DNAT --to-destination 172.16.65.112:3000 || true
+    iptables -D nixos-fw -s 192.168.89.207 -p tcp -m multiport --dports 9090,3030 -j nixos-fw-accept || true
+    iptables -D nixos-fw -s 172.16.64.0/24 -p tcp -m multiport --dports 9090,3030 -j nixos-fw-accept || true
+  '';
+  # Evaluation and actual builders are separate processes; cap their aggregate.
+  systemd.slices.nix-builds.sliceConfig = {
+    CPUQuota = "300%";
+    CPUWeight = 20;
+    IOWeight = 20;
+    MemoryHigh = "8G";
+    MemoryMax = "9G";
+  };
+  systemd.services.nix-daemon.serviceConfig.Slice = "nix-builds.slice";
+  systemd.services.nix-cache-builder.serviceConfig.Slice = "nix-builds.slice";
+  systemd.services.prometheus.serviceConfig = {
+    CPUWeight = 200;
+    IOWeight = 200;
+    MemoryLow = "512M";
+  };
+  systemd.services.loki.serviceConfig = {
+    CPUWeight = 200;
+    IOWeight = 200;
+    MemoryLow = "512M";
+  };
+  systemd.services."container@grafana".serviceConfig = {
+    CPUWeight = 200;
+    IOWeight = 200;
+    MemoryLow = "512M";
+  };
+
   custom.services.prometheus-exporters = {
     enable = true;
     node = {

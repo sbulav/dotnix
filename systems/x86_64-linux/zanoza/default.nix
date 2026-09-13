@@ -103,22 +103,6 @@ in
 
   custom.containers = {
     # {{{ Services on OS
-    loki = {
-      enable = true;
-      # 30 days; see modules/nixos/containers/loki/README.md before the first deploy
-      retention.enable = true;
-    };
-    prometheus = {
-      enable = true;
-      host = "prometheus.sbulav.ru";
-      smartctl_devices = [
-        "/dev/nvme0n1"
-        "/dev/sda"
-        "/dev/sdb"
-        "/dev/sdc"
-        "/dev/sdd"
-      ];
-    };
     msmtp = {
       enable = true;
       secret_file = "secrets/zanoza/default.yaml";
@@ -262,13 +246,6 @@ in
       localAddress = "172.16.64.109";
       secret_file = "secrets/zanoza/default.yaml";
     };
-    grafana = {
-      enable = true;
-      host = "grafana.sbulav.ru";
-      hostAddress = "172.16.64.10";
-      localAddress = "172.16.64.112";
-      secret_file = "secrets/zanoza/default.yaml";
-    };
     opencloud = {
       enable = true;
       host = "opencloud.sbulav.ru";
@@ -312,38 +289,74 @@ in
     requires = [ "container@sing-box.service" ];
   };
 
-  services.prometheus.scrapeConfigs = [
-    {
-      job_name = "beez";
-      static_configs = [
-        {
-          targets = [
-            "beez:9100"
-            "beez:9633"
-          ];
-          labels = {
-            instance = "beez";
-            role = "server";
-          };
-        }
+  # Collection remains next to the services; storage lives independently on beez.
+  custom.services.alloy = {
+    enable = true;
+    endpoint = "http://192.168.92.194:3030/loki/api/v1/push";
+  };
+  custom.services.prometheus-exporters = {
+    enable = true;
+    node.port = 3021;
+    smartctl = {
+      enable = true;
+      devices = [
+        "/dev/nvme0n1"
+        "/dev/sda"
+        "/dev/sdb"
+        "/dev/sdc"
+        "/dev/sdd"
       ];
-    }
-    {
-      job_name = "mz";
-      static_configs = [
-        {
-          targets = [
-            "mz:9100"
-            "mz:9633"
-          ];
-          labels = {
-            instance = "mz";
-            role = "desktop";
-          };
-        }
+    };
+  };
+  services.prometheus.exporters.nut = {
+    enable = true;
+    nutVariables = [
+      "battery.charge"
+      "battery.runtime"
+      "battery.runtime.low"
+      "battery.voltage"
+      "battery.voltage.nominal"
+      "input.voltage"
+      "input.voltage.nominal"
+      "output.voltage"
+      "ups.load"
+      "ups.status"
+      "ups.temperature"
+    ];
+  };
+  networking.firewall.extraCommands = ''
+    iptables -A nixos-fw -s 192.168.92.194 -p tcp -m multiport --dports 3021,9633,9199 -j nixos-fw-accept
+  '';
+  networking.firewall.extraStopCommands = ''
+    iptables -D nixos-fw -s 192.168.92.194 -p tcp -m multiport --dports 3021,9633,9199 -j nixos-fw-accept || true
+  '';
+  custom.containers.traefik.routes = {
+    prometheus = {
+      host = "prometheus.sbulav.ru";
+      url = "http://192.168.92.194:9090";
+      middlewares = [
+        "secure-headers"
+        "allow-lan"
       ];
-    }
-  ];
+    };
+    grafana = {
+      host = "grafana.sbulav.ru";
+      url = "http://192.168.92.194:3000";
+    };
+    allowedips-grafana = {
+      service = "grafana";
+      host = "grafana.sbulav.ru";
+      url = "http://192.168.92.194:3000";
+      middlewares = [
+        "secure-headers"
+        "allow-lan"
+      ];
+      clientIPs = [
+        "172.16.64.0/24"
+        "192.168.80.0/20"
+      ];
+    };
+  };
 
   environment.systemPackages = with pkgs; [
     nixd # LSP for nix

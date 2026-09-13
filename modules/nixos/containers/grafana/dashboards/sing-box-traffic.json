@@ -61,7 +61,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(rate(node_network_receive_bytes_total{instance=\"127.0.0.1:3021\",device=\"ve-sing-box\"}[$__rate_interval]) + rate(node_network_transmit_bytes_total{instance=\"127.0.0.1:3021\",device=\"ve-sing-box\"}[$__rate_interval]))",
+          "expr": "sum(rate(node_network_receive_bytes_total{host=\"zanoza\",job=\"node\",device=\"ve-sing-box\"}[$__rate_interval]) + rate(node_network_transmit_bytes_total{host=\"zanoza\",job=\"node\",device=\"ve-sing-box\"}[$__rate_interval]))",
           "instant": false,
           "legendFormat": "Total",
           "range": true,
@@ -123,7 +123,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "sum(increase(node_network_receive_bytes_total{instance=\"127.0.0.1:3021\",device=\"ve-sing-box\"}[$__range]) + increase(node_network_transmit_bytes_total{instance=\"127.0.0.1:3021\",device=\"ve-sing-box\"}[$__range]))",
+          "expr": "sum(increase(node_network_receive_bytes_total{host=\"zanoza\",job=\"node\",device=\"ve-sing-box\"}[$__range]) + increase(node_network_transmit_bytes_total{host=\"zanoza\",job=\"node\",device=\"ve-sing-box\"}[$__range]))",
           "instant": true,
           "legendFormat": "Observed bytes",
           "range": false,
@@ -202,7 +202,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "count(node_network_receive_bytes_total{instance=\"127.0.0.1:3021\",device=\"ve-sing-box\"}) or vector(0)",
+          "expr": "count(node_network_receive_bytes_total{host=\"zanoza\",job=\"node\",device=\"ve-sing-box\"}) or vector(0)",
           "instant": true,
           "legendFormat": "Interface",
           "range": false,
@@ -295,7 +295,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "rate(node_network_receive_bytes_total{instance=\"127.0.0.1:3021\",device=\"ve-sing-box\"}[$__rate_interval])",
+          "expr": "rate(node_network_receive_bytes_total{host=\"zanoza\",job=\"node\",device=\"ve-sing-box\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "From container",
           "range": true,
@@ -303,7 +303,7 @@
         },
         {
           "editorMode": "code",
-          "expr": "rate(node_network_transmit_bytes_total{instance=\"127.0.0.1:3021\",device=\"ve-sing-box\"}[$__rate_interval])",
+          "expr": "rate(node_network_transmit_bytes_total{host=\"zanoza\",job=\"node\",device=\"ve-sing-box\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "To container",
           "range": true,
@@ -393,7 +393,7 @@
       "targets": [
         {
           "editorMode": "code",
-          "expr": "rate(node_network_receive_packets_total{instance=\"127.0.0.1:3021\",device=\"ve-sing-box\"}[$__rate_interval])",
+          "expr": "rate(node_network_receive_packets_total{host=\"zanoza\",job=\"node\",device=\"ve-sing-box\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "From container",
           "range": true,
@@ -401,7 +401,7 @@
         },
         {
           "editorMode": "code",
-          "expr": "rate(node_network_transmit_packets_total{instance=\"127.0.0.1:3021\",device=\"ve-sing-box\"}[$__rate_interval])",
+          "expr": "rate(node_network_transmit_packets_total{host=\"zanoza\",job=\"node\",device=\"ve-sing-box\"}[$__rate_interval])",
           "instant": false,
           "legendFormat": "To container",
           "range": true,

@@ -14,6 +14,8 @@ in
 {
   options.${namespace}.containers.grafana = with types; {
     enable = mkBoolOpt false "Enable the grafana monitoring service ;";
+    publishWeb = mkBoolOpt true "Publish routes on this host's Traefik";
+    remoteDashboards = mkBoolOpt false "Include dashboards for services collected remotely";
     dataPath = mkOpt str "/tank/grafana" "Grafana data path on host machine";
     host = mkOpt str "grafana.sbulav.ru" "The host to serve grafana on";
     hostAddress = mkOpt str "172.16.64.10" "With private network, which address to use on Host";
@@ -29,7 +31,10 @@ in
   ];
 
   config = mkIf cfg.enable {
-    custom.containers.traefik.routes = {
+    # The container needs outbound SMTP and the host DNS port forward.
+    networking.nat.internalInterfaces = [ "ve-grafana" ];
+
+    custom.containers.traefik.routes = mkIf cfg.publishWeb {
       grafana = {
         host = cfg.host;
         url = "http://${cfg.localAddress}:3000";
@@ -59,10 +64,12 @@ in
         "grafana/admin_password" = lib.custom.secrets.special.grafana.adminPassword // {
           sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
         };
-        "telegram-notifications-bot-token" = lib.custom.secrets.special.grafana.telegramBot // {
+        "grafana/telegram-token" = lib.custom.secrets.special.grafana.telegramBot // {
+          key = "telegram-notifications-bot-token";
           sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
         };
-        "shared/email-password" = lib.custom.secrets.special.grafana.emailPassword // {
+        "grafana/email-password" = lib.custom.secrets.special.grafana.emailPassword // {
+          key = "shared/email-password";
           sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
         };
       }
@@ -90,10 +97,10 @@ in
         "${config.sops.secrets."grafana/admin_password".path}" = {
           isReadOnly = true;
         };
-        "${config.sops.secrets."telegram-notifications-bot-token".path}" = {
+        "${config.sops.secrets."grafana/telegram-token".path}" = {
           isReadOnly = true;
         };
-        "${config.sops.secrets."shared/email-password".path}" = {
+        "${config.sops.secrets."grafana/email-password".path}" = {
           isReadOnly = true;
         };
       };
@@ -112,10 +119,10 @@ in
               smtp = rec {
                 enabled = true;
                 user = "zppfan@gmail.com";
-                from_name = "ZANOZA-notifications";
+                from_name = "Homelab-notifications";
                 from_address = user;
                 host = "smtp.gmail.com:587";
-                password = "$__file{${config.sops.secrets."shared/email-password".path}}";
+                password = "$__file{${config.sops.secrets."grafana/email-password".path}}";
               };
               security = {
                 admin_email = config.${namespace}.user.email;
@@ -125,7 +132,10 @@ in
               analytics.reporting_enabled = false;
               users.auto_assign_org = true;
               users.auto_assign_org_id = 1;
+              "auth.basic".enabled = true;
+              "auth.anonymous".enabled = false;
               auth = {
+                disable_login_form = false;
                 signout_redirect_url = "https://authelia.sbulav.ru/application/o/grafana/end-session/";
                 # oauth_auto_login = true;
               };
@@ -252,7 +262,9 @@ in
                       hash,
                     }:
                     pkgs.runCommand name { nativeBuildInputs = [ pkgs.jq ]; } ''
-                      jq --arg title ${lib.escapeShellArg title} '.title = $title' \
+                      jq --arg title ${lib.escapeShellArg title} \
+                        --arg job ${lib.escapeShellArg (if name == "smartctl.json" then "smartctl" else "node")} \
+                        '.title = $title | walk(if type == "string" then gsub("127\\.0\\.0\\.1:(3021|9633)"; "zanoza") | gsub("job=\"nodes\""; "job=\"" + $job + "\"") else . end)'  \
                         ${
                           pkgs.fetchurl {
                             name = "${name}-src";
@@ -294,7 +306,7 @@ in
                     orgId = 1;
                   };
                   singBoxTraffic =
-                    if config.${namespace}.containers.sing-box.enable then
+                    if cfg.remoteDashboards || config.${namespace}.containers.sing-box.enable then
                       [
                         {
                           name = "sing-box traffic";
@@ -321,7 +333,7 @@ in
                     else
                       [ ];
                   authelia =
-                    if config.${namespace}.containers.authelia.enable then
+                    if cfg.remoteDashboards || config.${namespace}.containers.authelia.enable then
                       [
                         {
                           name = "Authelia dashboard";
@@ -337,7 +349,7 @@ in
                     else
                       [ ];
                   traefik =
-                    if config.${namespace}.containers.traefik.enable then
+                    if cfg.remoteDashboards || config.${namespace}.containers.traefik.enable then
                       [
                         {
                           name = "Traefik via Loki dashboard";
@@ -353,7 +365,7 @@ in
                     else
                       [ ];
                   nut =
-                    if config.${namespace}.containers.ups.enable then
+                    if cfg.remoteDashboards || config.${namespace}.containers.ups.enable then
                       [
                         {
                           name = "UPS info via NUT prometheus exporter";
@@ -385,7 +397,7 @@ in
           systemd.services.grafana = {
             serviceConfig = {
               EnvironmentFile = [
-                config.sops.secrets."telegram-notifications-bot-token".path
+                config.sops.secrets."grafana/telegram-token".path
               ];
             };
           };
