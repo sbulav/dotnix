@@ -1348,8 +1348,6 @@
         }
       }
     ],
-    "dashboardUid": "smartctl",
-    "panelId": 2,
     "noDataState": "NoData",
     "execErrState": "Error",
     "for": "5m",

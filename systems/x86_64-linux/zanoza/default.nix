@@ -150,9 +150,8 @@ in
     adguard = {
       enable = true;
       host = "adguard.sbulav.ru";
-      rewriteAddress = "192.168.89.207";
       hostAddress = "172.16.64.10";
-      localAddress = "172.16.64.104";
+      localAddress = lib.custom.dns.resolverAddresses.zanoza;
       hostMappings = lib.custom.dns.hostMappings;
     };
     flood = {
@@ -292,7 +291,7 @@ in
   # Collection remains next to the services; storage lives independently on beez.
   custom.services.alloy = {
     enable = true;
-    endpoint = "http://192.168.92.194:3030/loki/api/v1/push";
+    endpoint = "http://${lib.custom.dns.hosts.beez}:3030/loki/api/v1/push";
   };
   custom.services.prometheus-exporters = {
     enable = true;
@@ -324,39 +323,16 @@ in
       "ups.temperature"
     ];
   };
+  # Only beez's Prometheus scrapes the exporters.
   networking.firewall.extraCommands = ''
-    iptables -A nixos-fw -s 192.168.92.194 -p tcp -m multiport --dports 3021,9633,9199 -j nixos-fw-accept
+    iptables -A nixos-fw -s ${lib.custom.dns.hosts.beez} -p tcp -m multiport --dports 3021,9633,9199 -j nixos-fw-accept
   '';
   networking.firewall.extraStopCommands = ''
-    iptables -D nixos-fw -s 192.168.92.194 -p tcp -m multiport --dports 3021,9633,9199 -j nixos-fw-accept || true
+    iptables -D nixos-fw -s ${lib.custom.dns.hosts.beez} -p tcp -m multiport --dports 3021,9633,9199 -j nixos-fw-accept || true
   '';
-  custom.containers.traefik.routes = {
-    prometheus = {
-      host = "prometheus.sbulav.ru";
-      url = "http://192.168.92.194:9090";
-      middlewares = [
-        "secure-headers"
-        "allow-lan"
-      ];
-    };
-    grafana = {
-      host = "grafana.sbulav.ru";
-      url = "http://192.168.92.194:3000";
-    };
-    allowedips-grafana = {
-      service = "grafana";
-      host = "grafana.sbulav.ru";
-      url = "http://192.168.92.194:3000";
-      middlewares = [
-        "secure-headers"
-        "allow-lan"
-      ];
-      clientIPs = [
-        "172.16.64.0/24"
-        "192.168.80.0/20"
-      ];
-    };
-  };
+  # Prometheus and Grafana run on beez; their public routes stay on this ingress.
+  custom.containers.prometheus.remoteBackend = "http://${lib.custom.dns.hosts.beez}:9090";
+  custom.containers.grafana.remoteBackend = "http://${lib.custom.dns.hosts.beez}:3000";
 
   environment.systemPackages = with pkgs; [
     nixd # LSP for nix

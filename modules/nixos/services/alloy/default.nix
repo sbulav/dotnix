@@ -9,6 +9,57 @@ with lib;
 with lib.custom;
 let
   cfg = config.${namespace}.services.alloy;
+  c = config.${namespace}.containers;
+  hostName = config.networking.hostName;
+
+  # Application logs are collected only for services enabled on this host: a
+  # disabled service's leftover directory must not keep feeding Loki under
+  # this host's label. `traverse` lists parent directories the reader group
+  # needs `x` on to reach the log directory.
+  fileTargets =
+    optionals c.traefik.enable [
+      {
+        path = "${c.traefik.dataPath}/logs/access.log";
+        job = "traefik-access-log";
+      }
+      {
+        path = "${c.traefik.dataPath}/logs/traefik.log";
+        job = "traefik-log";
+      }
+    ]
+    ++ optionals c.authelia.enable [
+      {
+        path = "${c.authelia.dataPath}/logs/authelia.log";
+        job = "authelia";
+      }
+    ]
+    ++ optionals c.grafana.enable [
+      {
+        path = "${c.grafana.dataPath}/data/log/grafana.log";
+        job = "grafana";
+        # The migrated Grafana data directory is 0750.
+        traverse = [
+          c.grafana.dataPath
+          "${c.grafana.dataPath}/data"
+        ];
+      }
+    ]
+    ++ optionals c.jellyfin.enable [
+      {
+        path = "${c.jellyfin.dataPath}/log/*.log";
+        job = "jellyfin";
+        # /tank/jellyfin is 0700.
+        traverse = [ c.jellyfin.dataPath ];
+      }
+    ]
+    ++ optionals c.sing-box.enable [
+      {
+        path = "${c.sing-box.dataPath}/logs/*.log";
+        job = "sing-box";
+      }
+    ];
+  logDirs = unique (map (t: dirOf t.path) fileTargets);
+  traverseDirs = unique (concatMap (t: t.traverse or [ ]) fileTargets);
 in
 {
   options.${namespace}.services.alloy = with types; {
@@ -44,18 +95,10 @@ in
       };
       script = ''
         set -u
-        # /tank/jellyfin is 0700 - grant traverse so its log dir is reachable.
-        [ -d /tank/jellyfin ] && setfacl -m g:logreaders:x /tank/jellyfin
-        # The migrated Grafana data directory is 0750. Reading its log ACL
-        # also requires traversal through both parent directories.
-        for d in ${escapeShellArg config.custom.containers.grafana.dataPath} ${escapeShellArg "${config.custom.containers.grafana.dataPath}/data"}; do
+        for d in ${escapeShellArgs traverseDirs}; do
           [ ! -d "$d" ] || setfacl -m g:logreaders:x "$d"
         done
-        for d in \
-          /tank/authelia/logs \
-          ${config.custom.containers.grafana.dataPath}/data/log \
-          /tank/jellyfin/log \
-          /tank/sing-box/logs; do
+        for d in ${escapeShellArgs logDirs}; do
           [ -d "$d" ] || continue
           setfacl -R -m g:logreaders:rX "$d"
           setfacl -R -d -m g:logreaders:rX "$d"
@@ -82,7 +125,7 @@ in
         max_age       = "12h"
         labels        = {
           job  = "systemd-journal",
-          host = "${config.networking.hostName}",
+          host = "${hostName}",
         }
         relabel_rules = loki.relabel.journal.rules
         forward_to    = [loki.write.local.receiver]
@@ -90,12 +133,9 @@ in
 
       local.file_match "system_logs" {
         path_targets = [
-          {__path__ = "/tank/traefik/logs/access.log",       job = "traefik-access-log", host = "${config.networking.hostName}"},
-          {__path__ = "/tank/traefik/logs/traefik.log",      job = "traefik-log",        host = "${config.networking.hostName}"},
-          {__path__ = "/tank/authelia/logs/authelia.log",    job = "authelia",           host = "${config.networking.hostName}"},
-          {__path__ = "${config.custom.containers.grafana.dataPath}/data/log/grafana.log",  job = "grafana",            host = "${config.networking.hostName}"},
-          {__path__ = "/tank/jellyfin/log/*.log",            job = "jellyfin",           host = "${config.networking.hostName}"},
-          {__path__ = "/tank/sing-box/logs/*.log",           job = "sing-box",           host = "${config.networking.hostName}"},
+          ${concatMapStringsSep "\n          " (
+            t: ''{__path__ = "${t.path}", job = "${t.job}", host = "${hostName}"},''
+          ) fileTargets}
         ]
       }
 

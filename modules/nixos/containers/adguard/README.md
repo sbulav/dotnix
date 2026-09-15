@@ -1,11 +1,23 @@
 # Household DNS redundancy
 
 Both AdGuard instances own the same declarative filter policy and local records.
-`lib/dns/default.nix` contains only household DNS data. Service records (including
-Prometheus and Loki for #47) keep pointing to the existing ingress on
-192.168.89.207; moving a backend does not move Traefik or Authelia. A and AAAA
-queries must respectively return the ingress IPv4 and NODATA, never public DNS.
-Add future household records to that shared file, including remote services.
+`lib/dns/default.nix` contains only household DNS data: host addresses, the two
+resolver addresses, the ingress and the published service names. Service records
+(including Prometheus and Grafana, which run on beez) keep pointing to the
+existing ingress on 192.168.89.207; moving a backend does not move Traefik or
+Authelia. A and AAAA queries must respectively return the ingress IPv4 and
+NODATA, never public DNS. Add future household records to that shared file,
+including remote services, and only for names Traefik actually routes.
+
+Every module and host reads these addresses from `lib.custom.dns`; the AdGuard
+module asserts that the address it serves is one of the advertised resolvers,
+and the `household-dns` check asserts each resolver is served by exactly one host.
+
+**Container address space.** The router routes 172.16.64.0/18 to zanoza. beez's
+containers use 172.16.65.0/24, inside that range, so from anywhere else on the
+LAN (zanoza included) they are reachable only through beez's port forwards on
+192.168.92.194. Adding a container on beez that the LAN must reach means adding
+a forward, or moving beez's containers to a subnet with its own router route.
 
 ## Observed topology (2026-09-12)
 

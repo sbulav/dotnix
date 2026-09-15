@@ -15,6 +15,9 @@ in
   options.${namespace}.containers.grafana = with types; {
     enable = mkBoolOpt false "Enable the grafana monitoring service ;";
     publishWeb = mkBoolOpt true "Publish routes on this host's Traefik";
+    remoteBackend = mkOpt (nullOr str) null ''
+      Publish this host's Grafana routes for a Grafana running elsewhere, at
+      this URL. The container itself stays disabled here.'';
     remoteDashboards = mkBoolOpt false "Include dashboards for services collected remotely";
     dataPath = mkOpt str "/tank/grafana" "Grafana data path on host machine";
     host = mkOpt str "grafana.sbulav.ru" "The host to serve grafana on";
@@ -30,392 +33,422 @@ in
     })
   ];
 
-  config = mkIf cfg.enable {
-    # The container needs outbound SMTP and the host DNS port forward.
-    networking.nat.internalInterfaces = [ "ve-grafana" ];
+  config = mkMerge [
+    {
+      assertions = [
+        {
+          assertion = !(cfg.enable && cfg.remoteBackend != null);
+          message = "custom.containers.grafana: remoteBackend points the routes away from the Grafana enabled on this host";
+        }
+      ];
+    }
 
-    custom.containers.traefik.routes = mkIf cfg.publishWeb {
-      grafana = {
-        host = cfg.host;
-        url = "http://${cfg.localAddress}:3000";
-      };
-      "allowedips-grafana" = {
-        service = "grafana";
-        host = cfg.host;
-        url = "http://${cfg.localAddress}:3000";
-        middlewares = [
-          "secure-headers"
-          "allow-lan"
-        ];
-        clientIPs = [
-          "172.16.64.0/24"
-          "192.168.80.0/20"
-        ];
-      };
-    };
-
-    # Use shared templates with grafana-specific UID requirements
-    custom.security.sops.secrets = lib.mkMerge [
-      # Grafana special templates (UID 196)
+    # The same dual-router set whether Grafana runs here or on another host.
+    (mkIf (cfg.remoteBackend != null || (cfg.enable && cfg.publishWeb)) (
+      let
+        url = if cfg.remoteBackend != null then cfg.remoteBackend else "http://${cfg.localAddress}:3000";
+      in
       {
-        "grafana/oidc_client_secret" = lib.custom.secrets.special.grafana.oidcClientSecret // {
-          sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
-        };
-        "grafana/admin_password" = lib.custom.secrets.special.grafana.adminPassword // {
-          sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
-        };
-        "grafana/telegram-token" = lib.custom.secrets.special.grafana.telegramBot // {
-          key = "telegram-notifications-bot-token";
-          sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
-        };
-        "grafana/email-password" = lib.custom.secrets.special.grafana.emailPassword // {
-          key = "shared/email-password";
-          sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
+        custom.containers.traefik.routes = {
+          grafana = {
+            inherit url;
+            host = cfg.host;
+          };
+          "allowedips-grafana" = {
+            inherit url;
+            service = "grafana";
+            host = cfg.host;
+            middlewares = [
+              "secure-headers"
+              "allow-lan"
+            ];
+            clientIPs = [
+              "172.16.64.0/24"
+              "192.168.80.0/20"
+            ];
+          };
         };
       }
-    ];
-    # Allow grafana to read all exporters via trusted interface
-    networking.firewall.trustedInterfaces = [ "ve-grafana" ];
-    containers.grafana = {
-      ephemeral = true;
-      autoStart = true;
-      privateNetwork = true;
-      # Need to add 172.16.64.0/18 on router
-      hostAddress = "${cfg.hostAddress}";
-      localAddress = "${cfg.localAddress}";
+    ))
 
-      # Mounting Cloudflare creds(email and dns api token) as file
-      bindMounts = {
-        "/var/lib/grafana/data" = {
-          hostPath = "${cfg.dataPath}/data/";
-          isReadOnly = false;
-        };
+    (mkIf cfg.enable {
+      # The container needs outbound SMTP and the host DNS port forward.
+      networking.nat.internalInterfaces = [ "ve-grafana" ];
 
-        "${config.sops.secrets."grafana/oidc_client_secret".path}" = {
-          isReadOnly = true;
-        };
-        "${config.sops.secrets."grafana/admin_password".path}" = {
-          isReadOnly = true;
-        };
-        "${config.sops.secrets."grafana/telegram-token".path}" = {
-          isReadOnly = true;
-        };
-        "${config.sops.secrets."grafana/email-password".path}" = {
-          isReadOnly = true;
-        };
-      };
-
-      config =
-        { ... }:
+      # Use shared templates with grafana-specific UID requirements
+      custom.security.sops.secrets = lib.mkMerge [
+        # Grafana special templates (UID 196)
         {
-          services.grafana = {
-            enable = true;
-            settings = {
-              server = {
-                protocol = "http";
-                http_addr = "${cfg.localAddress}";
-                root_url = "https://${cfg.host}";
-              };
-              smtp = rec {
-                enabled = true;
-                user = "zppfan@gmail.com";
-                from_name = "Homelab-notifications";
-                from_address = user;
-                host = "smtp.gmail.com:587";
-                password = "$__file{${config.sops.secrets."grafana/email-password".path}}";
-              };
-              security = {
-                admin_email = config.${namespace}.user.email;
-                admin_password = "$__file{${config.sops.secrets."grafana/admin_password".path}}";
-                secret_key = "SW2YcwTIb9zpOOhoPsMm";
-              };
-              analytics.reporting_enabled = false;
-              users.auto_assign_org = true;
-              users.auto_assign_org_id = 1;
-              "auth.basic".enabled = true;
-              "auth.anonymous".enabled = false;
-              auth = {
-                disable_login_form = false;
-                signout_redirect_url = "https://authelia.sbulav.ru/application/o/grafana/end-session/";
-                # oauth_auto_login = true;
-              };
-              "auth.generic_oauth" = {
-                enabled = true;
-                name = "Authelia";
-                allow_sign_up = true;
-                client_id = "grafana";
-                client_secret = "$__file{${config.sops.secrets."grafana/oidc_client_secret".path}}";
-                api_url = "https://authelia.sbulav.ru/api/oidc/userinfo";
-                auth_url = "https://authelia.sbulav.ru/api/oidc/authorization";
-                token_url = "https://authelia.sbulav.ru/api/oidc/token";
-                empty_scopes = false;
-                scopes = "openid profile email groups";
-                groups_attribute_path = "groups";
-                email_attribute_path = "email";
-                login_attribute_path = "preferred_username";
-                name_attribute_path = "name";
-                role_attribute_path = "contains(groups[*], 'admin') && 'Admin' || contains(groups[*], 'editor') && 'Editor' || 'Viewer'";
-              };
-            };
-            provision = {
+          "grafana/oidc_client_secret" = lib.custom.secrets.special.grafana.oidcClientSecret // {
+            sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
+          };
+          "grafana/admin_password" = lib.custom.secrets.special.grafana.adminPassword // {
+            sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
+          };
+          "grafana/telegram-token" = lib.custom.secrets.special.grafana.telegramBot // {
+            key = "telegram-notifications-bot-token";
+            sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
+          };
+          "grafana/email-password" = lib.custom.secrets.special.grafana.emailPassword // {
+            key = "shared/email-password";
+            sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
+          };
+        }
+      ];
+      # Allow grafana to read all exporters via trusted interface
+      networking.firewall.trustedInterfaces = [ "ve-grafana" ];
+      containers.grafana = {
+        ephemeral = true;
+        autoStart = true;
+        privateNetwork = true;
+        # Reachability depends on the host. On zanoza the router routes
+        # 172.16.64.0/18 here, so the container answers the LAN directly. On
+        # beez the container sits at 172.16.65.112 -- inside that same /18, so
+        # the router still sends LAN traffic to zanoza -- and is reached only
+        # through beez's own port forward for 3000.
+        hostAddress = "${cfg.hostAddress}";
+        localAddress = "${cfg.localAddress}";
+
+        # Mounting Cloudflare creds(email and dns api token) as file
+        bindMounts = {
+          "/var/lib/grafana/data" = {
+            hostPath = "${cfg.dataPath}/data/";
+            isReadOnly = false;
+          };
+
+          "${config.sops.secrets."grafana/oidc_client_secret".path}" = {
+            isReadOnly = true;
+          };
+          "${config.sops.secrets."grafana/admin_password".path}" = {
+            isReadOnly = true;
+          };
+          "${config.sops.secrets."grafana/telegram-token".path}" = {
+            isReadOnly = true;
+          };
+          "${config.sops.secrets."grafana/email-password".path}" = {
+            isReadOnly = true;
+          };
+        };
+
+        config =
+          { ... }:
+          {
+            services.grafana = {
               enable = true;
-              alerting = {
-                contactPoints.settings = {
-                  apiVersion = 1;
-                  contactPoints = [
-                    {
-                      name = "default-alerts";
-                      receivers = [
-                        {
-                          type = "telegram";
-                          uid = "telegram";
-                          settings = {
-                            chatid = "681806836";
-                            bottoken = "\${TELEGRAM_TOKEN}";
-                            uploadImage = false;
-                            message = "{{ template \"alert_list\" . }}";
-                            parse_mode = "HTML";
-                          };
-                        }
-                        {
-                          uid = "basic-email";
-                          type = "email";
-                          settings.addresses = "bulavintsev.sergey@gmail.com";
-                        }
-                      ];
-                    }
-                  ];
+              settings = {
+                server = {
+                  protocol = "http";
+                  http_addr = "${cfg.localAddress}";
+                  root_url = "https://${cfg.host}";
                 };
-                policies.settings = {
-                  apiVersion = 1;
-                  policies = [
-                    {
-                      orgId = 1;
-                      receiver = "default-alerts";
-                      group_by = [ "alertname" ];
-                    }
-                  ];
+                smtp = rec {
+                  enabled = true;
+                  user = "zppfan@gmail.com";
+                  from_name = "Homelab-notifications";
+                  from_address = user;
+                  host = "smtp.gmail.com:587";
+                  password = "$__file{${config.sops.secrets."grafana/email-password".path}}";
                 };
-                rules.settings =
-                  let
-                    rules = builtins.fromJSON (builtins.readFile ./alerting/rules.json);
-                    # ruleIds = map (r: r.uid) rules;
-                  in
-                  {
+                security = {
+                  admin_email = config.${namespace}.user.email;
+                  admin_password = "$__file{${config.sops.secrets."grafana/admin_password".path}}";
+                  # FIXME: plaintext in a public repo, so it is already
+                  # disclosed and signs nothing trustworthy. It must be
+                  # rotated, then read like the two secrets above:
+                  # add a `secret_key` entry to ${cfg.secret_file}, declare it
+                  # in the sops block, bind-mount it, and use $__file{...}.
+                  # Not done here: this file is encrypted only to the beez
+                  # keys, so it cannot be edited from another host.
+                  secret_key = "SW2YcwTIb9zpOOhoPsMm";
+                };
+                analytics.reporting_enabled = false;
+                users.auto_assign_org = true;
+                users.auto_assign_org_id = 1;
+                "auth.basic".enabled = true;
+                "auth.anonymous".enabled = false;
+                auth = {
+                  disable_login_form = false;
+                  signout_redirect_url = "https://authelia.sbulav.ru/application/o/grafana/end-session/";
+                  # oauth_auto_login = true;
+                };
+                "auth.generic_oauth" = {
+                  enabled = true;
+                  name = "Authelia";
+                  allow_sign_up = true;
+                  client_id = "grafana";
+                  client_secret = "$__file{${config.sops.secrets."grafana/oidc_client_secret".path}}";
+                  api_url = "https://authelia.sbulav.ru/api/oidc/userinfo";
+                  auth_url = "https://authelia.sbulav.ru/api/oidc/authorization";
+                  token_url = "https://authelia.sbulav.ru/api/oidc/token";
+                  empty_scopes = false;
+                  scopes = "openid profile email groups";
+                  groups_attribute_path = "groups";
+                  email_attribute_path = "email";
+                  login_attribute_path = "preferred_username";
+                  name_attribute_path = "name";
+                  role_attribute_path = "contains(groups[*], 'admin') && 'Admin' || contains(groups[*], 'editor') && 'Editor' || 'Viewer'";
+                };
+              };
+              provision = {
+                enable = true;
+                alerting = {
+                  contactPoints.settings = {
                     apiVersion = 1;
-                    groups = [
+                    contactPoints = [
                       {
-                        orgId = 1;
-                        name = "zanoza";
-                        folder = "ALERTS";
-                        interval = "5m";
-                        inherit rules;
+                        name = "default-alerts";
+                        receivers = [
+                          {
+                            type = "telegram";
+                            uid = "telegram";
+                            settings = {
+                              chatid = "681806836";
+                              bottoken = "\${TELEGRAM_TOKEN}";
+                              uploadImage = false;
+                              message = "{{ template \"alert_list\" . }}";
+                              parse_mode = "HTML";
+                            };
+                          }
+                          {
+                            uid = "basic-email";
+                            type = "email";
+                            settings.addresses = "bulavintsev.sergey@gmail.com";
+                          }
+                        ];
                       }
                     ];
-                    # deleteRules seems to happen after creating the above rules, effectively rolling back
-                    # any updates.
                   };
-                templates.path = ./alerting/templates.yaml;
-              };
-
-              datasources.settings = {
-                datasources =
-                  let
-                    prometheus = {
-                      name = "Prometheus";
-                      uid = "prometheus";
-                      type = "prometheus";
-                      access = "proxy";
-                      url = "http://${cfg.hostAddress}:9090";
-                      isDefault = true;
+                  policies.settings = {
+                    apiVersion = 1;
+                    policies = [
+                      {
+                        orgId = 1;
+                        receiver = "default-alerts";
+                        group_by = [ "alertname" ];
+                      }
+                    ];
+                  };
+                  rules.settings =
+                    let
+                      rules = builtins.fromJSON (builtins.readFile ./alerting/rules.json);
+                      # ruleIds = map (r: r.uid) rules;
+                    in
+                    {
+                      apiVersion = 1;
+                      groups = [
+                        {
+                          orgId = 1;
+                          name = "homelab";
+                          folder = "ALERTS";
+                          interval = "5m";
+                          inherit rules;
+                        }
+                      ];
+                      # deleteRules seems to happen after creating the above rules, effectively rolling back
+                      # any updates.
                     };
-                    loki =
+                  templates.path = ./alerting/templates.yaml;
+                };
+
+                datasources.settings = {
+                  datasources =
+                    let
+                      prometheus = {
+                        name = "Prometheus";
+                        uid = "prometheus";
+                        type = "prometheus";
+                        access = "proxy";
+                        url = "http://${cfg.hostAddress}:9090";
+                        isDefault = true;
+                      };
+                      loki =
+                        if config.${namespace}.containers.loki.enable then
+                          [
+                            {
+                              name = "Loki";
+                              uid = "loki";
+                              type = "loki";
+                              access = "proxy";
+                              url = "http://${cfg.hostAddress}:3030";
+                            }
+                          ]
+                        else
+                          [ ];
+                    in
+                    [ prometheus ] ++ loki;
+                };
+                # All dashboards live flat in the General folder (no `folder`
+                # set on any provider). Titles are unified to a
+                # "Category · Subject" pattern via `mkDashboard`, which rewrites
+                # the fetched JSON's `.title` with jq — this normalises the two
+                # external dashboards (Node Exporter Full, Authelia) alongside
+                # our own without editing their upstream sources. The dashboard
+                # uid is preserved, so the rename is an in-place update. Host
+                # and job selection is left to the dashboards' own variables;
+                # nothing else in the fetched JSON is rewritten.
+                dashboards.settings.providers =
+                  let
+                    mkDashboard =
+                      {
+                        name,
+                        title,
+                        url,
+                        hash,
+                      }:
+                      pkgs.runCommand name { nativeBuildInputs = [ pkgs.jq ]; } ''
+                        jq --arg title ${lib.escapeShellArg title} '.title = $title' \
+                          ${
+                            pkgs.fetchurl {
+                              name = "${name}-src";
+                              inherit url hash;
+                            }
+                          } > $out
+                      '';
+
+                    nodeExporterFull = {
+                      name = "Node Exporter Full";
+                      options.path = mkDashboard {
+                        name = "node-exporter-full.json";
+                        title = "Compute · Nodes";
+                        url = "https://grafana.com/api/dashboards/1860/revisions/37/download";
+                        hash = "sha256-1DE1aaanRHHeCOMWDGdOS1wBXxOF84UXAjJzT5Ek6mM=";
+                      };
+                      orgId = 1;
+                    };
+
+                    smartctlExporter = {
+                      name = "Smartctl Exporter";
+                      options.path = mkDashboard {
+                        name = "smartctl.json";
+                        title = "Storage · SMART";
+                        url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/smartctl/smartctl.json";
+                        hash = "sha256-B6cWUiGsM3dbx2BVUdnaqjYVQgTzd/y7DNm2Rq1Cvws=";
+                      };
+                      orgId = 1;
+                    };
+
+                    zfsStats = {
+                      name = "ZFS stats";
+                      options.path = mkDashboard {
+                        name = "zfs-stats.json";
+                        title = "Storage · ZFS";
+                        url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/zfs/zfs-stats.json";
+                        hash = "sha256-1+DFTJXC9w41dYVHiarCN3QqWX6WCE053Sj0BktE2Bg=";
+                      };
+                      orgId = 1;
+                    };
+                    singBoxTraffic =
+                      if cfg.remoteDashboards || config.${namespace}.containers.sing-box.enable then
+                        [
+                          {
+                            name = "sing-box traffic";
+                            options.path = ./dashboards/sing-box-traffic.json;
+                            orgId = 1;
+                          }
+                        ]
+                      else
+                        [ ];
+                    logs =
                       if config.${namespace}.containers.loki.enable then
                         [
                           {
-                            name = "Loki";
-                            uid = "loki";
-                            type = "loki";
-                            access = "proxy";
-                            url = "http://${cfg.hostAddress}:3030";
+                            name = "Logs dashboard";
+                            options.path = mkDashboard {
+                              name = "logs.json";
+                              title = "Logs · Applications";
+                              url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/monitoring/Logs-promtail.json";
+                              hash = "sha256-GuwnN2VkEbqa3HNApYmu7482pgRDmC2EJx2DJpl7ZJo=";
+                            };
+                            orgId = 1;
+                          }
+                        ]
+                      else
+                        [ ];
+                    authelia =
+                      if cfg.remoteDashboards || config.${namespace}.containers.authelia.enable then
+                        [
+                          {
+                            name = "Authelia dashboard";
+                            options.path = mkDashboard {
+                              name = "authelia.json";
+                              title = "Security · Authelia";
+                              url = "https://raw.githubusercontent.com/authelia/authelia/refs/heads/master/examples/grafana-dashboards/simple.json";
+                              hash = "sha256-y+WbEev4ezdJyorjnnZi37CL1Pd9PxYAvl5N0hsFJnk=";
+                            };
+                            orgId = 1;
+                          }
+                        ]
+                      else
+                        [ ];
+                    traefik =
+                      if cfg.remoteDashboards || config.${namespace}.containers.traefik.enable then
+                        [
+                          {
+                            name = "Traefik via Loki dashboard";
+                            options.path = mkDashboard {
+                              name = "traefik.json";
+                              title = "Network · Traefik";
+                              url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/traefik/traefik-via-loki.json";
+                              hash = "sha256-KsYXA/rZC7AHy2YnUu5VDaQb2gnl4obkCoHLYp8b+Rg=";
+                            };
+                            orgId = 1;
+                          }
+                        ]
+                      else
+                        [ ];
+                    nut =
+                      if cfg.remoteDashboards || config.${namespace}.containers.ups.enable then
+                        [
+                          {
+                            name = "UPS info via NUT prometheus exporter";
+                            options.path = mkDashboard {
+                              name = "ups.json";
+                              title = "Power · UPS";
+                              url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/6caacb895957ccfbbc5a015c5c6d3afe0a7c9096/ups/prometheus-nut-exporter.json";
+                              hash = "sha256-413TxCcXNU01XvvY5O+oZPxz7UDSTchoJg9irxdqKFc=";
+                            };
+                            orgId = 1;
                           }
                         ]
                       else
                         [ ];
                   in
-                  [ prometheus ] ++ loki;
+                  [
+                    nodeExporterFull
+                    smartctlExporter
+                    zfsStats
+                  ]
+                  ++ singBoxTraffic
+                  ++ logs
+                  ++ authelia
+                  ++ traefik
+                  ++ nut;
               };
-              # All dashboards live flat in the General folder (no `folder`
-              # set on any provider). Titles are unified to a
-              # "Category · Subject" pattern via `mkDashboard`, which rewrites
-              # the fetched JSON's `.title` with jq — this normalises the two
-              # external dashboards (Node Exporter Full, Authelia) alongside
-              # our own without editing their upstream sources. The dashboard
-              # uid is preserved, so the rename is an in-place update.
-              dashboards.settings.providers =
-                let
-                  mkDashboard =
-                    {
-                      name,
-                      title,
-                      url,
-                      hash,
-                    }:
-                    pkgs.runCommand name { nativeBuildInputs = [ pkgs.jq ]; } ''
-                      jq --arg title ${lib.escapeShellArg title} \
-                        --arg job ${lib.escapeShellArg (if name == "smartctl.json" then "smartctl" else "node")} \
-                        '.title = $title | walk(if type == "string" then gsub("127\\.0\\.0\\.1:(3021|9633)"; "zanoza") | gsub("job=\"nodes\""; "job=\"" + $job + "\"") else . end)'  \
-                        ${
-                          pkgs.fetchurl {
-                            name = "${name}-src";
-                            inherit url hash;
-                          }
-                        } > $out
-                    '';
-
-                  nodeExporterFull = {
-                    name = "Node Exporter Full";
-                    options.path = mkDashboard {
-                      name = "node-exporter-full.json";
-                      title = "Compute · Nodes";
-                      url = "https://grafana.com/api/dashboards/1860/revisions/37/download";
-                      hash = "sha256-1DE1aaanRHHeCOMWDGdOS1wBXxOF84UXAjJzT5Ek6mM=";
-                    };
-                    orgId = 1;
-                  };
-
-                  smartctlExporter = {
-                    name = "Smartctl Exporter";
-                    options.path = mkDashboard {
-                      name = "smartctl.json";
-                      title = "Storage · SMART";
-                      url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/smartctl/smartctl.json";
-                      hash = "sha256-B6cWUiGsM3dbx2BVUdnaqjYVQgTzd/y7DNm2Rq1Cvws=";
-                    };
-                    orgId = 1;
-                  };
-
-                  zfsStats = {
-                    name = "ZFS stats";
-                    options.path = mkDashboard {
-                      name = "zfs-stats.json";
-                      title = "Storage · ZFS";
-                      url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/zfs/zfs-stats.json";
-                      hash = "sha256-1+DFTJXC9w41dYVHiarCN3QqWX6WCE053Sj0BktE2Bg=";
-                    };
-                    orgId = 1;
-                  };
-                  singBoxTraffic =
-                    if cfg.remoteDashboards || config.${namespace}.containers.sing-box.enable then
-                      [
-                        {
-                          name = "sing-box traffic";
-                          options.path = ./dashboards/sing-box-traffic.json;
-                          orgId = 1;
-                        }
-                      ]
-                    else
-                      [ ];
-                  logs =
-                    if config.${namespace}.containers.loki.enable then
-                      [
-                        {
-                          name = "Logs dashboard";
-                          options.path = mkDashboard {
-                            name = "logs.json";
-                            title = "Logs · Applications";
-                            url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/monitoring/Logs-promtail.json";
-                            hash = "sha256-GuwnN2VkEbqa3HNApYmu7482pgRDmC2EJx2DJpl7ZJo=";
-                          };
-                          orgId = 1;
-                        }
-                      ]
-                    else
-                      [ ];
-                  authelia =
-                    if cfg.remoteDashboards || config.${namespace}.containers.authelia.enable then
-                      [
-                        {
-                          name = "Authelia dashboard";
-                          options.path = mkDashboard {
-                            name = "authelia.json";
-                            title = "Security · Authelia";
-                            url = "https://raw.githubusercontent.com/authelia/authelia/refs/heads/master/examples/grafana-dashboards/simple.json";
-                            hash = "sha256-y+WbEev4ezdJyorjnnZi37CL1Pd9PxYAvl5N0hsFJnk=";
-                          };
-                          orgId = 1;
-                        }
-                      ]
-                    else
-                      [ ];
-                  traefik =
-                    if cfg.remoteDashboards || config.${namespace}.containers.traefik.enable then
-                      [
-                        {
-                          name = "Traefik via Loki dashboard";
-                          options.path = mkDashboard {
-                            name = "traefik.json";
-                            title = "Network · Traefik";
-                            url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/traefik/traefik-via-loki.json";
-                            hash = "sha256-KsYXA/rZC7AHy2YnUu5VDaQb2gnl4obkCoHLYp8b+Rg=";
-                          };
-                          orgId = 1;
-                        }
-                      ]
-                    else
-                      [ ];
-                  nut =
-                    if cfg.remoteDashboards || config.${namespace}.containers.ups.enable then
-                      [
-                        {
-                          name = "UPS info via NUT prometheus exporter";
-                          options.path = mkDashboard {
-                            name = "ups.json";
-                            title = "Power · UPS";
-                            url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/6caacb895957ccfbbc5a015c5c6d3afe0a7c9096/ups/prometheus-nut-exporter.json";
-                            hash = "sha256-413TxCcXNU01XvvY5O+oZPxz7UDSTchoJg9irxdqKFc=";
-                          };
-                          orgId = 1;
-                        }
-                      ]
-                    else
-                      [ ];
-                in
-                [
-                  nodeExporterFull
-                  smartctlExporter
-                  zfsStats
-                ]
-                ++ singBoxTraffic
-                ++ logs
-                ++ authelia
-                ++ traefik
-                ++ nut;
             };
-          };
 
-          systemd.services.grafana = {
-            serviceConfig = {
-              EnvironmentFile = [
-                config.sops.secrets."grafana/telegram-token".path
-              ];
+            systemd.services.grafana = {
+              serviceConfig = {
+                EnvironmentFile = [
+                  config.sops.secrets."grafana/telegram-token".path
+                ];
+              };
             };
-          };
-          networking = {
-            firewall = {
+            networking = {
+              firewall = {
+                enable = true;
+                allowedTCPPorts = [ 3000 ];
+              };
+
+              useHostResolvConf = lib.mkForce false;
+            };
+
+            services.resolved = {
               enable = true;
-              allowedTCPPorts = [ 3000 ];
+              settings.Resolve = householdDnsSettings;
             };
-
-            useHostResolvConf = lib.mkForce false;
+            system.stateVersion = "24.11";
           };
-
-          services.resolved = {
-            enable = true;
-            settings.Resolve = householdDnsSettings;
-          };
-          system.stateVersion = "24.11";
-        };
-    };
-  };
+      };
+    })
+  ];
 }

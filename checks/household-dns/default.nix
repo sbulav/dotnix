@@ -29,6 +29,10 @@ let
               type = lib.types.attrs;
               default = { };
             };
+            assertions = lib.mkOption {
+              type = lib.types.listOf lib.types.attrs;
+              default = [ ];
+            };
           };
           config.custom.containers.adguard = {
             enable = true;
@@ -52,7 +56,23 @@ let
   answer = name: (builtins.head (builtins.filter (r: r.domain == name) records)).answer;
   domains = map (r: r.domain) records;
   resolved = lib.custom.dns.resolvedSettings;
+  dns = lib.custom.dns;
+  holds = cfg: builtins.all (a: a.assertion) cfg.assertions;
+  # A resolver that is not served by an AdGuard container is a dead address.
+  serves =
+    cfg: address:
+    cfg.custom.containers.adguard.localAddress == address
+    || cfg.networking.nat.externalIP or null == address;
 in
+# Each resolver advertised to clients is served by exactly one of the two shapes.
+assert holds zanoza && holds beez;
+assert serves zanoza dns.resolverAddresses.zanoza && !serves beez dns.resolverAddresses.zanoza;
+assert serves beez dns.resolverAddresses.beez && !serves zanoza dns.resolverAddresses.beez;
+assert
+  !holds (evaluate {
+    localAddress = "172.16.64.105";
+  });
+assert dns.ingress == dns.hosts.zanoza;
 assert z.settings.filtering == b.settings.filtering;
 assert z.settings.filters == b.settings.filters;
 assert z.settings.dns.upstream_dns == b.settings.dns.upstream_dns;
@@ -66,7 +86,8 @@ assert !z.mutableSettings && !b.mutableSettings;
 assert builtins.length domains == builtins.length (lib.unique domains);
 assert answer "home.sbulav.ru" == "192.168.89.207";
 assert answer "prometheus.sbulav.ru" == "192.168.89.207";
-assert answer "loki.sbulav.ru" == "192.168.89.207";
+assert answer "grafana.sbulav.ru" == "192.168.89.207";
+assert !(builtins.elem "loki.sbulav.ru" domains);
 assert answer "beez.sbulav.ru" == "192.168.92.194";
 assert resolved.DNS == "172.16.64.104 192.168.92.194" && resolved.FallbackDNS == "";
 assert

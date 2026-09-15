@@ -2,6 +2,7 @@
 # your system.  Help is available in the configuration.nix(5) man page
 # and in the NixOS manual (accessible by running 'nixos-help').
 {
+  config,
   pkgs,
   lib,
   ...
@@ -54,13 +55,16 @@ in
   #   };
   # };
 
+  # Containers here use 172.16.65.0/24, which lies inside the 172.16.64.0/18
+  # the router routes to zanoza: from the LAN (zanoza included) these
+  # addresses are unreachable except through the port forwards below.
   custom.containers.adguard = {
     enable = true;
     publishWeb = false;
     externalInterface = "enp1s0";
     hostAddress = "172.16.65.10";
     localAddress = "172.16.65.104";
-    listenAddress = "192.168.92.194";
+    listenAddress = lib.custom.dns.resolverAddresses.beez;
     hostMappings = lib.custom.dns.hostMappings;
   };
 
@@ -70,6 +74,7 @@ in
       publishWeb = false;
       scrapeConfigs =
         let
+          zanoza = lib.custom.dns.hosts.zanoza;
           target = host: address: {
             targets = [ address ];
             labels = {
@@ -83,7 +88,7 @@ in
             job_name = "node";
             static_configs = [
               (target "beez" "127.0.0.1:9100")
-              (target "zanoza" "192.168.89.207:3021")
+              (target "zanoza" "${zanoza}:3021")
               (target "mz" "mz:9100")
             ];
           }
@@ -91,7 +96,7 @@ in
             job_name = "smartctl";
             static_configs = [
               (target "beez" "127.0.0.1:9633")
-              (target "zanoza" "192.168.89.207:9633")
+              (target "zanoza" "${zanoza}:9633")
               (target "mz" "mz:9633")
             ];
           }
@@ -100,7 +105,7 @@ in
             metrics_path = "/ups_metrics";
             static_configs = [
               {
-                targets = [ "192.168.89.207:9199" ];
+                targets = [ "${zanoza}:9199" ];
                 labels = {
                   host = "zanoza";
                   instance = "zanoza";
@@ -133,16 +138,24 @@ in
 
   # All monitoring state is on the root NVMe; no zanoza or USB mount dependency.
   systemd.tmpfiles.rules = [ "d /var/lib/grafana/data 0750 196 999 -" ];
-  # DNAT through the existing container NAT, restricted to zanoza's ingress.
+  # zanoza's Traefik reaches Grafana through the container NAT on this host's
+  # LAN address; the forward itself is the NAT module's, the source filter is
+  # ours (NixOS does not filter FORWARD). Prometheus and Loki listen on the
+  # host and take only zanoza's ingress.
+  networking.nat.forwardPorts = [
+    {
+      proto = "tcp";
+      sourcePort = 3000;
+      destination = "${config.custom.containers.grafana.localAddress}:3000";
+    }
+  ];
   networking.firewall.extraCommands = ''
-    iptables -t nat -A PREROUTING -s 192.168.89.207 -d 192.168.92.194 -p tcp --dport 3000 -j DNAT --to-destination 172.16.65.112:3000
-    iptables -A nixos-fw -s 192.168.89.207 -p tcp -m multiport --dports 9090,3030 -j nixos-fw-accept
-    iptables -A nixos-fw -s 172.16.64.0/24 -p tcp -m multiport --dports 9090,3030 -j nixos-fw-accept
+    iptables -A FORWARD -o ve-grafana -p tcp --dport 3000 ! -s ${lib.custom.dns.hosts.zanoza} -j DROP
+    iptables -A nixos-fw -s ${lib.custom.dns.hosts.zanoza} -p tcp -m multiport --dports 9090,3030 -j nixos-fw-accept
   '';
   networking.firewall.extraStopCommands = ''
-    iptables -t nat -D PREROUTING -s 192.168.89.207 -d 192.168.92.194 -p tcp --dport 3000 -j DNAT --to-destination 172.16.65.112:3000 || true
-    iptables -D nixos-fw -s 192.168.89.207 -p tcp -m multiport --dports 9090,3030 -j nixos-fw-accept || true
-    iptables -D nixos-fw -s 172.16.64.0/24 -p tcp -m multiport --dports 9090,3030 -j nixos-fw-accept || true
+    iptables -D FORWARD -o ve-grafana -p tcp --dport 3000 ! -s ${lib.custom.dns.hosts.zanoza} -j DROP || true
+    iptables -D nixos-fw -s ${lib.custom.dns.hosts.zanoza} -p tcp -m multiport --dports 9090,3030 -j nixos-fw-accept || true
   '';
   # Evaluation and actual builders are separate processes; cap their aggregate.
   systemd.slices.nix-builds.sliceConfig = {
@@ -170,17 +183,18 @@ in
     MemoryLow = "512M";
   };
 
+  # Scraped by the local Prometheus over loopback only.
   custom.services.prometheus-exporters = {
     enable = true;
     node = {
       enable = true;
       port = 9100;
-      openFirewall = true;
+      openFirewall = false;
     };
     smartctl = {
       enable = true;
       port = 9633;
-      openFirewall = true;
+      openFirewall = false;
       devices = [ "/dev/nvme0n1" ];
     };
   };

@@ -21,7 +21,7 @@ in
     hostAddress = mkOpt str "172.16.64.10" "With private network, which address to use on Host";
     localAddress = mkOpt str "172.16.64.104" "With privateNetwork, which address to use in container";
     rewriteAddress =
-      mkOpt str "192.168.89.207"
+      mkOpt str lib.custom.dns.ingress
         "IP address or CNAME to create DNS rewrites(local DNS entries) to";
     hostMappings = mkOpt (listOf (submodule {
       options = {
@@ -32,6 +32,20 @@ in
   };
 
   config = mkIf cfg.enable {
+    # The address clients are told to use must be one this container serves:
+    # the container address when routed directly, the forwarding host address
+    # otherwise. `lib.custom.dns.resolvers` is what every client is handed.
+    assertions =
+      let
+        advertised = if cfg.listenAddress != null then cfg.listenAddress else cfg.localAddress;
+      in
+      [
+        {
+          assertion = elem advertised lib.custom.dns.resolvers;
+          message = "custom.containers.adguard serves ${advertised}, which is not in lib.custom.dns.resolvers ${builtins.toJSON lib.custom.dns.resolvers}";
+        }
+      ];
+
     # Host lookups prefer its own resolver; DHCP must not append a public bypass.
     networking.nameservers = [
       cfg.localAddress
@@ -90,7 +104,9 @@ in
       autoStart = true;
 
       privateNetwork = true;
-      # Need to add 172.16.64.0/18 on router
+      # The router routes 172.16.64.0/18 to zanoza. A container on any other
+      # host must sit inside that range too (beez uses 172.16.65.0/24), so it
+      # is reachable from the LAN only through its host's port forwards.
       hostAddress = cfg.hostAddress;
       localAddress = cfg.localAddress;
 
