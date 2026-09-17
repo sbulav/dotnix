@@ -284,8 +284,16 @@ in
               dns.servers = [
                 {
                   # The system resolver handles household resolver failover.
+                  # prefer_go is load-bearing: without it sing-box 1.13's
+                  # "local" server asks systemd-resolved over D-Bus for
+                  # *per-link* nameservers, and this container only has the
+                  # global DNS= list — every lookup then fails with "link has
+                  # no DNS servers configured" and the whole proxy goes dark.
+                  # prefer_go routes lookups through the 127.0.0.53 stub,
+                  # which is where the household resolver list actually is.
                   type = "local";
                   tag = "adguard";
+                  prefer_go = true;
                 }
               ];
               inbounds = [
