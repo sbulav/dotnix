@@ -15,6 +15,11 @@ import lists:
 - Homes: `homes/{arch}/{user}@{hostname}/default.nix`
 - Packages: `packages/{name}/default.nix` → `pkgs.custom.{name}`
 - Overlays: `overlays/{name}/default.nix` → applied to every system
+- Agent docs: `modules/home/ai/shared/skill/{name}.nix` (general) and
+  `modules/home/ai/shared/workflow/skill/{name}.nix` (workflow) → rendered to
+  SKILL.md for both Claude Code and opencode by `shared/registry.nix`; opencode
+  agent prompts live in `modules/home/ai/opencode/agent/`. Editing any of these
+  is a job for the `writing-for-agents` skill.
 
 Reach everything through the namespace: `config.custom.*`, `pkgs.custom.*`,
 `lib.custom.*`. `lib.snowfall.fs.get-file "path"` resolves a path relative to

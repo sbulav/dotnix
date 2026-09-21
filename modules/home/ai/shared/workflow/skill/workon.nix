@@ -3,7 +3,7 @@ let
 in
 {
   name = "workon";
-  version = "1.2.0";
+  version = "1.3.0";
   description = "Resume and work on a Forgejo issue — read state, then implement. Use with an issue number, or infer from the current issue branch when unambiguous.";
   "argument-hint" = "[issue-number|TPL-key]";
   "disable-model-invocation" = true;
@@ -43,7 +43,7 @@ in
         - If JSON comments are unavailable, fall back to rendered `tea issues --comments` output and use the visible `**AI-HANDOFF**` heading plus the adjacent status block.
      5. If local `tea` does not return usable comment text, say that clearly and continue from issue body + PR state + branch state.
      6. Check for an open or merged PR related to the issue branch.
-     7. Check the current branch and working tree state.
+     7. Check the current branch and working tree state. A merge or rebase left in flight — unmerged paths, conflict markers, a `REBASE_HEAD` — is the first thing to finish: call the Skill tool with `resolving-merge-conflicts` before any implementation work.
      8. Summarize:
         - issue
         - handoff status

@@ -25,7 +25,7 @@ jobs:
         uses: DeterminateSystems/flake-checker-action@v14
 
       - name: Check formatting
-        run: git ls-files -z '*.nix' | xargs -0 nix fmt -- --check
+        run: nix fmt -- --ci
 
       # These expose the existing lint baseline without blocking configuration
       # validation. New warnings should still be fixed when touching a file.

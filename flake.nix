@@ -118,7 +118,7 @@
       };
 
       outputs-builder = channels: {
-        formatter = channels.nixpkgs.nixfmt;
+        formatter = channels.nixpkgs.nixfmt-tree;
       };
 
       overlays = with inputs; [

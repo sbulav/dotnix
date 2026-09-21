@@ -4,8 +4,8 @@
 # or AGENTS.md is being authored, without the user remembering it exists.
 {
   name = "writing-for-agents";
-  version = "2.0.0";
-  description = "Writing documents for agents: skills, AGENTS.md/CLAUDE.md, and any doc an agent reaches by a pointer. Use when creating or editing skills, or modifying AGENTS.md or CLAUDE.md.";
+  version = "2.1.0";
+  description = "Writing documents for agents: skills, AGENTS.md/CLAUDE.md, agent prompts, and any doc an agent reaches by a pointer. Use when creating or editing anything under `modules/home/ai/` — skills are Nix attrsets there, not SKILL.md files — or when modifying AGENTS.md or CLAUDE.md.";
   allowed-tools = [
     "Read"
     "Grep"

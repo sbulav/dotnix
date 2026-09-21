@@ -59,7 +59,7 @@ other active outputs are evaluation-only to keep pull request builds bounded.
 Run the strict local checks with:
 
 ```sh
-git ls-files -z '*.nix' | xargs -0 nix fmt -- --check
+nix fmt -- --ci
 nix flake check --no-build --no-write-lock-file
 ```
 

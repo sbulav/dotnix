@@ -1,6 +1,6 @@
 {
   name = "delegate";
-  version = "1.5.0";
+  version = "1.6.0";
   description = "Split a task or a batch of issues into subtasks and route each to the cheapest-capable model via opencode run. Use for multi-model orchestration, delegating grunt work to cheap models, issue-batch swarms with git worktrees, parallel investigations, and cross-model reviews.";
   "argument-hint" = "[task, issue number(s), or repo issue list]";
   "user-invocable" = true;
@@ -11,6 +11,7 @@
     "Glob"
     "Write"
     "TodoWrite"
+    "Skill"
   ];
   content = ''
     # Delegate: Multi-Model Task Router
@@ -33,7 +34,9 @@
     5. **Verify** every worker's output yourself before integrating: read the diff, run
        the build/tests, check claims against evidence. NEVER trust a worker's "done".
     6. **Integrate** results and produce a routing report:
-       `subtask -> model/variant -> outcome -> verification evidence`.
+       `subtask -> model/variant -> outcome -> verification evidence`. When integration
+       stops on conflicts, call the Skill tool with `resolving-merge-conflicts` — the
+       sides are sibling slices of one parent, and it resolves them by intent.
 
     **Keep deep reasoning close to home.** The orchestrator session (Claude work
     subscription or the opencode driver model) is flat-rate and top-tier. Delegate deep
@@ -214,7 +217,9 @@
        (`git commit -F <tmpfile>`, never heredocs), push the branch, and open the PR
        (`tea pr create` with a brief description referencing the issue). No approval
        gate. Stop when the PR is ready for review and merge — do NOT merge; merging is
-       the user's decision.
+       the user's decision. If a branch must rebase onto main first and the rebase stops
+       on conflicts, call the Skill tool with `resolving-merge-conflicts`; never
+       `--abort` to get the wave moving.
     7. **Report**: final table — `issue -> model -> review verdict -> PR link`. Clean up
        merged worktrees only when the user confirms merges are done.
 
