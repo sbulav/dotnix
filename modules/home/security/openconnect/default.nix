@@ -20,6 +20,19 @@ let
   splitDnsServers = escapeShellArgs cfg.splitDns.servers;
   splitDnsDomains = escapeShellArgs cfg.splitDns.domains;
 
+  # myvpn owns split DNS via /etc/resolver (dns_up/dns_down), which keeps the
+  # default resolvers intact. The stock vpnc-script would instead hijack
+  # global DNS on connect (corp-only /etc/resolv.conf plus `networksetup
+  # -setdnsservers <active-service>`), breaking everything outside the
+  # tunnel — and with an always-on VPN (AliceVPN/WARP) holding the default
+  # route its active-interface detection misfires on top of that. So on
+  # Darwin openconnect is pointed at this wrapper, which lets vpnc-script
+  # install routes but suppresses its DNS handling entirely.
+  dnsLessVpncScript = pkgs.writeShellScript "myvpn-vpnc-script" ''
+    unset INTERNAL_IP4_DNS INTERNAL_IP6_DNS
+    exec ${pkgs.vpnc-scripts}/bin/vpnc-script "$@"
+  '';
+
   # Ownership marker written into every /etc/resolver file myvpn creates, so
   # cleanup can recognise its own entries without depending on state under
   # /var/run (which macOS clears on boot) and can refuse to clobber resolver
@@ -77,15 +90,41 @@ let
         /usr/bin/awk '$1 == "interface:" { print $2; exit }'
     }
 
+    # First default route with a real gateway address. Point-to-point
+    # interfaces installed by always-on VPNs (AliceVPN, WARP) show up as
+    # `default link#N ...` with no gateway line at all, so the old
+    # `route -n get default` parsing returned empty while such a VPN held
+    # the default and route_up died with "could not discover the current
+    # LAN gateway". Same filter as vpnc-script's get_default_gw.
     default_gateway() {
-      "$ROUTE_BIN" -n get default 2>/dev/null |
-        /usr/bin/awk '$1 == "gateway:" { print $2; exit }'
+      /usr/sbin/netstat -r -n -f inet 2>/dev/null |
+        /usr/bin/awk '/:/ { next } /link#/ { next } $1 == "default" { print $2; exit }' || true
+    }
+
+    list_utuns() {
+      /sbin/ifconfig -l 2>/dev/null | /usr/bin/tr ' ' '\n' | /usr/bin/grep '^utun[0-9]*$' || true
+    }
+
+    # Snapshot of the utun interfaces that exist before dialling, taken by
+    # do_up. openconnect creates exactly one new utun for its tunnel, so
+    # readiness is "a utun that was not there before and has an IPv4
+    # address" — independent of which routes the server pushes and immune
+    # to utuns owned by other VPNs.
+    snapshot_utuns() {
+      PRE_UTUNS="$(list_utuns | /usr/bin/tr '\n' ' ')"
     }
 
     tunnel_ready() {
-      local interface
-      interface="$(route_interface "$LAN_CIDR")"
-      [[ "$interface" =~ ^utun[0-9]+$ ]]
+      local dev
+      for dev in $(list_utuns); do
+        case " $PRE_UTUNS " in
+          *" $dev "*) continue ;;
+        esac
+        if /sbin/ifconfig "$dev" 2>/dev/null | /usr/bin/grep -q '^[[:space:]]*inet '; then
+          return 0
+        fi
+      done
+      return 1
     }
 
     route_up() {
@@ -246,6 +285,7 @@ let
       ${optionalString isLinux "LAN_GATEWAY=${escapeShellArg cfg.routes.lanGateway}"}
       STATE_DIR="${stateRoot}/myvpn-$UID"
       PID_FILE="$STATE_DIR/openconnect.pid"
+      ${optionalString (!isLinux) "VPNC_SCRIPT=${escapeShellArg dnsLessVpncScript}"}
       SPLIT_DNS_SERVERS=( ${splitDnsServers} )
       SPLIT_DNS_DOMAINS=( ${splitDnsDomains} )
       ${optionalString (!isLinux) "RESOLVER_MARKER=${escapeShellArg resolverMarker}"}
@@ -376,6 +416,7 @@ let
 
         ensure_state_dir
         "$SUDO_BIN" ${pkgs.coreutils}/bin/rm -f "$PID_FILE"
+        ${optionalString (!isLinux) "snapshot_utuns"}
 
         local openconnect_args=(
           --background
@@ -383,6 +424,7 @@ let
           --passwd-on-stdin
           -u "$OPENCONNECT_USER"
         )
+        ${optionalString (!isLinux) ''openconnect_args+=(--script "$VPNC_SCRIPT")''}
         ${optionalString cfg.disableDtls "openconnect_args+=(--no-dtls)"}
         ${optionalString isLinux ''openconnect_args+=(--interface "$INTERFACE")''}
 
