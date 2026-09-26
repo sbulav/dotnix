@@ -86,7 +86,7 @@ assert !z.mutableSettings && !b.mutableSettings;
 assert builtins.length domains == builtins.length (lib.unique domains);
 assert answer "home.sbulav.ru" == "192.168.89.207";
 assert answer "prometheus.sbulav.ru" == "192.168.89.207";
-assert answer "grafana.sbulav.ru" == "192.168.89.207";
+assert answer "grafana.sbulav.ru" == "192.168.92.194";
 assert !(builtins.elem "loki.sbulav.ru" domains);
 assert answer "beez.sbulav.ru" == "192.168.92.194";
 assert resolved.DNS == "172.16.64.104 192.168.92.194" && resolved.FallbackDNS == "";

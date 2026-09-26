@@ -22,12 +22,13 @@ let
     resolverAddresses.beez
   ];
   # Traefik and Authelia live on zanoza; every published service name resolves
-  # there, whichever host runs the backend.
+  # there, whichever host runs the backend. Grafana is the exception: beez
+  # publishes it with its own Traefik so dashboards stay reachable while
+  # zanoza or the work site is down (see `beezIngressNames`).
   ingress = hosts.zanoza;
   ingressNames = [
     "authelia"
     "flood"
-    "grafana"
     "herdr"
     "herdr-relay"
     "home"
@@ -42,6 +43,7 @@ let
     "sonarr"
     "traefik"
   ];
+  beezIngressNames = [ "grafana" ];
 in
 {
   dns = {
@@ -61,6 +63,10 @@ in
         hostname = "${name}.sbulav.ru";
         ip = ingress;
       }) ingressNames)
+      ++ (map (name: {
+        hostname = "${name}.sbulav.ru";
+        ip = hosts.beez;
+      }) beezIngressNames)
       ++
         lib.concatMap
           (name: [

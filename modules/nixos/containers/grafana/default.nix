@@ -19,6 +19,10 @@ in
       Publish this host's Grafana routes for a Grafana running elsewhere, at
       this URL. The container itself stays disabled here.'';
     remoteDashboards = mkBoolOpt false "Include dashboards for services collected remotely";
+    externalMiddlewares = mkOpt (listOf str) [ "auth-chain" ] ''
+      Middlewares on the route serving clients outside the LAN. A host whose
+      Traefik cannot reach Authelia (beez, while zanoza is down) drops
+      `auth-chain` and relies on Grafana's own login instead.'';
     dataPath = mkOpt str "/tank/grafana" "Grafana data path on host machine";
     host = mkOpt str "grafana.sbulav.ru" "The host to serve grafana on";
     hostAddress = mkOpt str "172.16.64.10" "With private network, which address to use on Host";
@@ -53,6 +57,7 @@ in
           grafana = {
             inherit url;
             host = cfg.host;
+            middlewares = cfg.externalMiddlewares;
           };
           "allowedips-grafana" = {
             inherit url;
@@ -105,7 +110,7 @@ in
         # 172.16.64.0/18 here, so the container answers the LAN directly. On
         # beez the container sits at 172.16.65.112 -- inside that same /18, so
         # the router still sends LAN traffic to zanoza -- and is reached only
-        # through beez's own port forward for 3000.
+        # through beez's own host-network Traefik.
         hostAddress = "${cfg.hostAddress}";
         localAddress = "${cfg.localAddress}";
 

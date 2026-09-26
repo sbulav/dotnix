@@ -330,9 +330,10 @@ in
   networking.firewall.extraStopCommands = ''
     iptables -D nixos-fw -s ${lib.custom.dns.hosts.beez} -p tcp -m multiport --dports 3021,9633,9199 -j nixos-fw-accept || true
   '';
-  # Prometheus and Grafana run on beez; their public routes stay on this ingress.
+  # Prometheus runs on beez; its public route stays on this ingress. Grafana
+  # runs on beez too but beez publishes it itself, so dashboards survive a
+  # zanoza / work-site outage (grafana.sbulav.ru points at the home site).
   custom.containers.prometheus.remoteBackend = "http://${lib.custom.dns.hosts.beez}:9090";
-  custom.containers.grafana.remoteBackend = "http://${lib.custom.dns.hosts.beez}:3000";
 
   environment.systemPackages = with pkgs; [
     nixd # LSP for nix

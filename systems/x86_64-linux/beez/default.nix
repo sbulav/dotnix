@@ -124,37 +124,47 @@ in
       enable = true;
       retention.enable = true;
     };
+    # Published by this host's Traefik (below) so dashboards stay reachable
+    # while zanoza or the work site is down. Authelia lives on zanoza, so the
+    # public route skips `auth-chain`; Grafana's own login guards it.
     grafana = {
       enable = true;
-      publishWeb = false;
+      publishWeb = true;
+      externalMiddlewares = [ "secure-headers" ];
       remoteDashboards = true;
       dataPath = "/var/lib/grafana";
       hostAddress = "172.16.65.10";
       localAddress = "172.16.65.112";
       secret_file = "secrets/beez/monitoring.yaml";
     };
+    # Independent ingress for the services published from this host (only
+    # Grafana today): wildcard *.sbulav.ru certificate via Cloudflare DNS-01,
+    # ports 80/443 forwarded here by the home router. Runs on the host
+    # network, so it reaches the Grafana container address directly.
+    traefik = {
+      enable = true;
+      cf_secret_file = "secrets/beez/default.yaml";
+      domain = "sbulav.ru";
+      dataPath = "/var/lib/traefik";
+    };
   };
   custom.services.alloy.enable = true;
 
   # All monitoring state is on the root NVMe; no zanoza or USB mount dependency.
-  systemd.tmpfiles.rules = [ "d /var/lib/grafana/data 0750 196 999 -" ];
-  # zanoza's Traefik reaches Grafana through the container NAT on this host's
-  # LAN address; the forward itself is the NAT module's, the source filter is
-  # ours (NixOS does not filter FORWARD). Prometheus and Loki listen on the
-  # host and take only zanoza's ingress.
-  networking.nat.forwardPorts = [
-    {
-      proto = "tcp";
-      sourcePort = 3000;
-      destination = "${config.custom.containers.grafana.localAddress}:3000";
-    }
+  # Traefik runs as the first dynamically allocated system user of its
+  # ephemeral container (999), the same id the cloudflare env secret is
+  # owned by.
+  systemd.tmpfiles.rules = [
+    "d /var/lib/grafana/data 0750 196 999 -"
+    "d /var/lib/traefik 0750 999 999 -"
+    "d /var/lib/traefik/certs 0750 999 999 -"
+    "d /var/lib/traefik/logs 0750 999 999 -"
   ];
+  # Prometheus and Loki listen on the host and take only zanoza's ingress.
   networking.firewall.extraCommands = ''
-    iptables -A FORWARD -o ve-grafana -p tcp --dport 3000 ! -s ${lib.custom.dns.hosts.zanoza} -j DROP
     iptables -A nixos-fw -s ${lib.custom.dns.hosts.zanoza} -p tcp -m multiport --dports 9090,3030 -j nixos-fw-accept
   '';
   networking.firewall.extraStopCommands = ''
-    iptables -D FORWARD -o ve-grafana -p tcp --dport 3000 ! -s ${lib.custom.dns.hosts.zanoza} -j DROP || true
     iptables -D nixos-fw -s ${lib.custom.dns.hosts.zanoza} -p tcp -m multiport --dports 9090,3030 -j nixos-fw-accept || true
   '';
   # Evaluation and actual builders are separate processes; cap their aggregate.
