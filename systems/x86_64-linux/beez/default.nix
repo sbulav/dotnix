@@ -151,14 +151,14 @@ in
   custom.services.alloy.enable = true;
 
   # All monitoring state is on the root NVMe; no zanoza or USB mount dependency.
-  # Traefik runs as the first dynamically allocated system user of its
-  # ephemeral container (999), the same id the cloudflare env secret is
-  # owned by.
+  # Traefik runs as uid 997 inside its ephemeral container (the container
+  # allocates system users top-down from 999; systemd-network/resolve take
+  # the first two). No user namespacing, so the host dirs carry that id.
   systemd.tmpfiles.rules = [
     "d /var/lib/grafana/data 0750 196 999 -"
-    "d /var/lib/traefik 0750 999 999 -"
-    "d /var/lib/traefik/certs 0750 999 999 -"
-    "d /var/lib/traefik/logs 0750 999 999 -"
+    "d /var/lib/traefik 0750 997 997 -"
+    "d /var/lib/traefik/certs 0750 997 997 -"
+    "d /var/lib/traefik/logs 0750 997 997 -"
   ];
   # Prometheus and Loki listen on the host and take only zanoza's ingress.
   networking.firewall.extraCommands = ''
