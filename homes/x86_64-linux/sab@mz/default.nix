@@ -157,7 +157,7 @@ in
         signingKey = "15DB4B4A58D027CB73D0E911D06334BAEC6DC034"; # YubiKey key (fallback: 7C43420F61CEC7FB)
       };
       k9s = enabled;
-      opentofu = enabled;
+      opentofu = disabled;
       tea = enabled;
       record-screen = enabled;
       sqlite-jira = enabled;

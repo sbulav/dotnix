@@ -31,7 +31,7 @@ in
         feh = disabled;
         slack = disabled;
         zoom-us = disabled;
-        telegram = enabled;
+        telegram = disabled;
         vlc = enabled;
         zathura = enabled;
         pcmanfm-qt = enabled;

@@ -61,11 +61,11 @@
         "nextcloud.sbulav.ru"
         "traefik.sbulav.ru"
         "flood.sbulav.ru"
-        "grafana.sbulav.ru"
       ];
       "192.168.92.194" = [
         "beez"
         "beez.sbulav.ru"
+        "grafana.sbulav.ru"
       ];
     };
     # interfaces.wlp3s0.ipv4.routes = [
