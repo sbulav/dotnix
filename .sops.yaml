@@ -31,6 +31,7 @@ creation_rules:
       - age:
           - *sab_beez
           - *host_beez
+          - *sab_mz
   - path_regex: secrets/zanoza/[^/]+\.(yaml|json|env|ini)$
     key_groups:
       - age:
