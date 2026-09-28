@@ -105,6 +105,9 @@ in
 
           services.immich = {
             enable = true;
+            # Immich 2.x is EOL and marked insecure on 26.05; 3.x ships in 26.11.
+            # Drop this override once nixpkgs moves to 26.11.
+            package = pkgs.unstable.immich;
             host = cfg.localAddress;
             mediaLocation = "/var/lib/immich";
             # Setting settings to null to inject oidc config with client secret from sops
