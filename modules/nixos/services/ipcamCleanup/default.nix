@@ -26,7 +26,6 @@ in
 
     systemd.services."ipcam-cleanup" = {
       description = "Remove /tank/ipcam/hcam subdirs older than 30 days; link .dav→.dav.mp4";
-      # this script runs as root once per timer tick
       script = ''
         #!/usr/bin/env bash
         set -euxo pipefail
@@ -47,6 +46,37 @@ in
       serviceConfig = {
         Type = "oneshot";
         User = "root";
+        # Root only for the capabilities below: the camera files are owned by
+        # nobody (NFS-squashed), not all dirs are world-writable, and
+        # fs.protected_hardlinks gates linking files we do not own.
+        CapabilityBoundingSet = [
+          "CAP_CHOWN"
+          "CAP_DAC_OVERRIDE"
+          "CAP_FOWNER"
+        ];
+        NoNewPrivileges = true;
+        ProtectSystem = "strict";
+        ReadWritePaths = [ "/tank/ipcam/hcam" ];
+        ProtectHome = true;
+        PrivateTmp = true;
+        PrivateDevices = true;
+        PrivateNetwork = true;
+        RestrictAddressFamilies = [ "none" ];
+        ProtectClock = true;
+        ProtectControlGroups = true;
+        ProtectHostname = true;
+        ProtectKernelLogs = true;
+        ProtectKernelModules = true;
+        ProtectKernelTunables = true;
+        ProtectProc = "invisible";
+        ProcSubset = "pid";
+        RestrictNamespaces = true;
+        RestrictRealtime = true;
+        RestrictSUIDSGID = true;
+        LockPersonality = true;
+        MemoryDenyWriteExecute = true;
+        SystemCallArchitectures = "native";
+        SystemCallFilter = [ "@system-service" ];
       };
     };
   };

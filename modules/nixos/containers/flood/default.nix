@@ -122,15 +122,7 @@ in
           networking = {
             firewall = {
               enable = true;
-              allowedTCPPorts = [
-                3000
-                139
-                445
-              ];
-              allowedUDPPorts = [
-                137
-                138
-              ];
+              allowedTCPPorts = [ 3000 ];
             };
 
             useHostResolvConf = lib.mkForce false;

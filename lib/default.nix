@@ -272,6 +272,11 @@ in
         emailPassword = {
           uid = 196;
         };
+
+        secretKey = {
+          uid = 196;
+          restartUnits = [ "container@grafana.service" ];
+        };
       };
     };
 

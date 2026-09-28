@@ -306,6 +306,37 @@ in
         ProtectHome = true;
         # tmpfs scratch space for re-encoded candidates; /tmp is on disk here.
         RuntimeDirectory = "ipcam-jpegfix";
+        # Root only for the capabilities below: the camera files are owned by
+        # nobody (NFS-squashed) and not all are world-readable or -writable.
+        CapabilityBoundingSet = [
+          "CAP_CHOWN"
+          "CAP_DAC_OVERRIDE"
+          "CAP_FOWNER"
+        ];
+        NoNewPrivileges = true;
+        ProtectSystem = "strict";
+        ReadWritePaths = [
+          cfg.directory
+          "/var/lib/node_exporter/textfile_collector"
+        ];
+        PrivateDevices = true;
+        PrivateNetwork = true;
+        RestrictAddressFamilies = [ "none" ];
+        ProtectClock = true;
+        ProtectControlGroups = true;
+        ProtectHostname = true;
+        ProtectKernelLogs = true;
+        ProtectKernelModules = true;
+        ProtectKernelTunables = true;
+        ProtectProc = "invisible";
+        ProcSubset = "pid";
+        RestrictNamespaces = true;
+        RestrictRealtime = true;
+        RestrictSUIDSGID = true;
+        LockPersonality = true;
+        MemoryDenyWriteExecute = true;
+        SystemCallArchitectures = "native";
+        SystemCallFilter = [ "@system-service" ];
       };
     };
   };

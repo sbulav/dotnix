@@ -98,6 +98,9 @@ in
             key = "shared/email-password";
             sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
           };
+          "grafana/secret_key" = lib.custom.secrets.special.grafana.secretKey // {
+            sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
+          };
         }
       ];
       # Allow grafana to read all exporters via trusted interface
@@ -133,6 +136,9 @@ in
           "${config.sops.secrets."grafana/email-password".path}" = {
             isReadOnly = true;
           };
+          "${config.sops.secrets."grafana/secret_key".path}" = {
+            isReadOnly = true;
+          };
         };
 
         config =
@@ -157,14 +163,7 @@ in
                 security = {
                   admin_email = config.${namespace}.user.email;
                   admin_password = "$__file{${config.sops.secrets."grafana/admin_password".path}}";
-                  # FIXME: plaintext in a public repo, so it is already
-                  # disclosed and signs nothing trustworthy. It must be
-                  # rotated, then read like the two secrets above:
-                  # add a `secret_key` entry to ${cfg.secret_file}, declare it
-                  # in the sops block, bind-mount it, and use $__file{...}.
-                  # Not done here: this file is encrypted only to the beez
-                  # keys, so it cannot be edited from another host.
-                  secret_key = "SW2YcwTIb9zpOOhoPsMm";
+                  secret_key = "$__file{${config.sops.secrets."grafana/secret_key".path}}";
                 };
                 analytics.reporting_enabled = false;
                 users.auto_assign_org = true;
@@ -173,7 +172,7 @@ in
                 "auth.anonymous".enabled = false;
                 auth = {
                   disable_login_form = false;
-                  signout_redirect_url = "https://authelia.sbulav.ru/application/o/grafana/end-session/";
+                  signout_redirect_url = "https://authelia.sbulav.ru/logout?rd=https://${cfg.host}/login";
                   # oauth_auto_login = true;
                 };
                 "auth.generic_oauth" = {
