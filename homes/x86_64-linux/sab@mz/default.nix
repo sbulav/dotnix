@@ -170,7 +170,6 @@ in
         yubikeyKeyId = ""; # Auto-detect from YubiKey card
         fallbackKeyId = "7C43420F61CEC7FB";
       };
-      rbw = enabled;
       vault = enabled;
       openconnect = {
         enable = true;

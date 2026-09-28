@@ -110,7 +110,6 @@ with lib.custom;
       direnv = disabled;
     };
     security = {
-      rbw = disabled;
       vault = disabled;
       sops = {
         enable = true;

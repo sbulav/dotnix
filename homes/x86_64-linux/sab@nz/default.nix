@@ -109,7 +109,6 @@ in
       sqlite-jira = enabled;
     };
     security = {
-      rbw = enabled;
       vault = enabled;
       openconnect = {
         enable = true;
