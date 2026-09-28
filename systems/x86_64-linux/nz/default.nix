@@ -96,12 +96,6 @@ in
   custom = {
     desktop.addons.system-polish.clamshell.enable = true;
 
-    security.sops = {
-      enable = true;
-      sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
-      defaultSopsFile = lib.snowfall.fs.get-file "secrets/nz/default.yaml";
-    };
-
     virtualisation = {
       virt-manager.enable = true;
       kvm.enable = false;

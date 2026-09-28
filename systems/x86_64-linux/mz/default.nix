@@ -124,12 +124,6 @@ in
     games.enable = true;
   };
   custom = {
-    security.sops = {
-      enable = true;
-      sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
-      defaultSopsFile = lib.snowfall.fs.get-file "secrets/mz/default.yaml";
-    };
-
     virtualisation = {
       virt-manager.enable = true;
       kvm.enable = false;
