@@ -2,9 +2,11 @@
 
 Prometheus (`/var/lib/prometheus2`), Loki (`/var/lib/loki`) and Grafana
 (`/var/lib/grafana/data`, mounted into the container) use beez's root NVMe.
-They have no zanoza, ZFS, NFS or backup USB mount dependency. Traefik and
-Authelia remain on zanoza. Their usual public hostnames continue through
-explicit backends on beez's LAN address, 192.168.92.194.
+They have no zanoza, ZFS, NFS or backup USB mount dependency. Authelia remains
+on zanoza. Prometheus keeps its public hostname through zanoza's Traefik, with
+an explicit backend on beez's LAN address, 192.168.92.194. Grafana is published
+by beez's own Traefik container (see "Grafana ingress on beez" below), so the
+dashboards do not depend on zanoza or its site being up.
 
 ## Collection and history
 
@@ -65,19 +67,20 @@ Keep the cold source copy until the migration has been accepted.
 
 ## Administration when zanoza is down
 
-Connect directly to beez by IP, using the existing SSH key:
+`https://grafana.sbulav.ru` stays available: public DNS points it at beez's
+site and beez's Traefik terminates it. Use Grafana's local admin credentials
+from the encrypted `secrets/beez/monitoring.yaml`. Basic authentication and
+the login form remain enabled; anonymous access remains disabled. OIDC login
+requires zanoza and should not be selected during its outage.
+
+Prometheus and Loki have no beez ingress. Reach them (or Grafana, should its
+Traefik be down too) directly on beez by IP, using the existing SSH key:
 
 ```sh
 ssh -N -L 127.0.0.1:3000:172.16.65.112:3000 -L 127.0.0.1:9090:127.0.0.1:9090 -L 127.0.0.1:3030:127.0.0.1:3030 sab@192.168.92.194
 ```
 
-Open `http://127.0.0.1:3000/login` and use Grafana's local admin credentials
-from the encrypted `secrets/beez/monitoring.yaml`. Basic authentication and
-the login form remain enabled; anonymous access remains disabled. OIDC login
-requires zanoza and should not be selected during its outage. Grafana's public
-root URL is preserved for normal links; use the local URL manually for admin.
-Prometheus and Loki tunnel ports are protected by SSH and bind locally only.
-The forwarded Grafana LAN port accepts zanoza's source address only.
+The tunnel ports are protected by SSH and bind locally only.
 
 Grafana sends email directly to Gmail SMTP over STARTTLS, using its own secret
 and beez's redundant DNS. Email does not use zanoza's SOCKS proxy, Traefik or
@@ -155,3 +158,44 @@ correcting the abbreviated review prompt's job selector and pending duration.
 The isolation rules and recovery timers were removed after testing. Monitoring
 readiness stayed healthy during the capped build, with no cgroup memory-limit or
 OOM events.
+
+## Grafana ingress on beez (2026-09-26)
+
+The first cutover left `grafana.sbulav.ru` on zanoza's Traefik, reaching beez
+through a source-filtered port forward of 3000. That defeated the purpose of
+the move: a zanoza or work-site outage took the dashboards with it, and only
+the SSH tunnel remained. beez now runs its own Traefik container (host network,
+ports 80/443 forwarded by the home router, wildcard `*.sbulav.ru` certificate
+via Cloudflare DNS-01, state under `/var/lib/traefik` owned by uid 997). The
+public route carries only `secure-headers`: Authelia lives on zanoza, so the
+`auth-chain` middleware would fail exactly when the route matters. Grafana's
+own login guards it. Both household resolvers answer `grafana.sbulav.ru` with
+beez's address; every other published name still resolves to zanoza. The
+Prometheus route and the 9090/3030 host ports are unchanged.
+
+beez was activated on this configuration on 2026-09-26; the branch was merged
+into main on 2026-09-28. zanoza must be activated from that main: until then
+its Traefik still publishes the old Grafana route and its resolver still
+answers `grafana.sbulav.ru` with zanoza. The 3000 port forward and its FORWARD
+filter no longer exist in beez's configuration, but both rules survive in the
+kernel until the firewall restarts or the host reboots. The old zanoza route
+works only through them; remove them with `iptables -D` once zanoza is
+activated.
+
+## Acceptance and cleanup (2026-09-28)
+
+The migration is accepted. zanoza's pre-cutover `/var/lib/loki`,
+`/var/lib/prometheus2` and the `tank/grafana` dataset are no longer a rollback
+point: Prometheus's 15-day retention has passed, Loki on beez carries the
+copied history, and a tarball of the old Grafana data
+(`zanoza-grafana-data-precutover.tgz`) sits in beez's root-only
+`/var/lib/dotnix-monitoring-migration-47`. Delete the zanoza copies.
+
+Known limits that remain after acceptance:
+
+- Telegram delivery from beez (Grafana contact point, external monitor, cache
+  builder) is proxied through zanoza's sing-box. During a zanoza outage only
+  the direct Gmail path delivers.
+- The huawei-ups2000 driver reports constant `battery.charge` and
+  `battery.runtime`, so the battery-low rules cannot fire; only the on-battery
+  status is meaningful, and it only reaches beez while the switch has power.
