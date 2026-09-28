@@ -8,13 +8,15 @@
     "enabled": true,
     "extends": [
       "schedule:weekly"
-    ]
+    ],
+    "automerge": true,
+    "automergeType": "pr",
+    "platformAutomerge": false
   },
   "nix": {
     "enabled": true
   },
   "ignoreDeps": [
-    "stable",
     "wallpapers-nix",
     "darwin",
     "home-manager"

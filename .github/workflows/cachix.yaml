@@ -27,18 +27,19 @@ jobs:
       - name: Check formatting
         run: nix fmt -- --ci
 
-      # These expose the existing lint baseline without blocking configuration
-      # validation. New warnings should still be fixed when touching a file.
+      # Both lints are blocking. statix reads ./statix.toml (repeated_keys off,
+      # dead trees ignored); deadnix skips hidden directories on its own, and
+      # lambda pattern names (`{ inputs, ... }:`) are allowed to go unused.
       - name: Run statix
-        continue-on-error: true
         run: nix develop --no-write-lock-file -c statix check .
 
       - name: Run deadnix
-        continue-on-error: true
-        run: nix develop --no-write-lock-file -c deadnix .
+        run: nix develop --no-write-lock-file -c deadnix --fail --no-lambda-pattern-names --exclude modules/_darwin-disabled modules/_nixos-disabled -- .
 
-      - name: Check flake outputs
-        run: nix flake check --no-build --no-write-lock-file --print-build-logs
+      # Builds checks.x86_64-linux (cheap runCommand tests) and evaluates the
+      # remaining outputs; --no-build would skip the checks entirely.
+      - name: Check flake outputs and build checks
+        run: nix flake check --no-write-lock-file --print-build-logs
 
       - name: Verify the committed lock file is unchanged
         run: git diff --exit-code -- flake.lock
@@ -70,8 +71,8 @@ jobs:
       - name: Verify the committed lock file is unchanged
         run: git diff --exit-code -- flake.lock
 
-  # These representative outputs cover Linux desktop/server configurations and
-  # the active Apple Silicon host without building every large closure per PR.
+  # Every live host is built, so a green run (including Renovate's automerged
+  # lock file maintenance) means each closure actually builds.
   build:
     name: Build ${{ matrix.name }}
     needs: [quality, evaluate]
@@ -83,9 +84,15 @@ jobs:
           - name: NixOS nz
             os: ubuntu-latest
             target: .#nixosConfigurations.nz.config.system.build.toplevel
+          - name: NixOS mz
+            os: ubuntu-latest
+            target: .#nixosConfigurations.mz.config.system.build.toplevel
           - name: NixOS zanoza
             os: ubuntu-latest
             target: .#nixosConfigurations.zanoza.config.system.build.toplevel
+          - name: NixOS beez
+            os: ubuntu-latest
+            target: .#nixosConfigurations.beez.config.system.build.toplevel
           - name: Darwin mba13
             os: macos-15
             target: .#darwinConfigurations.mba13.config.system.build.toplevel
