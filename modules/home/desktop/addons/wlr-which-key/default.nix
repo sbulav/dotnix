@@ -349,22 +349,22 @@ let
   ];
 
   configFile = yamlFormat.generate "wlr-which-key-config.yaml" {
-    font = cfg.font;
-    background = cfg.background;
-    color = cfg.color;
-    border = cfg.border;
-    separator = cfg.separator;
+    inherit (cfg) font;
+    inherit (cfg) background;
+    inherit (cfg) color;
+    inherit (cfg) border;
+    inherit (cfg) separator;
     border_width = cfg.borderWidth;
     corner_r = cfg.cornerRadius;
-    padding = cfg.padding;
+    inherit (cfg) padding;
     rows_per_column = cfg.rowsPerColumn;
     column_padding = cfg.columnPadding;
-    anchor = cfg.anchor;
+    inherit (cfg) anchor;
     margin_right = cfg.marginRight;
     margin_bottom = cfg.marginBottom;
     margin_left = cfg.marginLeft;
     margin_top = cfg.marginTop;
-    menu = cfg.menu;
+    inherit (cfg) menu;
   };
 in
 {
@@ -387,7 +387,7 @@ in
     marginLeft = mkOpt int 0 "Left margin.";
     marginTop = mkOpt int 0 "Top margin.";
 
-    menu = mkOpt (yamlFormat.type) defaultMenu "Menu structure for wlr-which-key.";
+    menu = mkOpt yamlFormat.type defaultMenu "Menu structure for wlr-which-key.";
   };
 
   config = mkIf cfg.enable {

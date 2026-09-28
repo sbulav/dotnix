@@ -129,9 +129,9 @@ in
       ups.ups = {
         # find your driver here:
         # https://networkupstools.org/docs/man/usbhid-ups.html
-        driver = cfg.driver;
+        inherit (cfg) driver;
         description = "Huawei UPS2000-G1KRTS";
-        port = cfg.port;
+        inherit (cfg) port;
         directives = [
           "offdelay = 60"
           "ondelay = 120"
@@ -157,7 +157,7 @@ in
         monitor.ups = {
           system = ups;
           user = "upsmon";
-          passwordFile = passwordFile;
+          inherit passwordFile;
           type = "primary";
         };
         settings = {
@@ -197,7 +197,7 @@ in
       };
 
       users.upsmon = {
-        passwordFile = passwordFile;
+        inherit passwordFile;
         upsmon = "primary";
       };
 

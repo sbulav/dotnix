@@ -2,7 +2,7 @@ let
   workflow = import ../../shared/workflow/skill/plan-to-issues.nix;
 in
 {
-  description = workflow.description;
+  inherit (workflow) description;
   agent = "plan-to-issues-orchestrator";
 
   requirements = ''

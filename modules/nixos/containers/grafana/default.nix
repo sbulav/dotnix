@@ -32,7 +32,7 @@ in
 
   imports = [
     (import ../shared/shared-adguard-dns-rewrite.nix {
-      host = cfg.host;
+      inherit (cfg) host;
       rewrite_enabled = cfg.enable;
     })
   ];
@@ -56,13 +56,13 @@ in
         custom.containers.traefik.routes = {
           grafana = {
             inherit url;
-            host = cfg.host;
+            inherit (cfg) host;
             middlewares = cfg.externalMiddlewares;
           };
           "allowedips-grafana" = {
             inherit url;
             service = "grafana";
-            host = cfg.host;
+            inherit (cfg) host;
             middlewares = [
               "secure-headers"
               "allow-lan"
@@ -141,317 +141,315 @@ in
           };
         };
 
-        config =
-          { ... }:
-          {
-            services.grafana = {
-              enable = true;
-              settings = {
-                server = {
-                  protocol = "http";
-                  http_addr = "${cfg.localAddress}";
-                  root_url = "https://${cfg.host}";
-                };
-                smtp = rec {
-                  enabled = true;
-                  user = "zppfan@gmail.com";
-                  from_name = "Homelab-notifications";
-                  from_address = user;
-                  host = "smtp.gmail.com:587";
-                  password = "$__file{${config.sops.secrets."grafana/email-password".path}}";
-                };
-                security = {
-                  admin_email = config.${namespace}.user.email;
-                  admin_password = "$__file{${config.sops.secrets."grafana/admin_password".path}}";
-                  secret_key = "$__file{${config.sops.secrets."grafana/secret_key".path}}";
-                };
-                analytics.reporting_enabled = false;
-                users.auto_assign_org = true;
-                users.auto_assign_org_id = 1;
-                "auth.basic".enabled = true;
-                "auth.anonymous".enabled = false;
-                auth = {
-                  disable_login_form = false;
-                  signout_redirect_url = "https://authelia.sbulav.ru/logout?rd=https://${cfg.host}/login";
-                  # oauth_auto_login = true;
-                };
-                "auth.generic_oauth" = {
-                  enabled = true;
-                  name = "Authelia";
-                  allow_sign_up = true;
-                  client_id = "grafana";
-                  client_secret = "$__file{${config.sops.secrets."grafana/oidc_client_secret".path}}";
-                  api_url = "https://authelia.sbulav.ru/api/oidc/userinfo";
-                  auth_url = "https://authelia.sbulav.ru/api/oidc/authorization";
-                  token_url = "https://authelia.sbulav.ru/api/oidc/token";
-                  empty_scopes = false;
-                  scopes = "openid profile email groups";
-                  groups_attribute_path = "groups";
-                  email_attribute_path = "email";
-                  login_attribute_path = "preferred_username";
-                  name_attribute_path = "name";
-                  role_attribute_path = "contains(groups[*], 'admin') && 'Admin' || contains(groups[*], 'editor') && 'Editor' || 'Viewer'";
-                };
+        config = _: {
+          services.grafana = {
+            enable = true;
+            settings = {
+              server = {
+                protocol = "http";
+                http_addr = "${cfg.localAddress}";
+                root_url = "https://${cfg.host}";
               };
-              provision = {
-                enable = true;
-                alerting = {
-                  contactPoints.settings = {
-                    apiVersion = 1;
-                    contactPoints = [
-                      {
-                        name = "default-alerts";
-                        receivers = [
-                          {
-                            type = "telegram";
-                            uid = "telegram";
-                            settings = {
-                              chatid = "681806836";
-                              bottoken = "\${TELEGRAM_TOKEN}";
-                              uploadImage = false;
-                              message = "{{ template \"alert_list\" . }}";
-                              parse_mode = "HTML";
-                            };
-                          }
-                          {
-                            uid = "basic-email";
-                            type = "email";
-                            settings.addresses = "bulavintsev.sergey@gmail.com";
-                          }
-                        ];
-                      }
-                    ];
-                  };
-                  policies.settings = {
-                    apiVersion = 1;
-                    policies = [
-                      {
-                        orgId = 1;
-                        receiver = "default-alerts";
-                        group_by = [ "alertname" ];
-                      }
-                    ];
-                  };
-                  rules.settings =
-                    let
-                      rules = builtins.fromJSON (builtins.readFile ./alerting/rules.json);
-                      # ruleIds = map (r: r.uid) rules;
-                    in
+              smtp = rec {
+                enabled = true;
+                user = "zppfan@gmail.com";
+                from_name = "Homelab-notifications";
+                from_address = user;
+                host = "smtp.gmail.com:587";
+                password = "$__file{${config.sops.secrets."grafana/email-password".path}}";
+              };
+              security = {
+                admin_email = config.${namespace}.user.email;
+                admin_password = "$__file{${config.sops.secrets."grafana/admin_password".path}}";
+                secret_key = "$__file{${config.sops.secrets."grafana/secret_key".path}}";
+              };
+              analytics.reporting_enabled = false;
+              users.auto_assign_org = true;
+              users.auto_assign_org_id = 1;
+              "auth.basic".enabled = true;
+              "auth.anonymous".enabled = false;
+              auth = {
+                disable_login_form = false;
+                signout_redirect_url = "https://authelia.sbulav.ru/logout?rd=https://${cfg.host}/login";
+                # oauth_auto_login = true;
+              };
+              "auth.generic_oauth" = {
+                enabled = true;
+                name = "Authelia";
+                allow_sign_up = true;
+                client_id = "grafana";
+                client_secret = "$__file{${config.sops.secrets."grafana/oidc_client_secret".path}}";
+                api_url = "https://authelia.sbulav.ru/api/oidc/userinfo";
+                auth_url = "https://authelia.sbulav.ru/api/oidc/authorization";
+                token_url = "https://authelia.sbulav.ru/api/oidc/token";
+                empty_scopes = false;
+                scopes = "openid profile email groups";
+                groups_attribute_path = "groups";
+                email_attribute_path = "email";
+                login_attribute_path = "preferred_username";
+                name_attribute_path = "name";
+                role_attribute_path = "contains(groups[*], 'admin') && 'Admin' || contains(groups[*], 'editor') && 'Editor' || 'Viewer'";
+              };
+            };
+            provision = {
+              enable = true;
+              alerting = {
+                contactPoints.settings = {
+                  apiVersion = 1;
+                  contactPoints = [
                     {
-                      apiVersion = 1;
-                      groups = [
+                      name = "default-alerts";
+                      receivers = [
                         {
-                          orgId = 1;
-                          name = "homelab";
-                          folder = "ALERTS";
-                          interval = "5m";
-                          inherit rules;
+                          type = "telegram";
+                          uid = "telegram";
+                          settings = {
+                            chatid = "681806836";
+                            bottoken = "\${TELEGRAM_TOKEN}";
+                            uploadImage = false;
+                            message = "{{ template \"alert_list\" . }}";
+                            parse_mode = "HTML";
+                          };
+                        }
+                        {
+                          uid = "basic-email";
+                          type = "email";
+                          settings.addresses = "bulavintsev.sergey@gmail.com";
                         }
                       ];
-                      # deleteRules seems to happen after creating the above rules, effectively rolling back
-                      # any updates.
-                    };
-                  templates.path = ./alerting/templates.yaml;
+                    }
+                  ];
                 };
-
-                datasources.settings = {
-                  datasources =
-                    let
-                      prometheus = {
-                        name = "Prometheus";
-                        uid = "prometheus";
-                        type = "prometheus";
-                        access = "proxy";
-                        url = "http://${cfg.hostAddress}:9090";
-                        isDefault = true;
-                      };
-                      loki =
-                        if config.${namespace}.containers.loki.enable then
-                          [
-                            {
-                              name = "Loki";
-                              uid = "loki";
-                              type = "loki";
-                              access = "proxy";
-                              url = "http://${cfg.hostAddress}:3030";
-                            }
-                          ]
-                        else
-                          [ ];
-                    in
-                    [ prometheus ] ++ loki;
+                policies.settings = {
+                  apiVersion = 1;
+                  policies = [
+                    {
+                      orgId = 1;
+                      receiver = "default-alerts";
+                      group_by = [ "alertname" ];
+                    }
+                  ];
                 };
-                # All dashboards live flat in the General folder (no `folder`
-                # set on any provider). Titles are unified to a
-                # "Category · Subject" pattern via `mkDashboard`, which rewrites
-                # the fetched JSON's `.title` with jq — this normalises the two
-                # external dashboards (Node Exporter Full, Authelia) alongside
-                # our own without editing their upstream sources. The dashboard
-                # uid is preserved, so the rename is an in-place update. Host
-                # and job selection is left to the dashboards' own variables;
-                # nothing else in the fetched JSON is rewritten.
-                dashboards.settings.providers =
+                rules.settings =
                   let
-                    mkDashboard =
+                    rules = builtins.fromJSON (builtins.readFile ./alerting/rules.json);
+                    # ruleIds = map (r: r.uid) rules;
+                  in
+                  {
+                    apiVersion = 1;
+                    groups = [
                       {
-                        name,
-                        title,
-                        url,
-                        hash,
-                      }:
-                      pkgs.runCommand name { nativeBuildInputs = [ pkgs.jq ]; } ''
-                        jq --arg title ${lib.escapeShellArg title} '.title = $title' \
-                          ${
-                            pkgs.fetchurl {
-                              name = "${name}-src";
-                              inherit url hash;
-                            }
-                          } > $out
-                      '';
+                        orgId = 1;
+                        name = "homelab";
+                        folder = "ALERTS";
+                        interval = "5m";
+                        inherit rules;
+                      }
+                    ];
+                    # deleteRules seems to happen after creating the above rules, effectively rolling back
+                    # any updates.
+                  };
+                templates.path = ./alerting/templates.yaml;
+              };
 
-                    nodeExporterFull = {
-                      name = "Node Exporter Full";
-                      options.path = mkDashboard {
-                        name = "node-exporter-full.json";
-                        title = "Compute · Nodes";
-                        url = "https://grafana.com/api/dashboards/1860/revisions/37/download";
-                        hash = "sha256-1DE1aaanRHHeCOMWDGdOS1wBXxOF84UXAjJzT5Ek6mM=";
-                      };
-                      orgId = 1;
+              datasources.settings = {
+                datasources =
+                  let
+                    prometheus = {
+                      name = "Prometheus";
+                      uid = "prometheus";
+                      type = "prometheus";
+                      access = "proxy";
+                      url = "http://${cfg.hostAddress}:9090";
+                      isDefault = true;
                     };
-
-                    smartctlExporter = {
-                      name = "Smartctl Exporter";
-                      options.path = mkDashboard {
-                        name = "smartctl.json";
-                        title = "Storage · SMART";
-                        url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/smartctl/smartctl.json";
-                        hash = "sha256-B6cWUiGsM3dbx2BVUdnaqjYVQgTzd/y7DNm2Rq1Cvws=";
-                      };
-                      orgId = 1;
-                    };
-
-                    zfsStats = {
-                      name = "ZFS stats";
-                      options.path = mkDashboard {
-                        name = "zfs-stats.json";
-                        title = "Storage · ZFS";
-                        url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/zfs/zfs-stats.json";
-                        hash = "sha256-1+DFTJXC9w41dYVHiarCN3QqWX6WCE053Sj0BktE2Bg=";
-                      };
-                      orgId = 1;
-                    };
-                    singBoxTraffic =
-                      if cfg.remoteDashboards || config.${namespace}.containers.sing-box.enable then
-                        [
-                          {
-                            name = "sing-box traffic";
-                            options.path = ./dashboards/sing-box-traffic.json;
-                            orgId = 1;
-                          }
-                        ]
-                      else
-                        [ ];
-                    logs =
+                    loki =
                       if config.${namespace}.containers.loki.enable then
                         [
                           {
-                            name = "Logs dashboard";
-                            options.path = mkDashboard {
-                              name = "logs.json";
-                              title = "Logs · Applications";
-                              url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/monitoring/Logs-promtail.json";
-                              hash = "sha256-GuwnN2VkEbqa3HNApYmu7482pgRDmC2EJx2DJpl7ZJo=";
-                            };
-                            orgId = 1;
-                          }
-                        ]
-                      else
-                        [ ];
-                    authelia =
-                      if cfg.remoteDashboards || config.${namespace}.containers.authelia.enable then
-                        [
-                          {
-                            name = "Authelia dashboard";
-                            options.path = mkDashboard {
-                              name = "authelia.json";
-                              title = "Security · Authelia";
-                              url = "https://raw.githubusercontent.com/authelia/authelia/refs/heads/master/examples/grafana-dashboards/simple.json";
-                              hash = "sha256-y+WbEev4ezdJyorjnnZi37CL1Pd9PxYAvl5N0hsFJnk=";
-                            };
-                            orgId = 1;
-                          }
-                        ]
-                      else
-                        [ ];
-                    traefik =
-                      if cfg.remoteDashboards || config.${namespace}.containers.traefik.enable then
-                        [
-                          {
-                            name = "Traefik via Loki dashboard";
-                            options.path = mkDashboard {
-                              name = "traefik.json";
-                              title = "Network · Traefik";
-                              url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/traefik/traefik-via-loki.json";
-                              hash = "sha256-KsYXA/rZC7AHy2YnUu5VDaQb2gnl4obkCoHLYp8b+Rg=";
-                            };
-                            orgId = 1;
-                          }
-                        ]
-                      else
-                        [ ];
-                    nut =
-                      if cfg.remoteDashboards || config.${namespace}.containers.ups.enable then
-                        [
-                          {
-                            name = "UPS info via NUT prometheus exporter";
-                            options.path = mkDashboard {
-                              name = "ups.json";
-                              title = "Power · UPS";
-                              url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/6caacb895957ccfbbc5a015c5c6d3afe0a7c9096/ups/prometheus-nut-exporter.json";
-                              hash = "sha256-413TxCcXNU01XvvY5O+oZPxz7UDSTchoJg9irxdqKFc=";
-                            };
-                            orgId = 1;
+                            name = "Loki";
+                            uid = "loki";
+                            type = "loki";
+                            access = "proxy";
+                            url = "http://${cfg.hostAddress}:3030";
                           }
                         ]
                       else
                         [ ];
                   in
-                  [
-                    nodeExporterFull
-                    smartctlExporter
-                    zfsStats
-                  ]
-                  ++ singBoxTraffic
-                  ++ logs
-                  ++ authelia
-                  ++ traefik
-                  ++ nut;
+                  [ prometheus ] ++ loki;
               };
-            };
+              # All dashboards live flat in the General folder (no `folder`
+              # set on any provider). Titles are unified to a
+              # "Category · Subject" pattern via `mkDashboard`, which rewrites
+              # the fetched JSON's `.title` with jq — this normalises the two
+              # external dashboards (Node Exporter Full, Authelia) alongside
+              # our own without editing their upstream sources. The dashboard
+              # uid is preserved, so the rename is an in-place update. Host
+              # and job selection is left to the dashboards' own variables;
+              # nothing else in the fetched JSON is rewritten.
+              dashboards.settings.providers =
+                let
+                  mkDashboard =
+                    {
+                      name,
+                      title,
+                      url,
+                      hash,
+                    }:
+                    pkgs.runCommand name { nativeBuildInputs = [ pkgs.jq ]; } ''
+                      jq --arg title ${lib.escapeShellArg title} '.title = $title' \
+                        ${
+                          pkgs.fetchurl {
+                            name = "${name}-src";
+                            inherit url hash;
+                          }
+                        } > $out
+                    '';
 
-            systemd.services.grafana = {
-              serviceConfig = {
-                EnvironmentFile = [
-                  config.sops.secrets."grafana/telegram-token".path
-                ];
-              };
-            };
-            networking = {
-              firewall = {
-                enable = true;
-                allowedTCPPorts = [ 3000 ];
-              };
+                  nodeExporterFull = {
+                    name = "Node Exporter Full";
+                    options.path = mkDashboard {
+                      name = "node-exporter-full.json";
+                      title = "Compute · Nodes";
+                      url = "https://grafana.com/api/dashboards/1860/revisions/37/download";
+                      hash = "sha256-1DE1aaanRHHeCOMWDGdOS1wBXxOF84UXAjJzT5Ek6mM=";
+                    };
+                    orgId = 1;
+                  };
 
-              useHostResolvConf = lib.mkForce false;
-            };
+                  smartctlExporter = {
+                    name = "Smartctl Exporter";
+                    options.path = mkDashboard {
+                      name = "smartctl.json";
+                      title = "Storage · SMART";
+                      url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/smartctl/smartctl.json";
+                      hash = "sha256-B6cWUiGsM3dbx2BVUdnaqjYVQgTzd/y7DNm2Rq1Cvws=";
+                    };
+                    orgId = 1;
+                  };
 
-            services.resolved = {
-              enable = true;
-              settings.Resolve = householdDnsSettings;
+                  zfsStats = {
+                    name = "ZFS stats";
+                    options.path = mkDashboard {
+                      name = "zfs-stats.json";
+                      title = "Storage · ZFS";
+                      url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/zfs/zfs-stats.json";
+                      hash = "sha256-1+DFTJXC9w41dYVHiarCN3QqWX6WCE053Sj0BktE2Bg=";
+                    };
+                    orgId = 1;
+                  };
+                  singBoxTraffic =
+                    if cfg.remoteDashboards || config.${namespace}.containers.sing-box.enable then
+                      [
+                        {
+                          name = "sing-box traffic";
+                          options.path = ./dashboards/sing-box-traffic.json;
+                          orgId = 1;
+                        }
+                      ]
+                    else
+                      [ ];
+                  logs =
+                    if config.${namespace}.containers.loki.enable then
+                      [
+                        {
+                          name = "Logs dashboard";
+                          options.path = mkDashboard {
+                            name = "logs.json";
+                            title = "Logs · Applications";
+                            url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/monitoring/Logs-promtail.json";
+                            hash = "sha256-GuwnN2VkEbqa3HNApYmu7482pgRDmC2EJx2DJpl7ZJo=";
+                          };
+                          orgId = 1;
+                        }
+                      ]
+                    else
+                      [ ];
+                  authelia =
+                    if cfg.remoteDashboards || config.${namespace}.containers.authelia.enable then
+                      [
+                        {
+                          name = "Authelia dashboard";
+                          options.path = mkDashboard {
+                            name = "authelia.json";
+                            title = "Security · Authelia";
+                            url = "https://raw.githubusercontent.com/authelia/authelia/refs/heads/master/examples/grafana-dashboards/simple.json";
+                            hash = "sha256-y+WbEev4ezdJyorjnnZi37CL1Pd9PxYAvl5N0hsFJnk=";
+                          };
+                          orgId = 1;
+                        }
+                      ]
+                    else
+                      [ ];
+                  traefik =
+                    if cfg.remoteDashboards || config.${namespace}.containers.traefik.enable then
+                      [
+                        {
+                          name = "Traefik via Loki dashboard";
+                          options.path = mkDashboard {
+                            name = "traefik.json";
+                            title = "Network · Traefik";
+                            url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/refs/heads/main/traefik/traefik-via-loki.json";
+                            hash = "sha256-KsYXA/rZC7AHy2YnUu5VDaQb2gnl4obkCoHLYp8b+Rg=";
+                          };
+                          orgId = 1;
+                        }
+                      ]
+                    else
+                      [ ];
+                  nut =
+                    if cfg.remoteDashboards || config.${namespace}.containers.ups.enable then
+                      [
+                        {
+                          name = "UPS info via NUT prometheus exporter";
+                          options.path = mkDashboard {
+                            name = "ups.json";
+                            title = "Power · UPS";
+                            url = "https://raw.githubusercontent.com/sbulav/grafana-dashboards/6caacb895957ccfbbc5a015c5c6d3afe0a7c9096/ups/prometheus-nut-exporter.json";
+                            hash = "sha256-413TxCcXNU01XvvY5O+oZPxz7UDSTchoJg9irxdqKFc=";
+                          };
+                          orgId = 1;
+                        }
+                      ]
+                    else
+                      [ ];
+                in
+                [
+                  nodeExporterFull
+                  smartctlExporter
+                  zfsStats
+                ]
+                ++ singBoxTraffic
+                ++ logs
+                ++ authelia
+                ++ traefik
+                ++ nut;
             };
-            system.stateVersion = "24.11";
           };
+
+          systemd.services.grafana = {
+            serviceConfig = {
+              EnvironmentFile = [
+                config.sops.secrets."grafana/telegram-token".path
+              ];
+            };
+          };
+          networking = {
+            firewall = {
+              enable = true;
+              allowedTCPPorts = [ 3000 ];
+            };
+
+            useHostResolvConf = lib.mkForce false;
+          };
+
+          services.resolved = {
+            enable = true;
+            settings.Resolve = householdDnsSettings;
+          };
+          system.stateVersion = "24.11";
+        };
       };
     })
   ];

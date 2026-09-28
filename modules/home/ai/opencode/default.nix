@@ -10,7 +10,6 @@ let
     mkIf
     mkOption
     types
-    mapAttrs'
     nameValuePair
     filterAttrs
     ;
@@ -90,7 +89,7 @@ let
   # Import configurations from directories
   agents = processConfigDir agentDir;
   commands = processConfigDir commandDir;
-  skills = registry.skills;
+  inherit (registry) skills;
   plugins = processConfigDir pluginDir;
 
   # Process physical utility scripts from utils directory
@@ -164,7 +163,7 @@ let
 
   # Generate agent markdown file
   # name: string, config: attrset -> string
-  toMarkdownAgent = name: config: ''
+  toMarkdownAgent = _name: config: ''
     ${yamlHeader config}
     ${optionalYamlField "mode" (config.mode or null)}
     ${optionalYamlField "model" (config.model or null)}
@@ -177,7 +176,7 @@ let
 
   # Generate command markdown file
   # name: string, config: attrset -> string
-  toMarkdownCommand = name: config: ''
+  toMarkdownCommand = _name: config: ''
     ${yamlHeader config}
     ${optionalYamlField "agent" (config.agent or null)}
     ${optionalYamlField "model" (config.model or null)}

@@ -2,7 +2,7 @@ let
   workflow = import ../../shared/workflow/skill/workon.nix;
 in
 {
-  description = workflow.description;
+  inherit (workflow) description;
   agent = "workon-orchestrator";
 
   requirements = ''

@@ -46,7 +46,7 @@ in
   };
   imports = [
     (import ../shared/shared-adguard-dns-rewrite.nix {
-      host = cfg.host;
+      inherit (cfg) host;
       rewrite_enabled = cfg.enable;
     })
   ];
@@ -54,7 +54,7 @@ in
   config = mkIf cfg.enable {
     custom.containers.traefik.routes."allowedips-sonarr" = {
       service = "sonarr";
-      host = cfg.host;
+      inherit (cfg) host;
       url = "http://${cfg.localAddress}:8989";
       middlewares = [
         "secure-headers"
@@ -100,37 +100,35 @@ in
         };
       };
       privateNetwork = true;
-      hostAddress = cfg.hostAddress;
-      localAddress = cfg.localAddress;
+      inherit (cfg) hostAddress;
+      inherit (cfg) localAddress;
 
-      config =
-        { ... }:
-        {
-          users.groups.media.gid = mediaGid;
+      config = _: {
+        users.groups.media.gid = mediaGid;
 
-          services.sonarr = {
-            enable = true;
-            group = "media";
-          };
-
-          # Group-writable imports so jellyfin can read and future arr
-          # members can upgrade/replace files (upstream hardcodes 0022).
-          systemd.services.sonarr.serviceConfig.UMask = lib.mkForce "0002";
-
-          networking = {
-            firewall = {
-              enable = true;
-              allowedTCPPorts = [ 8989 ];
-            };
-            useHostResolvConf = lib.mkForce false;
-          };
-
-          services.resolved = {
-            enable = true;
-            settings.Resolve = householdDnsSettings;
-          };
-          system.stateVersion = "26.05";
+        services.sonarr = {
+          enable = true;
+          group = "media";
         };
+
+        # Group-writable imports so jellyfin can read and future arr
+        # members can upgrade/replace files (upstream hardcodes 0022).
+        systemd.services.sonarr.serviceConfig.UMask = lib.mkForce "0002";
+
+        networking = {
+          firewall = {
+            enable = true;
+            allowedTCPPorts = [ 8989 ];
+          };
+          useHostResolvConf = lib.mkForce false;
+        };
+
+        services.resolved = {
+          enable = true;
+          settings.Resolve = householdDnsSettings;
+        };
+        system.stateVersion = "26.05";
+      };
     };
   };
 }

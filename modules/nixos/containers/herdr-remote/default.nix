@@ -37,7 +37,7 @@ in
 
   imports = [
     (import ../shared/shared-adguard-dns-rewrite.nix {
-      host = cfg.host;
+      inherit (cfg) host;
       rewrite_enabled = cfg.enable;
     })
     (import ../shared/shared-adguard-dns-rewrite.nix {
@@ -51,7 +51,7 @@ in
     # run on the Traefik host.
     custom.containers.traefik.routes = {
       herdr-web = {
-        host = cfg.host;
+        inherit (cfg) host;
         url = cfg.webUrl;
       };
       # The native mobile client authenticates with its own token, so this one

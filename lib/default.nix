@@ -18,7 +18,7 @@ let
       config.nixpkgs.hostPlatform.system
     else
       null;
-  systemFallback = if builtins ? currentSystem then builtins.currentSystem else null;
+  systemFallback = builtins.currentSystem or null;
 
   systemName =
     if systemFromConfig != null then
@@ -79,7 +79,7 @@ in
     });
 
   # Smart secrets file resolution (placeholder)
-  getSecretsFile = hostName: userName: "secrets/${userName}/default.yaml";
+  getSecretsFile = _hostName: userName: "secrets/${userName}/default.yaml";
 
   # Generate standard SOPS configuration with robust cross-platform defaults.
   # On Darwin: both HOME and SYSTEM use the user's Age key at $HOME/.config/sops/age/keys.txt
@@ -139,7 +139,7 @@ in
   # - On Linux: allow `uid`
   # - On Darwin: drop `uid` (nix-darwin has no such option) and rely on `owner`/`group`
   mkSecret =
-    secretName:
+    _secretName:
     {
       sopsFile ? null,
       path ? null,
@@ -171,7 +171,7 @@ in
         // (if owner != null then { inherit owner; } else { });
     in
     # Re-attach uid only on Linux (NixOS); nix-darwin doesn’t support it.
-    base // (if (!isDarwin && args ? uid && args.uid != null) then { uid = args.uid; } else { });
+    base // (if (!isDarwin && args ? uid && args.uid != null) then { inherit (args) uid; } else { });
 
   # Common secret templates (uid will be ignored on darwin automatically)
   secrets = {
@@ -240,14 +240,14 @@ in
     # Common service patterns
     services = {
       sharedTelegramBot = uid: {
-        uid = uid; # 196 for grafana, 1000 for restic
+        inherit uid; # 196 for grafana, 1000 for restic
       };
 
       unifiedEmailPassword = uid: {
-        uid = uid;
+        inherit uid;
       };
 
-      backupPassword = backupName: {
+      backupPassword = _backupName: {
         uid = 1000; # User-level backups
       };
     };
@@ -283,7 +283,7 @@ in
     # System-level secrets
     system = {
       sshKey =
-        keyName: hostName:
+        _keyName: _hostName:
         if isDarwin then
           {
             mode = "0600";
@@ -295,7 +295,7 @@ in
           };
 
       hostSecret =
-        secretName: hostName:
+        _secretName: _hostName:
         if isDarwin then
           {
             mode = "0400";

@@ -1106,13 +1106,13 @@ in
     };
   };
 
-  config = mkIf cfg.enable ({
+  config = mkIf cfg.enable {
     programs.noctalia = {
       enable = true;
       systemd.enable = true;
       checkConfig = true;
       settings = recursiveUpdate (recursiveUpdate defaultSettings calendarSettings) cfg.settings;
-      customPalettes = cfg.customPalettes;
+      inherit (cfg) customPalettes;
     };
 
     # The shell is the only locker on the host: keep systemd retrying
@@ -1169,5 +1169,5 @@ in
       libnotify
       noctaliaMenu
     ];
-  });
+  };
 }

@@ -9,8 +9,6 @@ let
   inherit (lib)
     types
     mkIf
-    mkOption
-    mkEnableOption
     mapAttrsToList
     concatMapStringsSep
     concatStringsSep
@@ -243,7 +241,7 @@ let
   mkKeybindings =
     kb:
     let
-      mainMod = kb.mainMod;
+      inherit (kb) mainMod;
 
       # The noctalia addon owns launcher/clipboard/session — the binds
       # dispatch to its IPC, same pattern as the screenshot addon read below.

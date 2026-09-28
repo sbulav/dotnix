@@ -7,9 +7,6 @@
 }:
 with lib;
 with lib.custom;
-let
-  # cfg = config.system.wallpaper;
-in
 {
   options.custom.desktop.addons.wallpaper = mkOption {
     type = types.oneOf [

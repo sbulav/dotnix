@@ -32,7 +32,7 @@ in
     # The same route whether Prometheus runs here or on another host.
     (mkIf (cfg.remoteBackend != null || (cfg.enable && cfg.publishWeb)) {
       custom.containers.traefik.routes.prometheus = {
-        host = cfg.host;
+        inherit (cfg) host;
         url = if cfg.remoteBackend != null then cfg.remoteBackend else "http://127.0.0.1:9090";
         middlewares = [
           "secure-headers"
@@ -48,7 +48,7 @@ in
         listenAddress = "0.0.0.0";
         port = 9090;
         retentionTime = "15d";
-        scrapeConfigs = cfg.scrapeConfigs;
+        inherit (cfg) scrapeConfigs;
       };
     })
   ];

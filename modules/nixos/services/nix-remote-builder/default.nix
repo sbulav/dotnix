@@ -87,10 +87,10 @@ in
         distributedBuilds = true;
         buildMachines = [
           {
-            hostName = clientCfg.hostName;
+            inherit (clientCfg) hostName;
             protocol = "ssh-ng";
-            system = clientCfg.system;
-            sshUser = clientCfg.sshUser;
+            inherit (clientCfg) system;
+            inherit (clientCfg) sshUser;
             sshKey = config.sops.secrets.${clientCfg.sshKeySecret}.path;
             inherit (clientCfg)
               maxJobs
@@ -143,7 +143,7 @@ in
           allowed-users = [ serverCfg.user ];
           trusted-users = [ serverCfg.user ];
           max-jobs = serverCfg.maxJobs;
-          cores = serverCfg.cores;
+          inherit (serverCfg) cores;
         };
       };
 

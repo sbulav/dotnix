@@ -62,7 +62,7 @@ in
   };
   imports = [
     (import ../shared/shared-adguard-dns-rewrite.nix {
-      host = cfg.host;
+      inherit (cfg) host;
       rewrite_enabled = cfg.enable;
     })
   ];
@@ -70,7 +70,7 @@ in
   config = mkIf cfg.enable {
     custom.containers.traefik.routes."allowedips-prowlarr" = {
       service = "prowlarr";
-      host = cfg.host;
+      inherit (cfg) host;
       url = "http://${cfg.localAddress}:9696";
       middlewares = [
         "secure-headers"
@@ -112,73 +112,71 @@ in
         };
       };
       privateNetwork = true;
-      hostAddress = cfg.hostAddress;
-      localAddress = cfg.localAddress;
+      inherit (cfg) hostAddress;
+      inherit (cfg) localAddress;
 
-      config =
-        { ... }:
-        {
-          services.prowlarr = {
-            enable = true;
-            dataDir = "/var/lib/prowlarr-data";
-          };
-
-          services.flaresolverr.enable = cfg.enableFlareSolverr;
-
-          systemd.services.prowlarr = lib.mkMerge [
-            {
-              # Cardigann custom definitions, declaratively. Installed from
-              # preStart (not tmpfiles): the data dir belongs to prowlarr's
-              # DynamicUser, so root-driven tmpfiles trips the "unsafe path
-              # transition" check on the bind-mounted dataset. Must go
-              # through $STATE_DIRECTORY — the raw /var/lib/prowlarr-data
-              # path is read-only inside the service sandbox.
-              preStart = ''
-                install -D -m0644 ${./torrentio.yml} \
-                  "$STATE_DIRECTORY/Definitions/Custom/torrentio.yml"
-              '';
-            }
-            (lib.mkIf cfg.enableFlareSolverr {
-              after = [ "flaresolverr.service" ];
-              wants = [ "flaresolverr.service" ];
-            })
-          ];
-
-          # Torznab bridge for Filmix PRO+ (see header). Loopback only:
-          # nothing but Prowlarr in this container ever talks to it.
-          systemd.services.filmix-torznab = lib.mkIf cfg.enableFilmix {
-            description = "Filmix Torznab bridge";
-            wantedBy = [ "multi-user.target" ];
-            after = [ "network.target" ];
-            serviceConfig = {
-              ExecStart = lib.getExe pkgs.custom.filmix-torznab;
-              EnvironmentFile = config.sops.secrets."filmix-env".path;
-              DynamicUser = true;
-              Restart = "on-failure";
-              RestartSec = 10;
-              # Hardening: it only needs outbound HTTP and a loopback socket.
-              NoNewPrivileges = true;
-              ProtectSystem = "strict";
-              ProtectHome = true;
-              PrivateTmp = true;
-              CapabilityBoundingSet = "";
-            };
-          };
-
-          networking = {
-            firewall = {
-              enable = true;
-              allowedTCPPorts = [ 9696 ];
-            };
-            useHostResolvConf = lib.mkForce false;
-          };
-
-          services.resolved = {
-            enable = true;
-            settings.Resolve = householdDnsSettings;
-          };
-          system.stateVersion = "26.05";
+      config = _: {
+        services.prowlarr = {
+          enable = true;
+          dataDir = "/var/lib/prowlarr-data";
         };
+
+        services.flaresolverr.enable = cfg.enableFlareSolverr;
+
+        systemd.services.prowlarr = lib.mkMerge [
+          {
+            # Cardigann custom definitions, declaratively. Installed from
+            # preStart (not tmpfiles): the data dir belongs to prowlarr's
+            # DynamicUser, so root-driven tmpfiles trips the "unsafe path
+            # transition" check on the bind-mounted dataset. Must go
+            # through $STATE_DIRECTORY — the raw /var/lib/prowlarr-data
+            # path is read-only inside the service sandbox.
+            preStart = ''
+              install -D -m0644 ${./torrentio.yml} \
+                "$STATE_DIRECTORY/Definitions/Custom/torrentio.yml"
+            '';
+          }
+          (lib.mkIf cfg.enableFlareSolverr {
+            after = [ "flaresolverr.service" ];
+            wants = [ "flaresolverr.service" ];
+          })
+        ];
+
+        # Torznab bridge for Filmix PRO+ (see header). Loopback only:
+        # nothing but Prowlarr in this container ever talks to it.
+        systemd.services.filmix-torznab = lib.mkIf cfg.enableFilmix {
+          description = "Filmix Torznab bridge";
+          wantedBy = [ "multi-user.target" ];
+          after = [ "network.target" ];
+          serviceConfig = {
+            ExecStart = lib.getExe pkgs.custom.filmix-torznab;
+            EnvironmentFile = config.sops.secrets."filmix-env".path;
+            DynamicUser = true;
+            Restart = "on-failure";
+            RestartSec = 10;
+            # Hardening: it only needs outbound HTTP and a loopback socket.
+            NoNewPrivileges = true;
+            ProtectSystem = "strict";
+            ProtectHome = true;
+            PrivateTmp = true;
+            CapabilityBoundingSet = "";
+          };
+        };
+
+        networking = {
+          firewall = {
+            enable = true;
+            allowedTCPPorts = [ 9696 ];
+          };
+          useHostResolvConf = lib.mkForce false;
+        };
+
+        services.resolved = {
+          enable = true;
+          settings.Resolve = householdDnsSettings;
+        };
+        system.stateVersion = "26.05";
+      };
     };
   };
 }

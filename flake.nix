@@ -123,7 +123,7 @@
 
       overlays = with inputs; [
         # Expose unstable packages via pkgs.unstable
-        (final: prev: {
+        (final: _prev: {
           unstable = import unstable {
             system = final.stdenv.hostPlatform.system;
             config.allowUnfree = true;

@@ -6,7 +6,6 @@
 }:
 let
   inherit (lib) mkEnableOption mkIf;
-  inherit (lib.custom) enabled;
 
   cfg = config.custom.cli-apps.fastfetch;
 in

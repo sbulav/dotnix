@@ -41,7 +41,7 @@ in
       };
       "allowedips-nextcloud" = {
         service = "nextcloud";
-        host = cfg.host;
+        inherit (cfg) host;
         url = "http://${cfg.localAddress}:80";
         middlewares = [
           "secure-headers"

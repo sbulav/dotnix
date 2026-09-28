@@ -8,7 +8,6 @@ with lib.custom;
 let
   inherit (lib)
     mkIf
-    mkEnableOption
     nameValuePair
     ;
 

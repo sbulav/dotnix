@@ -40,14 +40,14 @@ in
 
   imports = [
     (import ../shared/shared-adguard-dns-rewrite.nix {
-      host = cfg.host;
+      inherit (cfg) host;
       rewrite_enabled = cfg.enable;
     })
   ];
 
   config = mkIf cfg.enable {
     custom.containers.traefik.routes.opencloud = {
-      host = cfg.host;
+      inherit (cfg) host;
       url = "http://${cfg.localAddress}:9200";
       middlewares = [ "secure-headers-opencloud" ];
     };
@@ -139,8 +139,8 @@ in
       autoStart = true;
 
       privateNetwork = true;
-      hostAddress = cfg.hostAddress;
-      localAddress = cfg.localAddress;
+      inherit (cfg) hostAddress;
+      inherit (cfg) localAddress;
 
       bindMounts = {
         "${config.sops.secrets."opencloud-env".path}" = {

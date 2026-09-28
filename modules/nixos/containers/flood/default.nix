@@ -21,7 +21,7 @@ in
   };
   imports = [
     (import ../shared/shared-adguard-dns-rewrite.nix {
-      host = cfg.host;
+      inherit (cfg) host;
       rewrite_enabled = cfg.enable;
     })
   ];
@@ -29,12 +29,12 @@ in
   config = mkIf cfg.enable {
     custom.containers.traefik.routes = {
       flood = {
-        host = cfg.host;
+        inherit (cfg) host;
         url = "http://${cfg.localAddress}:3000";
       };
       "allowedips-flood" = {
         service = "flood";
-        host = cfg.host;
+        inherit (cfg) host;
         url = "http://${cfg.localAddress}:3000";
         middlewares = [
           "secure-headers"
@@ -69,71 +69,69 @@ in
       };
       privateNetwork = true;
       # Need to add 172.16.64.0/18 on router
-      hostAddress = cfg.hostAddress;
-      localAddress = cfg.localAddress;
+      inherit (cfg) hostAddress;
+      inherit (cfg) localAddress;
 
-      config =
-        { ... }:
-        {
-          systemd.tmpfiles.rules = [
-            "d /var/lib/torrents/log 700 rtorrent rtorrent -"
-            "d /run/rtorrent 700 rtorrent rtorrent -"
+      config = _: {
+        systemd.tmpfiles.rules = [
+          "d /var/lib/torrents/log 700 rtorrent rtorrent -"
+          "d /run/rtorrent 700 rtorrent rtorrent -"
+        ];
+        services.rtorrent = {
+          enable = true;
+          dataDir = "/var/lib/torrents";
+          # package = pkgs.jesec-rtorrent;
+          # Using upstream rtorrent pkg, config below is required
+          # https://github.com/jesec/flood?tab=readme-ov-file#rtorrent-notes
+
+          configText = ''
+            method.redirect=load.throw,load.normal
+            method.redirect=load.start_throw,load.start
+            method.insert=d.down.sequential,value|const,0
+            method.insert=d.down.sequential.set,value|const,0
+          '';
+        };
+        services.flood = {
+          enable = true;
+          host = cfg.localAddress;
+          port = 3000;
+          extraArgs = [
+            "--noauth"
+            "--rtsocket=${config.services.rtorrent.rpcSocket}"
+            "--allowedpath=/var/lib/torrents/"
+            "--allowedpath=/var/lib/torrents/completed"
+            "--allowedpath=/var/lib/torrents/download"
           ];
-          services.rtorrent = {
-            enable = true;
-            dataDir = "/var/lib/torrents";
-            # package = pkgs.jesec-rtorrent;
-            # Using upstream rtorrent pkg, config below is required
-            # https://github.com/jesec/flood?tab=readme-ov-file#rtorrent-notes
-
-            configText = ''
-              method.redirect=load.throw,load.normal
-              method.redirect=load.start_throw,load.start
-              method.insert=d.down.sequential,value|const,0
-              method.insert=d.down.sequential.set,value|const,0
-            '';
-          };
-          services.flood = {
-            enable = true;
-            host = cfg.localAddress;
-            port = 3000;
-            extraArgs = [
-              "--noauth"
-              "--rtsocket=${config.services.rtorrent.rpcSocket}"
-              "--allowedpath=/var/lib/torrents/"
-              "--allowedpath=/var/lib/torrents/completed"
-              "--allowedpath=/var/lib/torrents/download"
+        };
+        systemd.services.flood = {
+          wantedBy = [ "multi-user.target" ];
+          wants = [ "rtorrent.service" ];
+          after = [ "rtorrent.service" ];
+          serviceConfig = {
+            User = "rtorrent";
+            SupplementaryGroups = [ "rtorrent" ];
+            ReadWritePaths = [
+              "/var/lib/torrents/download"
+              "/var/lib/torrents/completed"
             ];
           };
-          systemd.services.flood = {
-            wantedBy = [ "multi-user.target" ];
-            wants = [ "rtorrent.service" ];
-            after = [ "rtorrent.service" ];
-            serviceConfig = {
-              User = "rtorrent";
-              SupplementaryGroups = [ "rtorrent" ];
-              ReadWritePaths = [
-                "/var/lib/torrents/download"
-                "/var/lib/torrents/completed"
-              ];
-            };
-          };
-
-          networking = {
-            firewall = {
-              enable = true;
-              allowedTCPPorts = [ 3000 ];
-            };
-
-            useHostResolvConf = lib.mkForce false;
-          };
-
-          services.resolved = {
-            enable = true;
-            settings.Resolve = householdDnsSettings;
-          };
-          system.stateVersion = "24.11";
         };
+
+        networking = {
+          firewall = {
+            enable = true;
+            allowedTCPPorts = [ 3000 ];
+          };
+
+          useHostResolvConf = lib.mkForce false;
+        };
+
+        services.resolved = {
+          enable = true;
+          settings.Resolve = householdDnsSettings;
+        };
+        system.stateVersion = "24.11";
+      };
     };
   };
 }

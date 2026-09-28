@@ -51,32 +51,30 @@ in
           protocol = "tcp";
         }
       ];
-      config =
-        { ... }:
-        {
-          services.cockpit = {
-            enable = true;
-            settings = {
-              WebService = {
-                # Origins = "https://${cfg.host}";
-                # ProtocolHeader = "X-Forwarded-Proto";
-                AllowUnencrypted = true;
-              };
+      config = _: {
+        services.cockpit = {
+          enable = true;
+          settings = {
+            WebService = {
+              # Origins = "https://${cfg.host}";
+              # ProtocolHeader = "X-Forwarded-Proto";
+              AllowUnencrypted = true;
             };
           };
-
-          networking = {
-            firewall = {
-              enable = true;
-              allowedTCPPorts = [ 9090 ];
-            };
-            # Use systemd-resolved inside the container
-            # Workaround for bug https://github.com/NixOS/nixpkgs/issues/162686
-            useHostResolvConf = lib.mkForce false;
-          };
-          services.resolved.enable = true;
-          system.stateVersion = "24.11";
         };
+
+        networking = {
+          firewall = {
+            enable = true;
+            allowedTCPPorts = [ 9090 ];
+          };
+          # Use systemd-resolved inside the container
+          # Workaround for bug https://github.com/NixOS/nixpkgs/issues/162686
+          useHostResolvConf = lib.mkForce false;
+        };
+        services.resolved.enable = true;
+        system.stateVersion = "24.11";
+      };
     };
   };
 }

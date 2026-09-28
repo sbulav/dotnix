@@ -29,7 +29,6 @@ let
     ''
   );
 
-  freezeFlag = lib.optionalString cfg.freeze "--freeze";
   notifyFlag = lib.optionalString cfg.notify "--notify";
 
   # Helpers to build grimblast command strings tidily.

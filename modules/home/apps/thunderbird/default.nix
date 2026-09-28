@@ -339,16 +339,16 @@ in
 
     accounts.email.accounts.work = {
       primary = true;
-      address = cfg.address;
+      inherit (cfg) address;
       userName = cfg.login;
       realName = config.custom.user.fullName;
       imap = {
-        host = cfg.host;
+        inherit (cfg) host;
         port = 993;
         tls.enable = true; # implicit SSL/TLS
       };
       smtp = {
-        host = cfg.host;
+        inherit (cfg) host;
         port = 587;
         tls = {
           enable = true;

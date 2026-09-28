@@ -27,7 +27,7 @@ in
       };
     }
     // lib.optionalAttrs (cfg.secrets != { }) {
-      secrets = cfg.secrets;
+      inherit (cfg) secrets;
     };
 
     # warnings = [

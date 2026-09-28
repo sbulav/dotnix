@@ -2,7 +2,7 @@ let
   workflow = import ../../shared/workflow/skill/brainstorm.nix;
 in
 {
-  description = workflow.description;
+  inherit (workflow) description;
   agent = "brainstorm-orchestrator";
 
   requirements = ''

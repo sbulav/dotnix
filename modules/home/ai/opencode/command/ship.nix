@@ -2,7 +2,7 @@ let
   workflow = import ../../shared/workflow/skill/ship.nix;
 in
 {
-  description = workflow.description;
+  inherit (workflow) description;
   agent = "ship-orchestrator";
 
   requirements = ''

@@ -150,7 +150,7 @@ in
   };
   imports = [
     (import ../shared/shared-adguard-dns-rewrite.nix {
-      host = cfg.host;
+      inherit (cfg) host;
       rewrite_enabled = cfg.enable;
     })
   ];
@@ -162,7 +162,7 @@ in
       knownMiddlewares = [ "sing-box-ui-redirect" ];
 
       routes.sing-box = {
-        host = cfg.host;
+        inherit (cfg) host;
         url = "http://${cfg.localAddress}:9090";
         # auth-chain (= secure-headers + authelia) keeps the dashboard SSO-gated
         # like every other admin UI; allow-lan additionally pins it to LAN
@@ -270,159 +270,157 @@ in
           protocol = "tcp";
         }
       ];
-      config =
-        { ... }:
-        {
-          services.sing-box = {
-            enable = true;
-            settings = {
-              log = {
-                level = "info";
-                output = "/var/log/sing-box/sing-box.log";
-                timestamp = true;
-              };
-              dns.servers = [
+      config = _: {
+        services.sing-box = {
+          enable = true;
+          settings = {
+            log = {
+              level = "info";
+              output = "/var/log/sing-box/sing-box.log";
+              timestamp = true;
+            };
+            dns.servers = [
+              {
+                # The system resolver handles household resolver failover.
+                # prefer_go is load-bearing: without it sing-box 1.13's
+                # "local" server asks systemd-resolved over D-Bus for
+                # *per-link* nameservers, and this container only has the
+                # global DNS= list — every lookup then fails with "link has
+                # no DNS servers configured" and the whole proxy goes dark.
+                # prefer_go routes lookups through the 127.0.0.53 stub,
+                # which is where the household resolver list actually is.
+                type = "local";
+                tag = "adguard";
+                prefer_go = true;
+              }
+            ];
+            inbounds = [
+              {
+                # SOCKS5 + HTTP on the former v2rayA SOCKS port
+                type = "mixed";
+                tag = "in";
+                listen = "0.0.0.0";
+                listen_port = 20170;
+              }
+            ];
+            # vless outbounds + "auto" urltest + "exit" selector are
+            # generated into /run/sing-box/10-outbounds.json from sops;
+            # sing-box -C merges every *.json in the directory.
+            outbounds = [
+              {
+                type = "direct";
+                tag = "direct";
+              }
+            ];
+            route = {
+              default_domain_resolver = "adguard";
+              rule_set = [
                 {
-                  # The system resolver handles household resolver failover.
-                  # prefer_go is load-bearing: without it sing-box 1.13's
-                  # "local" server asks systemd-resolved over D-Bus for
-                  # *per-link* nameservers, and this container only has the
-                  # global DNS= list — every lookup then fails with "link has
-                  # no DNS servers configured" and the whole proxy goes dark.
-                  # prefer_go routes lookups through the 127.0.0.53 stub,
-                  # which is where the household resolver list actually is.
                   type = "local";
-                  tag = "adguard";
-                  prefer_go = true;
+                  format = "binary";
+                  tag = "geosite-category-ru";
+                  path = "${pkgs.sing-geosite}/share/sing-box/rule-set/geosite-category-ru.srs";
                 }
-              ];
-              inbounds = [
                 {
-                  # SOCKS5 + HTTP on the former v2rayA SOCKS port
-                  type = "mixed";
-                  tag = "in";
-                  listen = "0.0.0.0";
-                  listen_port = 20170;
+                  type = "local";
+                  format = "binary";
+                  tag = "geoip-ru";
+                  path = "${pkgs.sing-geoip}/share/sing-box/rule-set/geoip-ru.srs";
                 }
               ];
-              # vless outbounds + "auto" urltest + "exit" selector are
-              # generated into /run/sing-box/10-outbounds.json from sops;
-              # sing-box -C merges every *.json in the directory.
-              outbounds = [
+              rules = [
+                # redsocks hands us bare IPs; sniff recovers SNI/Host so
+                # the domain rules below can catch RU sites before the
+                # geoip fallback.
+                { action = "sniff"; }
                 {
-                  type = "direct";
-                  tag = "direct";
+                  domain_suffix = [
+                    "sbulav.ru"
+                    "pyn.ru"
+                    "hhdev.ru"
+                  ];
+                  rule_set = [ "geosite-category-ru" ];
+                  domain_regex = [
+                    "\\.ru$"
+                    "\\.su$"
+                    "\\.xn--p1ai$"
+                  ];
+                  outbound = "direct";
+                }
+                # xray's old IPIfNonMatch equivalent: resolve what the
+                # domain rules didn't catch (socks5h clients send names)
+                # so the IP rules below still see RU-hosted hosts on
+                # foreign TLDs. Uses default_domain_resolver (adguard);
+                # the outbound still dials by domain name.
+                { action = "resolve"; }
+                # The uplink poisons plain DNS for RKN-blocked domains
+                # (api.themoviedb.org -> 127.0.0.1) and adguard forwards
+                # that answer, which the ip_is_private rule below would
+                # send to "direct". A loopback/unspecified result is never
+                # a real destination: hand it to the exit, which dials by
+                # name and resolves remotely.
+                {
+                  ip_cidr = [
+                    "127.0.0.0/8"
+                    "0.0.0.0/32"
+                    "::1/128"
+                  ];
+                  outbound = "exit";
+                }
+                {
+                  ip_is_private = true;
+                  outbound = "direct";
+                }
+                {
+                  rule_set = [ "geoip-ru" ];
+                  outbound = "direct";
                 }
               ];
-              route = {
-                default_domain_resolver = "adguard";
-                rule_set = [
-                  {
-                    type = "local";
-                    format = "binary";
-                    tag = "geosite-category-ru";
-                    path = "${pkgs.sing-geosite}/share/sing-box/rule-set/geosite-category-ru.srs";
-                  }
-                  {
-                    type = "local";
-                    format = "binary";
-                    tag = "geoip-ru";
-                    path = "${pkgs.sing-geoip}/share/sing-box/rule-set/geoip-ru.srs";
-                  }
-                ];
-                rules = [
-                  # redsocks hands us bare IPs; sniff recovers SNI/Host so
-                  # the domain rules below can catch RU sites before the
-                  # geoip fallback.
-                  { action = "sniff"; }
-                  {
-                    domain_suffix = [
-                      "sbulav.ru"
-                      "pyn.ru"
-                      "hhdev.ru"
-                    ];
-                    rule_set = [ "geosite-category-ru" ];
-                    domain_regex = [
-                      "\\.ru$"
-                      "\\.su$"
-                      "\\.xn--p1ai$"
-                    ];
-                    outbound = "direct";
-                  }
-                  # xray's old IPIfNonMatch equivalent: resolve what the
-                  # domain rules didn't catch (socks5h clients send names)
-                  # so the IP rules below still see RU-hosted hosts on
-                  # foreign TLDs. Uses default_domain_resolver (adguard);
-                  # the outbound still dials by domain name.
-                  { action = "resolve"; }
-                  # The uplink poisons plain DNS for RKN-blocked domains
-                  # (api.themoviedb.org -> 127.0.0.1) and adguard forwards
-                  # that answer, which the ip_is_private rule below would
-                  # send to "direct". A loopback/unspecified result is never
-                  # a real destination: hand it to the exit, which dials by
-                  # name and resolves remotely.
-                  {
-                    ip_cidr = [
-                      "127.0.0.0/8"
-                      "0.0.0.0/32"
-                      "::1/128"
-                    ];
-                    outbound = "exit";
-                  }
-                  {
-                    ip_is_private = true;
-                    outbound = "direct";
-                  }
-                  {
-                    rule_set = [ "geoip-ru" ];
-                    outbound = "direct";
-                  }
-                ];
-                final = "exit";
+              final = "exit";
+            };
+            experimental = {
+              clash_api = {
+                external_controller = "0.0.0.0:9090";
+                external_ui = "${metacubexd}";
+                secret._secret = config.sops.secrets."sing-box/admin_password".path;
               };
-              experimental = {
-                clash_api = {
-                  external_controller = "0.0.0.0:9090";
-                  external_ui = "${metacubexd}";
-                  secret._secret = config.sops.secrets."sing-box/admin_password".path;
-                };
-                cache_file.enabled = true;
-              };
+              cache_file.enabled = true;
             };
           };
-
-          # "+" = run as root: the sops secret is 0400 and the module's own
-          # ExecStartPre (config.json render) also runs privileged.
-          systemd.services.sing-box.serviceConfig.ExecStartPre = mkAfter [
-            "+${outboundsGen}/bin/sing-box-outbounds-gen ${
-              config.sops.secrets."sing-box/vless_uris".path
-            } /run/sing-box/10-outbounds.json"
-            # Validate the merged config (module render + generated
-            # outbounds) so a bad sops edit fails with a readable message
-            # instead of a crash loop. Runs as the service user — same
-            # dirs as ExecStart.
-            "${getExe pkgs.sing-box} check -D /var/lib/sing-box -C /run/sing-box"
-          ];
-
-          # Bind mounts arrive root-owned; hand them to the service user.
-          systemd.tmpfiles.rules = [
-            "Z /var/log/sing-box - sing-box sing-box -"
-            "Z /var/lib/sing-box - sing-box sing-box -"
-          ];
-
-          networking = {
-            enableIPv6 = false;
-            firewall.enable = false;
-            # Use systemd-resolved inside the container
-            # Workaround for bug https://github.com/NixOS/nixpkgs/issues/162686
-            useHostResolvConf = lib.mkForce false;
-          };
-          services.resolved = {
-            enable = true;
-            settings.Resolve = householdDnsSettings;
-          };
-          system.stateVersion = "26.05";
         };
+
+        # "+" = run as root: the sops secret is 0400 and the module's own
+        # ExecStartPre (config.json render) also runs privileged.
+        systemd.services.sing-box.serviceConfig.ExecStartPre = mkAfter [
+          "+${outboundsGen}/bin/sing-box-outbounds-gen ${
+            config.sops.secrets."sing-box/vless_uris".path
+          } /run/sing-box/10-outbounds.json"
+          # Validate the merged config (module render + generated
+          # outbounds) so a bad sops edit fails with a readable message
+          # instead of a crash loop. Runs as the service user — same
+          # dirs as ExecStart.
+          "${getExe pkgs.sing-box} check -D /var/lib/sing-box -C /run/sing-box"
+        ];
+
+        # Bind mounts arrive root-owned; hand them to the service user.
+        systemd.tmpfiles.rules = [
+          "Z /var/log/sing-box - sing-box sing-box -"
+          "Z /var/lib/sing-box - sing-box sing-box -"
+        ];
+
+        networking = {
+          enableIPv6 = false;
+          firewall.enable = false;
+          # Use systemd-resolved inside the container
+          # Workaround for bug https://github.com/NixOS/nixpkgs/issues/162686
+          useHostResolvConf = lib.mkForce false;
+        };
+        services.resolved = {
+          enable = true;
+          settings.Resolve = householdDnsSettings;
+        };
+        system.stateVersion = "26.05";
+      };
     };
   };
 }

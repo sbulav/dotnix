@@ -9,7 +9,6 @@ let
   inherit (lib)
     mkIf
     mkMerge
-    mkDefault
     types
     optionalAttrs
     ;
@@ -119,7 +118,7 @@ in
     # Custom secrets with smart defaults
     (mkIf (cfg.secrets != { }) {
       sops.secrets = lib.mapAttrs (
-        name: secretConfig:
+        _name: secretConfig:
         secretConfig
         // optionalAttrs (secretConfig.sopsFile or null == null) {
           sopsFile =

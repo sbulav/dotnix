@@ -15,7 +15,7 @@ let
   # port-forwarded from its LAN address.
   resolverAddresses = {
     zanoza = "172.16.64.104";
-    beez = hosts.beez;
+    inherit (hosts) beez;
   };
   resolvers = [
     resolverAddresses.zanoza

@@ -77,7 +77,7 @@ in
   };
   imports = [
     (import ../shared/shared-adguard-dns-rewrite.nix {
-      host = cfg.host;
+      inherit (cfg) host;
       rewrite_enabled = cfg.enable;
     })
   ];
@@ -85,7 +85,7 @@ in
   config = mkIf cfg.enable {
     custom.containers.traefik.routes."allowedips-radarr" = {
       service = "radarr";
-      host = cfg.host;
+      inherit (cfg) host;
       url = "http://${cfg.localAddress}:7878";
       middlewares = [
         "secure-headers"
@@ -145,8 +145,8 @@ in
         };
       };
       privateNetwork = true;
-      hostAddress = cfg.hostAddress;
-      localAddress = cfg.localAddress;
+      inherit (cfg) hostAddress;
+      inherit (cfg) localAddress;
 
       config =
         { ... }:

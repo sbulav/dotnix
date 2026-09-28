@@ -67,139 +67,137 @@ in
         };
       };
 
-      config =
-        { ... }:
-        {
-          networking.hosts = {
-            #TODO: remove this once migrated
-            "${cfg.hostAddress}" = [
-              "traefik.sbulav.ru"
-              "adguard.sbulav.ru"
-              "flood.sbulav.ru"
-              "jellyfin.sbulav.ru"
-            ];
-          };
-
-          services.homepage-dashboard = {
-            environmentFiles = [ config.sops.secrets.homepage-env.path ];
-            enable = true;
-            widgets = [
-              {
-                resources = {
-                  cpu = true;
-                  cputemp = true;
-                  disk = [ "/" ];
-                  memory = true;
-                };
-              }
-            ];
-            services = [
-              {
-                "Network" = [
-                  # TODO: implement enabling widgets based on config
-                  {
-                    "Traefik" = {
-                      icon = "traefik";
-                      href = "https://traefik.${config.${namespace}.containers.traefik.domain}";
-                      widget = {
-                        type = "traefik";
-                        url = "https://traefik.${config.${namespace}.containers.traefik.domain}";
-                      };
-                    };
-                  }
-                  {
-                    "Adguard" = mkIf config.${namespace}.containers.adguard.enable {
-                      icon = "adguard-home";
-                      href = "https://${config.${namespace}.containers.adguard.host}";
-                      widget = {
-                        type = "adguard";
-                        url = "http://${config.${namespace}.containers.adguard.localAddress}:3000";
-                      };
-                    };
-                  }
-                ];
-              }
-              {
-                "Media" = [
-                  {
-                    "nextcloud" = mkIf config.${namespace}.containers.nextcloud.enable {
-                      icon = "nextcloud";
-                      href = "https://${config.${namespace}.containers.nextcloud.host}";
-                      widget = {
-                        type = "nextcloud";
-                        key = "{{HOMEPAGE_VAR_NEXTCLOUD_API_KEY}}";
-                        url = "http://${config.${namespace}.containers.nextcloud.localAddress}:80";
-                      };
-                    };
-                  }
-
-                  {
-                    "jellyfin" = mkIf config.${namespace}.containers.jellyfin.enable {
-                      icon = "jellyfin";
-                      href = "https://${config.${namespace}.containers.jellyfin.host}";
-                      widget = {
-                        type = "jellyfin";
-                        key = "{{HOMEPAGE_VAR_JELLYFIN_API_KEY}}";
-                        url = "http://${config.${namespace}.containers.jellyfin.localAddress}:8096";
-                        enableBlocks = true; # optional, defaults to false
-                        enableNowPlaying = true; # optional, defaults to true
-                        enableUser = true; # optional, defaults to false
-                        showEpisodeNumber = true; # optional, defaults to false
-                        expandOneStreamToTwoRows = false; # optional, defaults to true
-                      };
-                    };
-                  }
-                  {
-                    "immich" = mkIf config.${namespace}.containers.immich.enable {
-                      icon = "immich";
-                      href = "https://${config.${namespace}.containers.immich.host}";
-                      widget = {
-                        type = "immich";
-                        version = 2;
-                        key = "{{HOMEPAGE_VAR_IMMICH_API_KEY}}";
-                        url = "http://${config.${namespace}.containers.immich.localAddress}:2283";
-                      };
-                    };
-                  }
-                  {
-                    "opencloud" = mkIf config.${namespace}.containers.opencloud.enable {
-                      icon = "opencloud";
-                      href = "https://${config.${namespace}.containers.opencloud.host}";
-                    };
-                  }
-                ];
-              }
-              {
-                "ARR Stack" = [
-                  {
-                    "Flood" = mkIf config.${namespace}.containers.flood.enable {
-                      icon = "flood";
-                      href = "https://${config.${namespace}.containers.flood.host}";
-                      widget = {
-                        type = "flood";
-                        url = "http://${config.${namespace}.containers.flood.localAddress}:3000";
-                      };
-                    };
-                  }
-                ];
-              }
-            ];
-          };
-
-          networking = {
-            firewall = {
-              enable = true;
-              allowedTCPPorts = [ 8082 ];
-            };
-            useHostResolvConf = lib.mkForce false;
-          };
-
-          services.resolved = {
-            enable = true;
-            settings.Resolve = householdDnsSettings;
-          };
-          system.stateVersion = "24.11";
+      config = _: {
+        networking.hosts = {
+          #TODO: remove this once migrated
+          "${cfg.hostAddress}" = [
+            "traefik.sbulav.ru"
+            "adguard.sbulav.ru"
+            "flood.sbulav.ru"
+            "jellyfin.sbulav.ru"
+          ];
         };
+
+        services.homepage-dashboard = {
+          environmentFiles = [ config.sops.secrets.homepage-env.path ];
+          enable = true;
+          widgets = [
+            {
+              resources = {
+                cpu = true;
+                cputemp = true;
+                disk = [ "/" ];
+                memory = true;
+              };
+            }
+          ];
+          services = [
+            {
+              "Network" = [
+                # TODO: implement enabling widgets based on config
+                {
+                  "Traefik" = {
+                    icon = "traefik";
+                    href = "https://traefik.${config.${namespace}.containers.traefik.domain}";
+                    widget = {
+                      type = "traefik";
+                      url = "https://traefik.${config.${namespace}.containers.traefik.domain}";
+                    };
+                  };
+                }
+                {
+                  "Adguard" = mkIf config.${namespace}.containers.adguard.enable {
+                    icon = "adguard-home";
+                    href = "https://${config.${namespace}.containers.adguard.host}";
+                    widget = {
+                      type = "adguard";
+                      url = "http://${config.${namespace}.containers.adguard.localAddress}:3000";
+                    };
+                  };
+                }
+              ];
+            }
+            {
+              "Media" = [
+                {
+                  "nextcloud" = mkIf config.${namespace}.containers.nextcloud.enable {
+                    icon = "nextcloud";
+                    href = "https://${config.${namespace}.containers.nextcloud.host}";
+                    widget = {
+                      type = "nextcloud";
+                      key = "{{HOMEPAGE_VAR_NEXTCLOUD_API_KEY}}";
+                      url = "http://${config.${namespace}.containers.nextcloud.localAddress}:80";
+                    };
+                  };
+                }
+
+                {
+                  "jellyfin" = mkIf config.${namespace}.containers.jellyfin.enable {
+                    icon = "jellyfin";
+                    href = "https://${config.${namespace}.containers.jellyfin.host}";
+                    widget = {
+                      type = "jellyfin";
+                      key = "{{HOMEPAGE_VAR_JELLYFIN_API_KEY}}";
+                      url = "http://${config.${namespace}.containers.jellyfin.localAddress}:8096";
+                      enableBlocks = true; # optional, defaults to false
+                      enableNowPlaying = true; # optional, defaults to true
+                      enableUser = true; # optional, defaults to false
+                      showEpisodeNumber = true; # optional, defaults to false
+                      expandOneStreamToTwoRows = false; # optional, defaults to true
+                    };
+                  };
+                }
+                {
+                  "immich" = mkIf config.${namespace}.containers.immich.enable {
+                    icon = "immich";
+                    href = "https://${config.${namespace}.containers.immich.host}";
+                    widget = {
+                      type = "immich";
+                      version = 2;
+                      key = "{{HOMEPAGE_VAR_IMMICH_API_KEY}}";
+                      url = "http://${config.${namespace}.containers.immich.localAddress}:2283";
+                    };
+                  };
+                }
+                {
+                  "opencloud" = mkIf config.${namespace}.containers.opencloud.enable {
+                    icon = "opencloud";
+                    href = "https://${config.${namespace}.containers.opencloud.host}";
+                  };
+                }
+              ];
+            }
+            {
+              "ARR Stack" = [
+                {
+                  "Flood" = mkIf config.${namespace}.containers.flood.enable {
+                    icon = "flood";
+                    href = "https://${config.${namespace}.containers.flood.host}";
+                    widget = {
+                      type = "flood";
+                      url = "http://${config.${namespace}.containers.flood.localAddress}:3000";
+                    };
+                  };
+                }
+              ];
+            }
+          ];
+        };
+
+        networking = {
+          firewall = {
+            enable = true;
+            allowedTCPPorts = [ 8082 ];
+          };
+          useHostResolvConf = lib.mkForce false;
+        };
+
+        services.resolved = {
+          enable = true;
+          settings.Resolve = householdDnsSettings;
+        };
+        system.stateVersion = "24.11";
+      };
     };
   };
 }

@@ -16,7 +16,6 @@ let
 
   cfg = config.custom.user;
 
-  is-linux = pkgs.stdenv.isLinux;
   is-darwin = pkgs.stdenv.isDarwin;
 
   home-directory =

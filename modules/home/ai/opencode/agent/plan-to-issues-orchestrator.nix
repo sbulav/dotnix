@@ -2,7 +2,7 @@ let
   workflow = import ../../shared/workflow/skill/plan-to-issues.nix;
 in
 {
-  description = workflow.description;
+  inherit (workflow) description;
   mode = "subagent";
   model = "hhdev-glm5-fp8/zai-org/GLM-5.3-Flash";
   temperature = 0.1;

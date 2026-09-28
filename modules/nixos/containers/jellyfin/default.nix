@@ -45,7 +45,7 @@ in
   config = mkIf cfg.enable {
     custom.containers.traefik.routes = {
       jellyfin = {
-        host = cfg.host;
+        inherit (cfg) host;
         url = "http://${cfg.localAddress}:8096";
         middlewares = [
           "secure-headers-jellyfin"
@@ -54,7 +54,7 @@ in
       };
       "allowedips-jellyfin" = {
         service = "jellyfin";
-        host = cfg.host;
+        inherit (cfg) host;
         url = "http://${cfg.localAddress}:8096";
         middlewares = [
           "secure-headers-jellyfin"

@@ -43,7 +43,7 @@ in
   };
   imports = [
     (import ../shared/shared-adguard-dns-rewrite.nix {
-      host = cfg.host;
+      inherit (cfg) host;
       rewrite_enabled = cfg.enable;
     })
   ];
@@ -51,7 +51,7 @@ in
   config = mkIf cfg.enable {
     custom.containers.traefik.routes."allowedips-qbittorrent" = {
       service = "qbittorrent";
-      host = cfg.host;
+      inherit (cfg) host;
       url = "http://${cfg.localAddress}:8080";
       middlewares = [
         "secure-headers"
@@ -103,8 +103,8 @@ in
         };
       };
       privateNetwork = true;
-      hostAddress = cfg.hostAddress;
-      localAddress = cfg.localAddress;
+      inherit (cfg) hostAddress;
+      inherit (cfg) localAddress;
       forwardPorts = [
         {
           containerPort = cfg.torrentingPort;
@@ -118,58 +118,56 @@ in
         }
       ];
 
-      config =
-        { ... }:
-        {
-          users.groups.media.gid = mediaGid;
+      config = _: {
+        users.groups.media.gid = mediaGid;
 
-          services.qbittorrent = {
-            enable = true;
-            group = "media";
-            webuiPort = cfg.webuiPort;
-            torrentingPort = cfg.torrentingPort;
-            # NOTE: serverConfig is reinstalled on every service start —
-            # preferences changed in the WebUI do not survive a restart,
-            # torrents/categories do. Keep durable settings here.
-            serverConfig = {
-              LegalNotice.Accepted = true;
-              BitTorrent.Session = {
-                DefaultSavePath = "/data/torrents";
-                Port = cfg.torrentingPort;
-              };
-              Preferences.WebUI = {
-                # UIs are only reachable through the LAN-only traefik route
-                # (same trust model as flood's --noauth).
-                AuthSubnetWhitelistEnabled = true;
-                AuthSubnetWhitelist = "172.16.64.0/24, 192.168.80.0/20";
-                # Traefik passes Host: ${cfg.host} (passHostHeader);
-                # qBittorrent would otherwise reject the proxied requests.
-                HostHeaderValidation = false;
-              };
+        services.qbittorrent = {
+          enable = true;
+          group = "media";
+          inherit (cfg) webuiPort;
+          inherit (cfg) torrentingPort;
+          # NOTE: serverConfig is reinstalled on every service start —
+          # preferences changed in the WebUI do not survive a restart,
+          # torrents/categories do. Keep durable settings here.
+          serverConfig = {
+            LegalNotice.Accepted = true;
+            BitTorrent.Session = {
+              DefaultSavePath = "/data/torrents";
+              Port = cfg.torrentingPort;
+            };
+            Preferences.WebUI = {
+              # UIs are only reachable through the LAN-only traefik route
+              # (same trust model as flood's --noauth).
+              AuthSubnetWhitelistEnabled = true;
+              AuthSubnetWhitelist = "172.16.64.0/24, 192.168.80.0/20";
+              # Traefik passes Host: ${cfg.host} (passHostHeader);
+              # qBittorrent would otherwise reject the proxied requests.
+              HostHeaderValidation = false;
             };
           };
-
-          # Group-writable files so sonarr (group media) can import/hardlink.
-          systemd.services.qbittorrent.serviceConfig.UMask = "0002";
-
-          networking = {
-            firewall = {
-              enable = true;
-              allowedTCPPorts = [
-                cfg.webuiPort
-                cfg.torrentingPort
-              ];
-              allowedUDPPorts = [ cfg.torrentingPort ];
-            };
-            useHostResolvConf = lib.mkForce false;
-          };
-
-          services.resolved = {
-            enable = true;
-            settings.Resolve = householdDnsSettings;
-          };
-          system.stateVersion = "26.05";
         };
+
+        # Group-writable files so sonarr (group media) can import/hardlink.
+        systemd.services.qbittorrent.serviceConfig.UMask = "0002";
+
+        networking = {
+          firewall = {
+            enable = true;
+            allowedTCPPorts = [
+              cfg.webuiPort
+              cfg.torrentingPort
+            ];
+            allowedUDPPorts = [ cfg.torrentingPort ];
+          };
+          useHostResolvConf = lib.mkForce false;
+        };
+
+        services.resolved = {
+          enable = true;
+          settings.Resolve = householdDnsSettings;
+        };
+        system.stateVersion = "26.05";
+      };
     };
   };
 }

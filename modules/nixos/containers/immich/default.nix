@@ -22,7 +22,7 @@ in
   };
   imports = [
     (import ../shared/shared-adguard-dns-rewrite.nix {
-      host = cfg.host;
+      inherit (cfg) host;
       rewrite_enabled = cfg.enable;
     })
   ];
@@ -30,12 +30,12 @@ in
   config = mkIf cfg.enable {
     custom.containers.traefik.routes = {
       immich = {
-        host = cfg.host;
+        inherit (cfg) host;
         url = "http://${cfg.localAddress}:2283";
       };
       "allowedips-immich" = {
         service = "immich";
-        host = cfg.host;
+        inherit (cfg) host;
         url = "http://${cfg.localAddress}:2283";
         middlewares = [
           "secure-headers"
@@ -50,7 +50,7 @@ in
       # https://github.com/immich-app/immich/discussions/3118
       "bypass-immich" = {
         service = "immich";
-        host = cfg.host;
+        inherit (cfg) host;
         url = "http://${cfg.localAddress}:2283";
         middlewares = [ "secure-headers" ];
         # pathRegexp = "/api/(albums|assets|users|partners)|/api/.well-known/immich|^/api/(auth|oauth|socket.io|sync|assets|server)/";
@@ -95,44 +95,42 @@ in
       hostAddress = "${cfg.hostAddress}";
       localAddress = "${cfg.localAddress}";
 
-      config =
-        { ... }:
-        {
-          systemd.tmpfiles.rules = [
-            "d /var/lib/immich 750 immich immich -"
-            "d /var/lib/postgresql 700 postgres postgres -"
-          ];
+      config = _: {
+        systemd.tmpfiles.rules = [
+          "d /var/lib/immich 750 immich immich -"
+          "d /var/lib/postgresql 700 postgres postgres -"
+        ];
 
-          services.immich = {
-            enable = true;
-            # Immich 2.x is EOL and marked insecure on 26.05; 3.x ships in 26.11.
-            # Drop this override once nixpkgs moves to 26.11.
-            package = pkgs.unstable.immich;
-            host = cfg.localAddress;
-            mediaLocation = "/var/lib/immich";
-            # Setting settings to null to inject oidc config with client secret from sops
-            settings = null;
-            environment = {
-              IMMICH_ENV = "production";
-              IMMICH_TRUSTED_PROXIES = cfg.hostAddress;
-              IMMICH_CONFIG_FILE = "${config.sops.secrets."immich_config".path}";
-            };
+        services.immich = {
+          enable = true;
+          # Immich 2.x is EOL and marked insecure on 26.05; 3.x ships in 26.11.
+          # Drop this override once nixpkgs moves to 26.11.
+          package = pkgs.unstable.immich;
+          host = cfg.localAddress;
+          mediaLocation = "/var/lib/immich";
+          # Setting settings to null to inject oidc config with client secret from sops
+          settings = null;
+          environment = {
+            IMMICH_ENV = "production";
+            IMMICH_TRUSTED_PROXIES = cfg.hostAddress;
+            IMMICH_CONFIG_FILE = "${config.sops.secrets."immich_config".path}";
           };
-
-          networking = {
-            firewall = {
-              enable = true;
-              allowedTCPPorts = [ 2283 ];
-            };
-            useHostResolvConf = lib.mkForce false;
-          };
-
-          services.resolved = {
-            enable = true;
-            settings.Resolve = householdDnsSettings;
-          };
-          system.stateVersion = "24.11";
         };
+
+        networking = {
+          firewall = {
+            enable = true;
+            allowedTCPPorts = [ 2283 ];
+          };
+          useHostResolvConf = lib.mkForce false;
+        };
+
+        services.resolved = {
+          enable = true;
+          settings.Resolve = householdDnsSettings;
+        };
+        system.stateVersion = "24.11";
+      };
     };
   };
 }

@@ -69,7 +69,7 @@ let
       };
       whisper = {
         model = "${cfg.model}";
-        language = cfg.language;
+        inherit (cfg) language;
       };
       output = {
         mode = cfg.outputMode;

@@ -2,7 +2,7 @@ let
   workflow = import ../../shared/workflow/skill/complete.nix;
 in
 {
-  description = workflow.description;
+  inherit (workflow) description;
   agent = "complete-orchestrator";
 
   requirements = ''

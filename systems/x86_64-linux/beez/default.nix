@@ -8,10 +8,6 @@
   ...
 }:
 with lib;
-let
-  system = "x86_64-linux";
-  hostName = "beez";
-in
 {
   imports = [
     # Include the results of the hardware scan.

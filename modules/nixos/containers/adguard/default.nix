@@ -61,12 +61,12 @@ in
 
     custom.containers.traefik.routes = mkIf cfg.publishWeb {
       adguard = {
-        host = cfg.host;
+        inherit (cfg) host;
         url = "http://${cfg.localAddress}:3000";
       };
       "allowedips-adguard" = {
         service = "adguard";
-        host = cfg.host;
+        inherit (cfg) host;
         url = "http://${cfg.localAddress}:3000";
         middlewares = [
           "secure-headers"
@@ -82,7 +82,7 @@ in
     networking.nat = {
       enable = true;
       internalInterfaces = [ "ve-adguard" ];
-      externalInterface = cfg.externalInterface;
+      inherit (cfg) externalInterface;
       externalIP = cfg.listenAddress;
       forwardPorts = optionals (cfg.listenAddress != null) (
         map
@@ -107,91 +107,89 @@ in
       # The router routes 172.16.64.0/18 to zanoza. A container on any other
       # host must sit inside that range too (beez uses 172.16.65.0/24), so it
       # is reachable from the LAN only through its host's port forwards.
-      hostAddress = cfg.hostAddress;
-      localAddress = cfg.localAddress;
+      inherit (cfg) hostAddress;
+      inherit (cfg) localAddress;
 
-      config =
-        { ... }:
-        {
-          services.adguardhome = {
-            enable = true;
-            mutableSettings = false;
-            host = cfg.localAddress;
-            port = 3000;
-            settings = {
-              dns = {
-                bind_hosts = [ "${cfg.localAddress}" ];
-                port = 53;
-                ratelimit = 0;
-                upstream_dns = [
-                  "tls://security.cloudflare-dns.com"
-                  "quic://dns.adguard-dns.com"
-                  "77.88.8.8"
-                ];
-                # Never ask another household resolver, including for reverse DNS.
-                use_private_ptr_resolvers = false;
-                upstream_mode = "parallel";
-                use_http3_upstreams = true;
-                bootstrap_dns = [
-                  "1.1.1.2"
-                  "1.0.0.2"
-                ];
-
-                cache_size = 256 * 1024 * 1024;
-                cache_optimistic = true;
-
-                enable_dnssec = true;
-              };
-              filters = [
-                {
-                  enabled = true;
-                  url = "https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt";
-                  name = "AdGuard DNS filter";
-                  id = 1;
-                }
+      config = _: {
+        services.adguardhome = {
+          enable = true;
+          mutableSettings = false;
+          host = cfg.localAddress;
+          port = 3000;
+          settings = {
+            dns = {
+              bind_hosts = [ "${cfg.localAddress}" ];
+              port = 53;
+              ratelimit = 0;
+              upstream_dns = [
+                "tls://security.cloudflare-dns.com"
+                "quic://dns.adguard-dns.com"
+                "77.88.8.8"
               ];
-              user_rules = [ ];
-              filtering = {
-                protection_enabled = true;
-                filtering_enabled = true;
-                safe_search.enabled = true;
-
-                rewrites = [
-                  {
-                    domain = cfg.host;
-                    answer = cfg.rewriteAddress;
-                    enabled = true;
-                  }
-                ]
-                ++ (map (host: {
-                  domain = host.hostname;
-                  answer = host.ip;
-                  enabled = true;
-                }) cfg.hostMappings);
-              };
-              statistics.enabled = true;
-            };
-          };
-
-          networking = {
-            firewall = {
-              enable = true;
-              allowedTCPPorts = [
-                53
-                3000
+              # Never ask another household resolver, including for reverse DNS.
+              use_private_ptr_resolvers = false;
+              upstream_mode = "parallel";
+              use_http3_upstreams = true;
+              bootstrap_dns = [
+                "1.1.1.2"
+                "1.0.0.2"
               ];
-              allowedUDPPorts = [ 53 ];
+
+              cache_size = 256 * 1024 * 1024;
+              cache_optimistic = true;
+
+              enable_dnssec = true;
             };
-            # Bootstrap downloads use numeric external DNS, never host DHCP DNS.
-            nameservers = [
-              "1.1.1.2"
-              "1.0.0.2"
+            filters = [
+              {
+                enabled = true;
+                url = "https://adguardteam.github.io/HostlistsRegistry/assets/filter_1.txt";
+                name = "AdGuard DNS filter";
+                id = 1;
+              }
             ];
-            useHostResolvConf = lib.mkForce false;
+            user_rules = [ ];
+            filtering = {
+              protection_enabled = true;
+              filtering_enabled = true;
+              safe_search.enabled = true;
+
+              rewrites = [
+                {
+                  domain = cfg.host;
+                  answer = cfg.rewriteAddress;
+                  enabled = true;
+                }
+              ]
+              ++ (map (host: {
+                domain = host.hostname;
+                answer = host.ip;
+                enabled = true;
+              }) cfg.hostMappings);
+            };
+            statistics.enabled = true;
           };
-          services.resolved.enable = false;
-          system.stateVersion = "24.11";
         };
+
+        networking = {
+          firewall = {
+            enable = true;
+            allowedTCPPorts = [
+              53
+              3000
+            ];
+            allowedUDPPorts = [ 53 ];
+          };
+          # Bootstrap downloads use numeric external DNS, never host DHCP DNS.
+          nameservers = [
+            "1.1.1.2"
+            "1.0.0.2"
+          ];
+          useHostResolvConf = lib.mkForce false;
+        };
+        services.resolved.enable = false;
+        system.stateVersion = "24.11";
+      };
     };
   };
 }

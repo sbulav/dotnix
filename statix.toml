@@ -1,0 +1,14 @@
+# statix configuration — `statix check .` from the repo root reads this file.
+#
+# repeated_keys (W20): the repo deliberately splits attribute sets such as
+# `boot.*` / `services.*` across a file to keep related settings together.
+disabled = ["repeated_keys"]
+
+# Preserved-but-dead trees (see CLAUDE.md) and local tool state.
+ignore = [
+  ".claude",
+  ".direnv",
+  ".disabled",
+  "modules/_darwin-disabled",
+  "modules/_nixos-disabled",
+]

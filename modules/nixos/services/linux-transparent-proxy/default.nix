@@ -9,8 +9,6 @@ let
   inherit (lib)
     types
     mkIf
-    mkOption
-    mkEnableOption
     concatStringsSep
     optionalString
     ;
@@ -66,7 +64,7 @@ let
   # shell fragments shared across services
   mkIpSetSetup = ''
     # Create set if enabled and entries are provided
-    ${optionalString (cfg.ipset.enable) ''
+    ${optionalString cfg.ipset.enable ''
       ${ipsetBin} list ${cfg.ipset.name} >/dev/null 2>&1 || ${ipsetBin} create ${cfg.ipset.name} hash:ip family inet -exist
       ${concatStringsSep "\n" (
         map (cidr: ''
@@ -93,14 +91,14 @@ let
     ${concatStringsSep "\n" (
       map (cidr: ''
         ${iptables} -t nat -A ${natChain} -d ${cidr} -j RETURN
-      '') (cfg.excludeCidrs ++ [ ])
+      '') cfg.excludeCidrs
     )}
 
     # Never proxy traffic going TO the proxy host itself
     ${iptables} -t nat -A ${natChain} -d ${cfg.socksHost} -j RETURN
 
     # Optional ipset scoping ("desired sites")
-    ${optionalString (cfg.ipset.enable) ''
+    ${optionalString cfg.ipset.enable ''
       # If ipset is enabled, we only redirect when dst matches the set
       ${
         if cfg.tcpPorts == [ ] then
@@ -145,7 +143,7 @@ let
   '';
 
   mkMasqueradeSetup = ''
-    ${optionalString (cfg.masquerade.enable) ''
+    ${optionalString cfg.masquerade.enable ''
       # Add MASQUERADE for non-proxied egress
       ${iptables} -t nat -C POSTROUTING -o ${cfg.masquerade.interface} -j MASQUERADE 2>/dev/null || \
         ${iptables} -t nat -A POSTROUTING -o ${cfg.masquerade.interface} -j MASQUERADE
@@ -153,7 +151,7 @@ let
   '';
 
   mkMasqueradeTeardown = ''
-    ${optionalString (cfg.masquerade.enable) ''
+    ${optionalString cfg.masquerade.enable ''
       ${iptables} -t nat -D POSTROUTING -o ${cfg.masquerade.interface} -j MASQUERADE 2>/dev/null || true
     ''}
   '';
@@ -174,12 +172,12 @@ let
     ${concatStringsSep "\n" (
       map (cidr: ''
         ${iptables} -t mangle -A ${mangleChain} -d ${cidr} -j RETURN
-      '') (cfg.excludeCidrs ++ [ ])
+      '') cfg.excludeCidrs
     )}
     ${iptables} -t mangle -A ${mangleChain} -d ${cfg.socksHost} -j RETURN
 
     # ipset scoping
-    ${optionalString (cfg.ipset.enable) ''
+    ${optionalString cfg.ipset.enable ''
       ${
         if cfg.tcpPorts == [ ] then
           ''
