@@ -3,7 +3,7 @@
 # here and with the investigation-issue flow `brainstorm` creates on a fog check.
 {
   name = "research";
-  version = "1.0.0";
+  version = "1.1.0";
   description = "Investigate a question against primary sources and capture the findings as a cited Markdown file. Use when the user wants a topic researched, docs or API facts gathered, an investigation issue resolved, or reading legwork delegated to a background agent.";
   allowed-tools = [
     "Read"
@@ -20,9 +20,15 @@
 
     ## Dispatch
 
-    Run the reading in a **background agent** so the main session keeps working. When the volume is large and the question is already sharp, route it through `delegate` to a cheap model instead — bulk reading is grunt work.
+    Delegate bounded source gathering through `delegate` when it can run
+    alongside useful parent work. Keep a single quick lookup local. Use the
+    runtime's available tools; a cheap model without source access cannot
+    verify current facts. Give workers exact identifiers, scope, and an output
+    contract of claim → source → evidence; synthesize conclusions yourself.
 
-    Verify what comes back. An unsourced claim is a failed research task, whoever produced it.
+    Verify what comes back. Match the exact subject (repo, version, cluster,
+    resource ID) before using a source as evidence. Distinguish tracked files
+    from local leftovers. An unsourced or mismatched claim remains unverified.
 
     ## Sources
 

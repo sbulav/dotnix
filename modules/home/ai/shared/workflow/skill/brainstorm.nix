@@ -3,7 +3,7 @@ let
 in
 {
   name = "brainstorm";
-  version = "2.3.0";
+  version = "2.4.0";
   description = "Start a Forgejo-first workflow for new work. Two-phase process: grill the idea with questions, then plan the issue — or map the fog with investigation issues.";
   "argument-hint" = "[initial idea]";
   "disable-model-invocation" = true;
@@ -40,7 +40,7 @@ in
     2. Lightly inspect repo context and recent work patterns.
     3. Walk a "design tree" — at each decision point, surface alternatives and trade-offs.
     4. Challenge scope: "Is X needed for v1? What's the simplest thing that works?"
-    5. Cover ALL of these question categories before moving to Phase 2:
+    5. Use these categories to find material unresolved decisions; skip categories already settled or irrelevant to this task:
        - Users & access: who uses this, what permissions?
        - Scope boundaries: what's v1 vs later?
        - Architecture trade-offs: what are the alternatives? why this approach?
@@ -49,7 +49,11 @@ in
        - Failure modes and recovery: what can go wrong?
        - Testing strategy: how do we verify it works?
        - Deployment: how does it ship?
-    6. Ask minimum 5-8 questions before proposing anything. One focused question at a time.
+    6. Ask only unresolved decisions that affect the result. Group independent questions
+       in a short round with recommended answers; dependent questions wait for
+       prerequisites. There is no minimum question count. Look up facts yourself,
+       using `research` when useful. Use `prototype` if a runnable experiment is
+       needed to settle a design question. Reuse decisions from prior context.
     7. End Phase 1 with a "shared understanding" summary:
        - Name the **destination** first — what done looks like for the whole effort, one or two lines. The destination fixes the scope: everything below is judged against it.
        - State the problem, the proposed approach, key decisions made, and what's explicitly out of scope.
@@ -114,7 +118,7 @@ in
      Handoff policy:
      - Post `AI-HANDOFF` only when stopping, blocked, before commit approval, or before PR approval.
      - Use append-only comments; latest handoff wins.
-     - Prefer delegating comment creation to the handoff helper when available; otherwise use `tea comment` directly.
+     - Post a short tracker handoff directly with explicit repo scope when authorized; a separate worker is unnecessary. The portable `handoff` skill is for transferring sessions, not posting comments.
      - Planning mode alone is no reason to avoid `tea comment` — skip it only when the runtime explicitly blocks that command.
      - Include a **Decision log** in handoffs summarizing key decisions and their rationale from the grill phase. Mark entries that pass the `domain-modeling` bar (hard to reverse, surprising, real trade-off) with `[promote]` — `/ship` reads these to update AGENTS.md.
 

@@ -8,20 +8,7 @@ let
   # Claude Code has no machine-readable model listing, so the relay offers
   # exactly what is declared here. Every other harness is enumerated by probing
   # the host, and what is declared for it is ignored.
-  claudeModels = [
-    {
-      id = "opus";
-      displayName = "Opus";
-    }
-    {
-      id = "sonnet";
-      displayName = "Sonnet";
-    }
-    {
-      id = "haiku";
-      displayName = "Haiku";
-    }
-  ];
+  claudeModels = (import ../../../modules/home/ai/shared/models.nix).claudeAliases;
   harnesses = [
     {
       id = "claude";

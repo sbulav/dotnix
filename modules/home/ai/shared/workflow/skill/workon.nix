@@ -3,7 +3,7 @@ let
 in
 {
   name = "workon";
-  version = "1.3.0";
+  version = "1.4.0";
   description = "Resume and work on a Forgejo issue — read state, then implement. Use with an issue number, or infer from the current issue branch when unambiguous.";
   "argument-hint" = "[issue-number|TPL-key]";
   "disable-model-invocation" = true;
@@ -25,11 +25,13 @@ in
      - If the argument is a Jira key, resolve it to a Forgejo issue in the current repo only.
      - Read only the issue body, the latest `AI-HANDOFF` comment, and any linked or open PR relevant to the issue.
      - Do broad repo archaeology only when it is required to unblock the next step.
-     - Ask before switching branches.
+     - Use the assigned branch/worktree. Ask before switching the user's working tree only when that switch has not already been authorized.
      - Follow issue scope and acceptance criteria strictly.
      - Stop at natural checkpoints and report status via AI-HANDOFF.
      - Leave commits and PRs to `/ship` — suggest it when ready.
-     - When a handoff is needed, prefer delegating comment work to the handoff helper when available; otherwise use `tea comment` directly.
+     - In a delegated worker session, return the handoff to the parent; post it
+       only when posting was explicitly assigned. The parent owns integration
+       and shipping. A short handoff does not need its own helper session.
      - Planning mode alone is no reason to avoid `tea comment` — skip it only when the runtime explicitly blocks that command.
 
     ${tea}
@@ -53,19 +55,19 @@ in
 
      Status-driven action:
      9. Based on the handoff status, take the appropriate action:
-        - `planned` → Ask before starting implementation, then switch to branch and build.
+        - `planned` → If implementation was requested or assigned by the parent, proceed in the assigned worktree; otherwise clarify the intended next action.
         - `in-progress` → Continue building from where the last session left off.
         - `blocked` → Surface blockers, ask what to do.
         - `ready-for-commit` / `ready-for-pr` → Suggest `/ship`.
         - `pr-open` / `merged` → Suggest `/complete`.
      10. If the parent issue has sub-issues, list them and recommend working on the next unblocked sub-issue — one whose `**Blocked by:**` line is `none` or references only closed issues.
-     11. Ask before switching branches if needed.
+     11. Prepare an isolated worktree when needed for assigned work; preserve the user's current branch and unrelated changes.
 
      During implementation:
      - Follow the acceptance criteria from the issue as your checklist.
      - For feature work or bug fixes with testable behaviour, load the `tdd` skill and work its red → green loop over the seams the issue pins (or agree them with the user first).
      - When designing or reshaping a module's interface, consult the `codebase-design` skill for the vocabulary and principles.
-     - Stop at natural checkpoints (feature complete, tests passing, etc.) and post AI-HANDOFF updates.
+     - At natural checkpoints, record concise progress without stopping already-authorized implementation. Workers report to the parent; the parent posts handoffs within the task's authorization.
      - Keep commits granular; do not bundle unrelated changes.
      - When implementation is complete and tests pass, suggest `/ship`.
 

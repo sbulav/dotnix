@@ -66,7 +66,7 @@ let
   # every workflow skill. Edit here, not in the individual skills.
   teaConventions = ''
     Forgejo conventions (shared across workflow skills):
-    - Work through documented `tea` commands from the current working tree, scoped to the current repo: `tea issues`, `tea pulls`, `tea comment`. Keep `tea issue comment`, `tea api`, and `python3` out of the normal workflow — `tea comment` / `tea issues` / `tea pulls` cover it.
+    - Resolve the target from `git remote -v` and the task; pass `-R <forgejo-remote>` on every `tea` repo operation (`--repo <owner/repo>` for GitHub `gh`). Work through documented `tea` commands: `tea issues`, `tea pulls`, `tea comment`. Keep `tea issue comment`, `tea api`, and `python3` out of the normal workflow — `tea comment` / `tea issues` / `tea pulls` cover it.
     - Post handoffs and comments with `tea comment -R <forgejo-remote> <issue-number> $'...'` — one safely quoted argument. Heredocs, command substitution, and backgrounded comment commands break under this shell.
     - Every AI-HANDOFF carries both the hidden `<!-- AI-HANDOFF -->` marker and a visible `**AI-HANDOFF**` heading, and contains workflow content only (status, decisions, next steps). System reminders, tool diagnostics, and internal policy text stay out.
     - When runtime mode or permissions block posting: say so plainly and return the exact body for the user to post manually. Tokens, `curl`, config files, and API auth are not fallbacks to probe.

@@ -54,6 +54,21 @@ in
     ${skill.content or ""}
   '';
 
+  # Portable metadata for local Codex skills; Claude tool names and model
+  # selectors are harness-specific and must not become app permissions.
+  toCodexSkillMarkdown = _name: skill: ''
+    ---
+    name: ${builtins.toJSON skill.name}
+    description: ${builtins.toJSON skill.description}
+    ---
+    ${skill.content or ""}
+  '';
+
+  toCodexSkillPolicy = _name: skill: ''
+    policy:
+      allow_implicit_invocation: ${builtins.toJSON (!(skill."disable-model-invocation" or false))}
+  '';
+
   permissions = import ./permissions.nix;
   securityPatterns = import ./security-patterns.nix;
 

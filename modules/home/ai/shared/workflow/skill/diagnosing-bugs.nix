@@ -3,7 +3,7 @@
 # able to reach for this discipline mid-flight.
 {
   name = "diagnosing-bugs";
-  version = "1.1.0";
+  version = "1.2.0";
   description = "Diagnosis loop for hard bugs, flaky failures, and performance regressions. Use when the user says diagnose/debug/root-cause, reports something broken, throwing, failing, flaky, or slow, or when a previous fix did not hold.";
   allowed-tools = [
     "Read"
@@ -18,6 +18,15 @@
     A discipline for hard bugs. Skip phases only when explicitly justified.
 
     Before diving in, check ADRs and runbooks in the area you're touching, if the repo keeps them.
+    Pin the affected host, cluster/context, package version and last-known-good
+    revision. For an upgrade regression, inspect upstream issues/changelogs
+    and the version delta before speculative config changes. Keep read-only
+    investigations read-only; use passive observations if reproducing would
+    require an unauthorized mutation. Cancel only processes you started.
+
+    Delegate independent hypotheses through `delegate` only after defining
+    the symptom and evidence contract; the parent owns the reproduction and
+    synthesis. Repeated failed patches call for new evidence, not more agents.
 
     ## Redact
 

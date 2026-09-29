@@ -1,4 +1,11 @@
+let
+  models = import ../shared/models.nix;
+in
 {
+  # The built-in provider retains its auth and Responses transport. Explicit
+  # catalog entries also work before the bundled models.dev list catches up.
+  openai.models = models.openai;
+
   "hhdev-openai" = {
     npm = "@ai-sdk/openai";
     name = "HHDev Gateway";
@@ -19,10 +26,8 @@
       "gpt-5.6-luna" = {
         name = "ChatGPT 5.6 Luna";
       };
-      "gpt-6-astra" = {
-        name = "ChatGPT 6 Astra";
-      };
-    };
+    }
+    // models.openai;
   };
 
   "hhdev-anthropic" = {
@@ -35,10 +40,8 @@
       "claude-opus-5" = {
         name = "Claude Opus 5";
       };
-      "claude-fable-5-1" = {
-        name = "Claude Fable 5.1";
-      };
-    };
+    }
+    // models.anthropic;
     options = {
       apiKey = "{env:OPENAI_API_KEY}";
       baseURL = "https://llmgtw.hhdev.ru/proxy/anthropic/v1";

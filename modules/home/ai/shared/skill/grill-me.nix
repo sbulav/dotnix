@@ -40,8 +40,8 @@
 
     Finding *facts* is your job, never the user's. When a frontier question
     needs a fact from the environment (filesystem, git history, config, docs),
-    dispatch a sub-agent to find it — don't ask the user for anything you could
-    look up yourself. Don't block on it: a running exploration is an unsettled
+    look it up directly, or use `delegate` for independent substantial research —
+    don't ask the user for facts you can retrieve. Don't block on it: a running exploration is an unsettled
     prerequisite, so only the questions downstream of it wait for the sub-agent
     to report — ask the rest of the frontier now. The *decisions* are the
     user's — put each to them and wait.

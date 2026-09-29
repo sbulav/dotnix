@@ -80,6 +80,7 @@ in
     ai = {
       opencode = enabled;
       claude = enabled;
+      codex = enabled;
       mcp-k8s-go = enabled;
     };
 

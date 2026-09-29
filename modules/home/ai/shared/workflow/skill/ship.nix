@@ -31,6 +31,10 @@ in
 
      Steps:
      1. Inspect branch, working tree, staged changes, and unpushed commits.
+        - Run `git status` and `git diff --cached` before committing. Preserve
+          other sessions' staged changes; if present, stop before the commit
+          and explain the conflict. Stage only task paths, never `git add -A`
+          or `git commit -a`. Recheck the staged diff immediately before commit.
      2. Load the Forgejo issue for the current repo only.
      3. Promotion gate — read the issue's latest `AI-HANDOFF` **Decision log** and test each entry against the `domain-modeling` bar: hard to reverse, surprising, and a real trade-off (a rejection with a load-bearing reason also counts). For any survivor, invoke the `domain-modeling` skill to write it into AGENTS.md so it lands in this same commit. Most handoffs promote nothing — skip silently.
      4. Draft a commit message with `Refs #<issue>` in the footer if appropriate.

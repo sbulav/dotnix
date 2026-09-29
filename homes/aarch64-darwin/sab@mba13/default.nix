@@ -13,6 +13,7 @@ with lib.custom;
 
     ai = {
       claude = enabled;
+      codex = enabled;
       mcp-k8s-go = enabled;
 
       opencode = {
@@ -28,10 +29,7 @@ with lib.custom;
             anthropic = {
               npm = "@ai-sdk/anthropic";
               name = "Anthropic";
-              models = {
-                "claude-opus-4-8" = {
-                  name = "Claude Opus 4.8";
-                };
+              models = (import ../../../modules/home/ai/shared/models.nix).anthropic // {
                 "claude-haiku-4-5-20251001" = {
                   name = "Claude Haiku 4.5";
                 };
