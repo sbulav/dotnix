@@ -16,7 +16,7 @@ no quarantine tree. To revive one, restore it from history, then:
 4. evaluate and build that profile.
 
 Deleting a module never deletes its data. Datasets and state directories on the
-host (for example `/tank/nextcloud`) are removed by hand, as a separate decision.
+host are removed by hand, as a separate decision.
 
 ## History
 
@@ -25,7 +25,7 @@ host (for example `/tank/nextcloud`) are removed by hand, as a separate decision
 | 2026-07 | NixOS LF, Authentik, Seafile | Quarantined: unused, commented out, or non-working with placeholder credentials. |
 | 2026-07 | Historical Darwin (`mbp16`) | Quarantined; the active Darwin host is `mba13`. |
 | 2026-09 | All quarantine trees (`modules/_darwin-disabled`, `modules/_nixos-disabled`, `.disabled`) | Deleted. |
-| 2026-09 | Nextcloud | Deleted with its Authelia client, Traefik middleware and homepage entry; OpenCloud replaced it. `/tank/nextcloud` on `zanoza` is untouched. |
+| 2026-09 | Nextcloud | Deleted with its Authelia client, Traefik middleware and homepage entry; OpenCloud replaced it. `/tank/nextcloud` on `zanoza` removed by hand afterwards. |
 
 The active Nix language server is `nixd`. Development suites install it through
 `custom.tools.lsp`; server profiles that need it list it explicitly. `nil` is not
