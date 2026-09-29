@@ -6,6 +6,9 @@ keys:
   - &sab_mz age18rax0jv4pj2yuegt7e5ea2wzu486mz9nl3vhsa09y45lzw8cj58stfdd6d
   - &host_beez age1t69sgcam6f6h6xl06qf3zt8hc6zhx5vfy32e3ggvu4hylldgv4nq0w40rt
   - &host_zanoza age1xz35v23vpnudp2u7el44cv32fdzc0sc42x0yzs2kl58dcfdpdy3qt9j4y2
+  # Offline recovery key: passphrase-wrapped, stored off every host. Keep it
+  # in every creation rule so no secret depends on a surviving machine.
+  - &recovery age1zy63ptejp3s5skj4j55ggs6vsp8gffnd367c8n3y0vzhaeyp3fms4e253u
 creation_rules:
   - path_regex: secrets/sab/[^/]+\.(yaml|json|env|ini)$
     key_groups:
@@ -15,6 +18,7 @@ creation_rules:
           - *sab_beez
           - *sab_zanoza
           - *sab_mz
+          - *recovery
 
   - path_regex: secrets/beez/[^/]+\.(yaml|json|env|ini)$
     key_groups:
@@ -22,6 +26,7 @@ creation_rules:
           - *sab_beez
           - *host_beez
           - *sab_mz
+          - *recovery
   - path_regex: secrets/zanoza/[^/]+\.(yaml|json|env|ini)$
     key_groups:
       - age:
@@ -30,3 +35,4 @@ creation_rules:
           - *sab_mba13
           - *sab_zanoza
           - *sab_mz
+          - *recovery
