@@ -156,10 +156,9 @@ All platform-specific modules now redirect to the shared module:
 
 **✅ Container Template Coverage**
 
-All 10 container modules now use standardized templates:
-- grafana, restic, jellyfin, immich, nextcloud, msmtp (✅ Phase 3)
+Container modules using standardized templates:
+- grafana, restic, jellyfin, immich, msmtp (✅ Phase 3)
 - homepage, traefik, authelia (✅ Phase 4)
-- seafile (ready for future enablement)
 
 **✅ Duplication Elimination**
 

@@ -19,7 +19,7 @@ in
     enable = mkBoolOpt false "Enable authelia nixos-container;";
     secret_file = mkOpt str "secrets/serverz/default.yaml" "SOPS secret to get creds from";
     dataPath = mkOpt str "/tank/authelia" "Authelia data path on host machine";
-    host = mkOpt str "authelia.sbulav.ru" "The host to serve authentik on";
+    host = mkOpt str "authelia.sbulav.ru" "The host to serve authelia on";
     domain = mkOpt str "sbulav.ru" "The domain session cookie to protect";
     hostAddress = mkOpt str "172.16.64.10" "With private network, which address to use on Host";
     localAddress = mkOpt str "172.16.64.103" "With privateNetwork, which address to use in container";
@@ -187,16 +187,6 @@ in
                     refresh_token = "30d";
                   };
                   claims_policies = {
-                    # https://github.com/pulsejet/nextcloud-oidc-login/issues/311
-                    # https://www.authelia.com/integration/openid-connect/openid-connect-1.0-claims/#restore-functionality-prior-to-claims-parameter
-                    nextcloud_policy.id_token = [
-                      "groups"
-                      "email"
-                      "email_verified"
-                      "alt_emails"
-                      "preferred_username"
-                      "name"
-                    ];
                     opencloud_policy = {
                       id_token = [
                         "groups"
@@ -226,20 +216,6 @@ in
                       redirect_uris = [ "https://jellyfin.${cfg.domain}/sso/OID/redirect/authelia" ];
                       require_pkce = true;
                       token_endpoint_auth_method = "client_secret_post";
-                    }
-                    {
-                      authorization_policy = "one_factor";
-                      client_id = "nextcloud";
-                      client_name = "Nextcloud";
-                      claims_policy = "nextcloud_policy";
-                      client_secret = "$pbkdf2-sha512$310000$UO0xTTiZTXcj6cUL1R7P/A$4SQ.Zzv//x02/sZ5WM8EBPYd/Tps07K8.Zq19sjVVV6vIMCb.e5giDgHeZokgD3lBv4MOVlxttCjRU0dhFO15w";
-                      consent_mode = "implicit";
-                      pkce_challenge_method = "S256";
-                      public = "false";
-                      redirect_uris = [ "https://nextcloud.${cfg.domain}/apps/oidc_login/oidc" ];
-                      require_pkce = true;
-                      token_endpoint_auth_method = "client_secret_basic";
-                      userinfo_signed_response_alg = "none";
                     }
                     {
                       authorization_policy = "one_factor";

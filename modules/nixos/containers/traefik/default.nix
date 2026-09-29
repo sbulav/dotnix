@@ -75,7 +75,6 @@ in
     ./middleware_secure-headers.nix
     ./middleware_secure-headers-jellyfin.nix
     ./middleware_secure-headers-opencloud.nix
-    ./middleware_nextcloud-redirect.nix
     (import ../shared/shared-adguard-dns-rewrite.nix {
       host = "traefik.${cfg.domain}";
       rewrite_enabled = cfg.enable;
@@ -92,7 +91,6 @@ in
         "secure-headers"
         "secure-headers-jellyfin"
         "secure-headers-opencloud"
-        "nextcloud-redirect"
       ];
     }
 

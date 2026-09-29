@@ -120,18 +120,6 @@ in
             {
               "Media" = [
                 {
-                  "nextcloud" = mkIf config.${namespace}.containers.nextcloud.enable {
-                    icon = "nextcloud";
-                    href = "https://${config.${namespace}.containers.nextcloud.host}";
-                    widget = {
-                      type = "nextcloud";
-                      key = "{{HOMEPAGE_VAR_NEXTCLOUD_API_KEY}}";
-                      url = "http://${config.${namespace}.containers.nextcloud.localAddress}:80";
-                    };
-                  };
-                }
-
-                {
                   "jellyfin" = mkIf config.${namespace}.containers.jellyfin.enable {
                     icon = "jellyfin";
                     href = "https://${config.${namespace}.containers.jellyfin.host}";
