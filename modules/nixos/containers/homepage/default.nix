@@ -9,6 +9,14 @@ with lib.custom;
 let
   householdDnsSettings = lib.custom.dns.resolvedSettings;
   cfg = config.${namespace}.containers.homepage;
+  ctr = config.${namespace}.containers;
+  # A dashboard entry exists only while its service's container is enabled;
+  # mkIf can't do this, the services option leaves a disabled one as {}.
+  entry =
+    svc: name: value:
+    optional ctr.${svc}.enable { ${name} = value; };
+  # Drop a group whose entries are all disabled instead of rendering it empty.
+  group = name: entries: optional (entries != [ ]) { ${name} = entries; };
 in
 {
   options.${namespace}.containers.homepage = with types; {
@@ -68,16 +76,6 @@ in
       };
 
       config = _: {
-        networking.hosts = {
-          #TODO: remove this once migrated
-          "${cfg.hostAddress}" = [
-            "traefik.sbulav.ru"
-            "adguard.sbulav.ru"
-            "flood.sbulav.ru"
-            "jellyfin.sbulav.ru"
-          ];
-        };
-
         services.homepage-dashboard = {
           environmentFiles = [ config.sops.secrets.homepage-env.path ];
           enable = true;
@@ -91,85 +89,65 @@ in
               };
             }
           ];
-          services = [
-            {
-              "Network" = [
-                # TODO: implement enabling widgets based on config
-                {
-                  "Traefik" = {
-                    icon = "traefik";
-                    href = "https://traefik.${config.${namespace}.containers.traefik.domain}";
-                    widget = {
-                      type = "traefik";
-                      url = "https://traefik.${config.${namespace}.containers.traefik.domain}";
-                    };
-                  };
-                }
-                {
-                  "Adguard" = mkIf config.${namespace}.containers.adguard.enable {
-                    icon = "adguard-home";
-                    href = "https://${config.${namespace}.containers.adguard.host}";
-                    widget = {
-                      type = "adguard";
-                      url = "http://${config.${namespace}.containers.adguard.localAddress}:3000";
-                    };
-                  };
-                }
-              ];
-            }
-            {
-              "Media" = [
-                {
-                  "jellyfin" = mkIf config.${namespace}.containers.jellyfin.enable {
-                    icon = "jellyfin";
-                    href = "https://${config.${namespace}.containers.jellyfin.host}";
-                    widget = {
-                      type = "jellyfin";
-                      key = "{{HOMEPAGE_VAR_JELLYFIN_API_KEY}}";
-                      url = "http://${config.${namespace}.containers.jellyfin.localAddress}:8096";
-                      enableBlocks = true; # optional, defaults to false
-                      enableNowPlaying = true; # optional, defaults to true
-                      enableUser = true; # optional, defaults to false
-                      showEpisodeNumber = true; # optional, defaults to false
-                      expandOneStreamToTwoRows = false; # optional, defaults to true
-                    };
-                  };
-                }
-                {
-                  "immich" = mkIf config.${namespace}.containers.immich.enable {
-                    icon = "immich";
-                    href = "https://${config.${namespace}.containers.immich.host}";
-                    widget = {
-                      type = "immich";
-                      version = 2;
-                      key = "{{HOMEPAGE_VAR_IMMICH_API_KEY}}";
-                      url = "http://${config.${namespace}.containers.immich.localAddress}:2283";
-                    };
-                  };
-                }
-                {
-                  "opencloud" = mkIf config.${namespace}.containers.opencloud.enable {
-                    icon = "opencloud";
-                    href = "https://${config.${namespace}.containers.opencloud.host}";
-                  };
-                }
-              ];
-            }
-            {
-              "ARR Stack" = [
-                {
-                  "Flood" = mkIf config.${namespace}.containers.flood.enable {
-                    icon = "flood";
-                    href = "https://${config.${namespace}.containers.flood.host}";
-                    widget = {
-                      type = "flood";
-                      url = "http://${config.${namespace}.containers.flood.localAddress}:3000";
-                    };
-                  };
-                }
-              ];
-            }
-          ];
+          services =
+            group "Network" (
+              entry "traefik" "Traefik" {
+                icon = "traefik";
+                href = "https://traefik.${ctr.traefik.domain}";
+                widget = {
+                  type = "traefik";
+                  url = "https://traefik.${ctr.traefik.domain}";
+                };
+              }
+              ++ entry "adguard" "Adguard" {
+                icon = "adguard-home";
+                href = "https://${ctr.adguard.host}";
+                widget = {
+                  type = "adguard";
+                  url = "http://${ctr.adguard.localAddress}:3000";
+                };
+              }
+            )
+            ++ group "Media" (
+              entry "jellyfin" "jellyfin" {
+                icon = "jellyfin";
+                href = "https://${ctr.jellyfin.host}";
+                widget = {
+                  type = "jellyfin";
+                  key = "{{HOMEPAGE_VAR_JELLYFIN_API_KEY}}";
+                  url = "http://${ctr.jellyfin.localAddress}:8096";
+                  enableBlocks = true; # optional, defaults to false
+                  enableNowPlaying = true; # optional, defaults to true
+                  enableUser = true; # optional, defaults to false
+                  showEpisodeNumber = true; # optional, defaults to false
+                  expandOneStreamToTwoRows = false; # optional, defaults to true
+                };
+              }
+              ++ entry "immich" "immich" {
+                icon = "immich";
+                href = "https://${ctr.immich.host}";
+                widget = {
+                  type = "immich";
+                  version = 2;
+                  key = "{{HOMEPAGE_VAR_IMMICH_API_KEY}}";
+                  url = "http://${ctr.immich.localAddress}:2283";
+                };
+              }
+              ++ entry "opencloud" "opencloud" {
+                icon = "opencloud";
+                href = "https://${ctr.opencloud.host}";
+              }
+            )
+            ++ group "ARR Stack" (
+              entry "flood" "Flood" {
+                icon = "flood";
+                href = "https://${ctr.flood.host}";
+                widget = {
+                  type = "flood";
+                  url = "http://${ctr.flood.localAddress}:3000";
+                };
+              }
+            );
         };
 
         networking = {
