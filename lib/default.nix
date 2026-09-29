@@ -326,6 +326,12 @@ in
           uid = 999;
           restartUnits = [ "container@${serviceName}.service" ];
         };
+        # Same Gmail account as the Grafana alerts and msmtp.
+        "${serviceName}-smtp-password" = {
+          uid = 999;
+          key = "shared/email-password";
+          restartUnits = [ "container@${serviceName}.service" ];
+        };
       };
     };
   };

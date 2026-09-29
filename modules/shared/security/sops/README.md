@@ -112,7 +112,7 @@ Pre-defined secret templates available:
 - `secrets.system.hostSecret secretName hostName` - Host-specific secrets
 
 ### Multi-Secret Patterns
-- `secrets.multiSecrets.authelia serviceName` - Complete authelia secret set (4 secrets)
+- `secrets.multiSecrets.authelia serviceName` - Complete authelia secret set (5 secrets, incl. the shared SMTP password)
 
 ### Shared Services  
 - `secrets.services.sharedTelegramBot uid` - Unified telegram bot token

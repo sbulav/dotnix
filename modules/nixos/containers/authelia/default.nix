@@ -73,6 +73,9 @@ in
         "${config.sops.secrets.authelia-jwt-rsa-key.path}" = {
           isReadOnly = true;
         };
+        "${config.sops.secrets.authelia-smtp-password.path}" = {
+          isReadOnly = true;
+        };
 
         "/var/lib/authelia-main/users/" = {
           hostPath = "${cfg.dataPath}/users/";
@@ -98,6 +101,8 @@ in
               sessionSecretFile = config.sops.secrets.authelia-session-secret.path;
               oidcIssuerPrivateKeyFile = config.sops.secrets.authelia-jwt-rsa-key.path;
             };
+            environmentVariables.AUTHELIA_NOTIFIER_SMTP_PASSWORD_FILE =
+              config.sops.secrets.authelia-smtp-password.path;
 
             settings = {
               log = {
@@ -148,12 +153,15 @@ in
                 ];
               };
               default_2fa_method = "totp";
-              # TODO: change notifier to smtp/2fa
-              #used to send 2FA registration emails etc
+              # Sends identity-verification codes (2FA registration etc.).
+              # No startup check: with it, a Gmail outage on restart would stop
+              # Authelia and take SSO down for every service behind it.
               notifier = {
-                disable_startup_check = false;
-                filesystem = {
-                  filename = "/var/lib/authelia-main/logs/notification.txt";
+                disable_startup_check = true;
+                smtp = {
+                  address = "submission://smtp.gmail.com:587";
+                  username = "zppfan@gmail.com";
+                  sender = "Authelia <zppfan@gmail.com>";
                 };
               };
               access_control = {
