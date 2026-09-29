@@ -105,6 +105,9 @@ in
       ];
       # Allow grafana to read all exporters via trusted interface
       networking.firewall.trustedInterfaces = [ "ve-grafana" ];
+      # Match the container's pinned grafana ids; an unpinned group landed on
+      # 999, which the host gives to dhcpcd.
+      systemd.tmpfiles.rules = [ "Z ${cfg.dataPath}/data - 196 196 -" ];
       containers.grafana = {
         ephemeral = true;
         autoStart = true;
@@ -142,6 +145,8 @@ in
         };
 
         config = _: {
+          # nixpkgs reserves gid 196 for grafana but leaves the group dynamic.
+          users.groups.grafana.gid = 196;
           services.grafana = {
             enable = true;
             settings = {

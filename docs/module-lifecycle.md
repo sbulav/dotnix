@@ -5,29 +5,27 @@ Snowfall automatically discovers modules below `modules/nixos`, `modules/darwin`
 surface: they must evaluate with the pinned inputs and be reasonable to enable.
 An option defaulting to `false` is not, by itself, a reason to remove a module.
 
-Historical or incomplete implementations belong in a sibling directory whose name
-starts with an underscore, such as `modules/_nixos-disabled` or
-`modules/_darwin-disabled`. Snowfall does not discover these directories. A
-quarantined module must not be referenced by active suites or host configurations.
-Keep it only when its implementation still provides useful migration or design
-context; otherwise delete it and rely on Git history.
+A module that no host or home enables and that is not expected to come back is
+deleted, together with every integration that only served it (routes, OIDC
+clients, dashboard entries, host entries). Git history is the archive: there is
+no quarantine tree. To revive one, restore it from history, then:
 
-Move a quarantined module back into the active tree only after:
+1. remove placeholder credentials and obsolete workarounds;
+2. update it for the pinned inputs;
+3. enable it in an intended host or home profile; and
+4. evaluate and build that profile.
 
-1. removing placeholder credentials and obsolete workarounds;
-2. updating it for the pinned inputs;
-3. enabling it in an intended host or home profile; and
-4. evaluating and building that profile.
+Deleting a module never deletes its data. Datasets and state directories on the
+host are removed by hand, as a separate decision.
 
-## July 2026 audit
+## History
 
-| Surface | Decision | Evidence |
+| Date | Surface | Decision |
 | --- | --- | --- |
-| NixOS LF | Quarantine | No host enables it, every active home enables Yazi, and the module mixes obsolete Home Manager configuration into a NixOS module. |
-| Authentik | Quarantine | No host enables it and its implementation is entirely commented out. Authelia remains active on `zanoza`. |
-| Seafile | Quarantine | No host enables it; the module is marked non-working and still contains placeholder credentials. OpenCloud remains active on `zanoza`. |
-| Nextcloud | Retain, suspended | It is explicitly disabled on `zanoza`; its former Restic job was replaced by OpenCloud user-data backups after migration. Removal of the retained module and data remains a separate decision. |
-| Historical Darwin | Retain in quarantine | The old `mbp16` profiles and modules already live under `.disabled` and `modules/_darwin-disabled`; the active Darwin host is `mba13`. |
+| 2026-07 | NixOS LF, Authentik, Seafile | Quarantined: unused, commented out, or non-working with placeholder credentials. |
+| 2026-07 | Historical Darwin (`mbp16`) | Quarantined; the active Darwin host is `mba13`. |
+| 2026-09 | All quarantine trees (`modules/_darwin-disabled`, `modules/_nixos-disabled`, `.disabled`) | Deleted. |
+| 2026-09 | Nextcloud | Deleted with its Authelia client, Traefik middleware and homepage entry; OpenCloud replaced it. `/tank/nextcloud` on `zanoza` removed by hand afterwards. |
 
 The active Nix language server is `nixd`. Development suites install it through
 `custom.tools.lsp`; server profiles that need it list it explicitly. `nil` is not

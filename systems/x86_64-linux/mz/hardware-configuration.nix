@@ -58,7 +58,6 @@
         "jellyfin.sbulav.ru"
         "authelia.sbulav.ru"
         "home.sbulav.ru"
-        "nextcloud.sbulav.ru"
         "traefik.sbulav.ru"
         "flood.sbulav.ru"
       ];

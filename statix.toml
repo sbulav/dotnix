@@ -4,11 +4,8 @@
 # `boot.*` / `services.*` across a file to keep related settings together.
 disabled = ["repeated_keys"]
 
-# Preserved-but-dead trees (see CLAUDE.md) and local tool state.
+# Local tool state.
 ignore = [
   ".claude",
   ".direnv",
-  ".disabled",
-  "modules/_darwin-disabled",
-  "modules/_nixos-disabled",
 ]

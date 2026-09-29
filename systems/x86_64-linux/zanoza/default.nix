@@ -162,13 +162,6 @@
       host = "herdr.sbulav.ru";
       relayHost = "herdr-relay.sbulav.ru";
     };
-    nextcloud = {
-      enable = false;
-      host = "nextcloud.sbulav.ru";
-      secret_file = "secrets/zanoza/default.yaml";
-      hostAddress = "172.16.64.10";
-      localAddress = "172.16.64.106";
-    };
     jellyfin = {
       enable = true;
       enableGPU = true;
