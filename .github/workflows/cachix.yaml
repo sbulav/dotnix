@@ -28,13 +28,13 @@ jobs:
         run: nix fmt -- --ci
 
       # Both lints are blocking. statix reads ./statix.toml (repeated_keys off,
-      # dead trees ignored); deadnix skips hidden directories on its own, and
+      # tool state ignored); deadnix skips hidden directories on its own, and
       # lambda pattern names (`{ inputs, ... }:`) are allowed to go unused.
       - name: Run statix
         run: nix develop --no-write-lock-file -c statix check .
 
       - name: Run deadnix
-        run: nix develop --no-write-lock-file -c deadnix --fail --no-lambda-pattern-names --exclude modules/_darwin-disabled modules/_nixos-disabled -- .
+        run: nix develop --no-write-lock-file -c deadnix --fail --no-lambda-pattern-names -- .
 
       # Builds checks.x86_64-linux (cheap runCommand tests) and evaluates the
       # remaining outputs; --no-build would skip the checks entirely.

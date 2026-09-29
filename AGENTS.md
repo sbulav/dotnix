@@ -29,7 +29,7 @@ the flake root.
 
 - `nixpkgs` is pinned to `nixos-26.05` (stable); `nixos-unstable` is exposed as `pkgs.unstable` via overlay in `flake.nix`.
 - `determinate.nixosModules.default` and the sops-nix modules are auto-imported into every system and home — never import them by hand.
-- `modules/_darwin-disabled/`, `modules/_nixos-disabled/` and `.disabled/` are preserved-but-dead trees: editing them has no effect on any build, and the linters skip them. The live Darwin host is `mba13`.
+- Retired modules and hosts are deleted, not quarantined: git history is the archive (`docs/module-lifecycle.md`). The live Darwin host is `mba13`.
 - CI (`.github/workflows/cachix.yaml`) builds every host and `checks/` on every push, and statix and deadnix are blocking. Renovate automerges its weekly lock file PR once CI is green, so a red build on it stalls every input bump.
 
 ## Decisions
@@ -58,7 +58,7 @@ Raw equivalents:
 
 ## Definition of done
 
-1. `nix fmt` — clean; `statix check .` and `deadnix --fail --no-lambda-pattern-names --exclude modules/_darwin-disabled modules/_nixos-disabled -- .` — both exit 0 (CI runs exactly these).
+1. `nix fmt` — clean; `statix check .` and `deadnix --fail --no-lambda-pattern-names -- .` — both exit 0 (CI runs exactly these).
 2. `nix build .#nixosConfigurations.{affected-host}.config.system.build.toplevel` — builds without error, for every host the change touches.
 3. `nix flake check` when the change spans hosts or shared modules.
 4. Activation (`sys test`, then `sys rebuild`) — only with the user's explicit go-ahead; remote hosts build locally first, then `nix run nixpkgs#deploy-rs -- .#{hostname}`.
