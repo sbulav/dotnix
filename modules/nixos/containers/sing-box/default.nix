@@ -1,4 +1,5 @@
-# sing-box proxy container: VLESS+REALITY exits with automatic failover.
+# sing-box proxy container: VLESS exits (REALITY over TCP, or TLS over
+# gRPC) with automatic failover.
 # Replaces the former v2rayA container (and the host-level tv-proxy-router):
 # a urltest group probes every exit and routes around blocked ones; a
 # selector ("exit", default "auto") lets the metacubexd dashboard pin one.
@@ -18,10 +19,11 @@ let
   householdDnsSettings = lib.custom.dns.resolvedSettings;
   cfg = config.${namespace}.containers.sing-box;
 
-  # Parses the sops-provided vless:// URI list into sing-box outbounds plus
-  # the urltest/selector groups. Runs as a root ExecStartPre inside the
-  # container (secrets are 0400); output tags come from the URI fragments,
-  # so adding/removing an exit is a sops edit only — no Nix change.
+  # Parses the sops-provided vless:// URI list (REALITY/TCP or TLS/gRPC)
+  # into sing-box outbounds plus the urltest/selector groups. Runs as a root
+  # ExecStartPre inside the container (secrets are 0400); output tags come
+  # from the URI fragments, so adding/removing an exit is a sops edit only —
+  # no Nix change.
   outboundsGen = pkgs.writers.writePython3Bin "sing-box-outbounds-gen" { } ''
     import json
     import os
@@ -47,49 +49,72 @@ let
                 continue
             u = urlsplit(uri)
             q = {k: v[0] for k, v in parse_qs(u.query).items()}
-            if q.get("security") != "reality":
-                print(f"skipping non-reality server {u.hostname}",
-                      file=sys.stderr)
+            security = q.get("security")
+            if security not in ("reality", "tls"):
+                print(f"skipping server {u.hostname} with unsupported "
+                      f"security {security!r}", file=sys.stderr)
                 continue
-            # Only bare-TCP REALITY is mapped; a ws/grpc URI would
+            # Only bare TCP and gRPC are mapped; a ws/xhttp URI would
             # otherwise silently become a broken TCP outbound.
-            if q.get("type", "tcp") not in ("", "tcp", "none"):
+            transport = q.get("type", "tcp")
+            if transport not in ("", "tcp", "none", "grpc"):
                 print(f"skipping unsupported transport "
-                      f"{q['type']!r} for {u.hostname}",
+                      f"{transport!r} for {u.hostname}",
                       file=sys.stderr)
                 continue
-            # An accepted REALITY URI must be complete: an empty pbk/sni
-            # renders an invalid config and crash-loops the service.
-            if not q.get("pbk") or not q.get("sni"):
+            is_grpc = transport == "grpc"
+            # sing-box speaks only gun-mode gRPC; there is no "multi".
+            if is_grpc and q.get("mode", "gun") != "gun":
+                print(f"skipping unsupported grpc mode "
+                      f"{q['mode']!r} for {u.hostname}",
+                      file=sys.stderr)
+                continue
+            # An accepted URI must be complete: an empty pbk/sni renders
+            # an invalid config and crash-loops the service.
+            if security == "reality" and (
+                    not q.get("pbk") or not q.get("sni")):
                 sys.exit(f"URI for {u.hostname} lacks pbk/sni — "
                          "fix the sops entry")
-            tag = unquote(u.fragment) or u.hostname
+            if security == "tls" and not q.get("sni"):
+                sys.exit(f"URI for {u.hostname} lacks sni — "
+                         "fix the sops entry")
+            tag = unquote(u.fragment).strip() or u.hostname
             if tag in RESERVED_TAGS:
                 sys.exit(f"tag {tag!r} collides with a built-in tag")
             if tag in seen_tags:
                 sys.exit(f"duplicate outbound tag {tag!r}")
             seen_tags.add(tag)
+            tls = {
+                "enabled": True,
+                "server_name": q["sni"],
+                "utls": {
+                    "enabled": True,
+                    "fingerprint": q.get("fp", "chrome"),
+                },
+            }
+            if q.get("alpn"):
+                tls["alpn"] = q["alpn"].split(",")
+            if security == "reality":
+                tls["reality"] = {
+                    "enabled": True,
+                    "public_key": q["pbk"],
+                    "short_id": q.get("sid", ""),
+                }
             outbound = {
                 "type": "vless",
                 "tag": tag,
                 "server": u.hostname,
                 "server_port": u.port or 443,
                 "uuid": u.username,
-                "tls": {
-                    "enabled": True,
-                    "server_name": q.get("sni", ""),
-                    "utls": {
-                        "enabled": True,
-                        "fingerprint": q.get("fp", "chrome"),
-                    },
-                    "reality": {
-                        "enabled": True,
-                        "public_key": q.get("pbk", ""),
-                        "short_id": q.get("sid", ""),
-                    },
-                },
+                "tls": tls,
             }
-            if q.get("flow"):
+            if is_grpc:
+                outbound["transport"] = {
+                    "type": "grpc",
+                    "service_name": q.get("serviceName", ""),
+                }
+            # Vision is TCP-only; never carry flow onto a gRPC outbound.
+            elif q.get("flow"):
                 outbound["flow"] = q["flow"]
             outbounds.append(outbound)
 
