@@ -79,6 +79,9 @@ in
           # Port of the old waybar akg-vu-meter (default sourceMatch AKG_C44).
           micVuMeter.enable = true;
         };
+        # Pump LCD + RGB follow the noctalia palette (udev rule for
+        # 0416:7395 lives in the mz system config).
+        galahad-lcd = enabled;
         woomer = enabled;
         kitty = disabled;
         wezterm = {

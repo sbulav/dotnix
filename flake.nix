@@ -53,6 +53,13 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Lian Li Galahad II LCD pump control (glc), used by the galahad-lcd
+    # home addon on mz.
+    galahad-linux-control = {
+      url = "github:sbulav/galahad-linux-control";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Woomer: Wayland zoomer (personal fork with HiDPI/scaling fixes).
     # Intentionally NOT following our nixpkgs: woomer pins its own
     # nixpkgs-unstable + crane for the raylib/bindgen build.
