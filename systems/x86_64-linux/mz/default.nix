@@ -171,12 +171,16 @@ in
   services.resolved = {
     enable = true;
     settings.Resolve = {
-      DNS = "1.1.1.1 1.0.0.1 8.8.8.8";
+      # Cloudflare first is a trap: 1.1.1.1/1.0.0.1 SERVFAIL for nalog.ru
+      # (they cannot reach the gi.nalog.ru delegation) and resolved treats
+      # SERVFAIL as an answer, so it never fails over. Google and Quad9
+      # resolve it; keep Cloudflare only as the last resort.
+      DNS = "8.8.8.8 9.9.9.9 1.1.1.1";
       DNSSEC = "false";
       FallbackDNS = [
-        "1.1.1.1"
-        "1.0.0.1"
         "8.8.8.8"
+        "9.9.9.9"
+        "1.1.1.1"
       ];
     };
   };
