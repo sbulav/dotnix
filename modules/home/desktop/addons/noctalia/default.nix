@@ -730,6 +730,9 @@ let
     wallpaper = {
       enabled = true;
       default.path = toString config.custom.desktop.addons.wallpaper;
+      # Manual random/next/previous actions also use this scan setting.
+      # wallpapers-nix keeps its images in category subdirectories.
+      automation.recursive = true;
       # The default is all six transitions with one picked at random per
       # change; narrow to the cheapest on the 3840×2560 output. Key is
       # `transition`, singular, despite holding a list — and seed-only like
