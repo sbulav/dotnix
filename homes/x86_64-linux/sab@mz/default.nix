@@ -82,6 +82,10 @@ in
         # Pump LCD + RGB follow the noctalia palette (udev rule for
         # 0416:7395 lives in the mz system config).
         galahad-lcd = enabled;
+        quake-console = {
+          enable = true;
+          sessionName = "default";
+        };
         woomer = enabled;
         kitty = disabled;
         wezterm = {
