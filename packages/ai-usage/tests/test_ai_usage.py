@@ -7,6 +7,7 @@ import pathlib
 import stat
 import sys
 import tempfile
+import time
 import unittest
 from unittest import mock
 
@@ -123,6 +124,91 @@ class CodexChildEnvTest(unittest.TestCase):
       child = ai_usage.codex_child_env()
     self.assertEqual(child["HTTPS_PROXY"], "http://fwdproxy.pyn.ru:4443")
     self.assertEqual(child["NO_PROXY"], "localhost,127.0.0.1,::1,pyn.ru,chatgpt.com")
+
+
+class CodexProbeTest(unittest.TestCase):
+  def test_real_rpc_server_with_unanswered_account_read(self) -> None:
+    with tempfile.TemporaryDirectory() as directory:
+      server = pathlib.Path(directory) / "codex"
+      server.write_text(f"#!{sys.executable}\n" + '''
+import json
+import sys
+
+for line in sys.stdin:
+  request = json.loads(line)
+  method = request["method"]
+  if method == "initialize":
+    result = {}
+  elif method == "account/rateLimits/read":
+    result = {"rateLimits": {
+      "planType": "pro",
+      "primary": {"usedPercent": 36, "windowDurationMins": 10080},
+    }}
+  else:
+    continue  # account/read never answers, as in the affected app-server.
+  print(json.dumps({"id": request["id"], "result": result}), flush=True)
+''')
+      server.chmod(0o700)
+      started = time.monotonic()
+      result = ai_usage.probe_codex(str(server))
+      self.assertTrue(result.ok)
+      self.assertEqual(result.tier_label, "Pro")
+      self.assertEqual(result.limits[0]["percent"], 0.36)
+      self.assertLess(time.monotonic() - started, 4)
+
+  def probe(self, limits: dict, account: dict | Exception) -> tuple:
+    process = mock.Mock()
+    methods = []
+
+    def request(_process, _request_id, method, params=None, timeout=8):
+      methods.append((method, timeout))
+      if method == "account/rateLimits/read":
+        return {"result": {"rateLimits": limits}}
+      if method == "account/read":
+        if isinstance(account, Exception):
+          raise account
+        return {"result": {"account": account}}
+      return {"result": {}}
+
+    with mock.patch.object(ai_usage.shutil, "which", return_value="/bin/codex"), \
+         mock.patch.object(ai_usage.subprocess, "Popen", return_value=process), \
+         mock.patch.object(ai_usage, "rpc_request", side_effect=request):
+      result = ai_usage.probe_codex()
+    process.terminate.assert_called_once()
+    return result, methods
+
+  def test_plan_in_limits_skips_unanswered_account_request(self) -> None:
+    result, methods = self.probe({
+      "planType": "pro",
+      "primary": {"usedPercent": 36, "windowDurationMins": 10080},
+    }, TimeoutError("account/read"))
+    self.assertTrue(result.ok)
+    self.assertEqual(result.tier_label, "Pro")
+    self.assertEqual(result.limits[0]["percent"], 0.36)
+    self.assertEqual([method for method, _ in methods], ["initialize", "account/rateLimits/read"])
+
+  def test_missing_plan_uses_account_after_limits(self) -> None:
+    result, methods = self.probe({
+      "primary": {"usedPercent": 20, "windowDurationMins": 300},
+    }, {"type": "chatgpt", "planType": "plus"})
+    self.assertTrue(result.ok)
+    self.assertEqual(result.tier_label, "Plus")
+    self.assertEqual(methods[-2:], [("account/rateLimits/read", 8), ("account/read", 2)])
+
+  def test_failed_optional_account_request_preserves_limits(self) -> None:
+    for error in (TimeoutError("account/read"), RuntimeError("RPC error")):
+      with self.subTest(error=error):
+        result, _ = self.probe({
+          "primary": {"usedPercent": 20, "windowDurationMins": 300},
+        }, error)
+        self.assertTrue(result.ok)
+        self.assertEqual(result.tier_label, "")
+        self.assertEqual(result.limits[0]["percent"], 0.2)
+
+  def test_no_active_limits_still_reports_unavailable(self) -> None:
+    result, _ = self.probe({"planType": "pro"}, {})
+    self.assertFalse(result.ok)
+    self.assertEqual(result.status_text, "Codex limits unavailable")
 
 
 class CacheMergeTest(unittest.TestCase):

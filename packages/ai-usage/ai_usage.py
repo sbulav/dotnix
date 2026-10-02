@@ -32,7 +32,6 @@ from typing import Any, Callable
 SCHEMA_VERSION = 1
 CLAUDE_USAGE_ENDPOINT = "https://api.anthropic.com/api/oauth/usage"
 CLAUDE_AUTH_HELP = "Run `claude auth login` to restore Claude usage."
-CODEX_AUTH_HELP = "Run `codex login` to restore Codex usage."
 
 
 @dataclasses.dataclass(frozen=True)
@@ -376,15 +375,19 @@ def probe_codex(command: str | None = None) -> Probe:
     assert process.stdin is not None
     process.stdin.write(json.dumps({"method": "initialized", "params": {}}) + "\n")
     process.stdin.flush()
-    account_message = rpc_request(process, 2, "account/read", timeout=8)
-    account_result = account_message.get("result") or {}
-    account = account_result.get("account")
-    if not isinstance(account, dict):
-      return Probe(False, status_text="Waiting for Codex auth", help_text=CODEX_AUTH_HELP)
-    limits_message = rpc_request(process, 3, "account/rateLimits/read", timeout=8)
-
+    limits_message = rpc_request(process, 2, "account/rateLimits/read", timeout=8)
     rate_limits = (limits_message.get("result") or {}).get("rateLimits") or {}
-    raw_plan = rate_limits.get("planType") or account.get("planType") or account.get("type") or ""
+    raw_plan = rate_limits.get("planType") or ""
+    # Limits already carry the plan. An unanswered account/read must not
+    # discard usable limits; older app-servers only need it as a fallback.
+    if not raw_plan:
+      try:
+        account_message = rpc_request(process, 3, "account/read", timeout=2)
+        account = (account_message.get("result") or {}).get("account")
+        if isinstance(account, dict):
+          raw_plan = account.get("planType") or account.get("type") or ""
+      except (OSError, RuntimeError, TimeoutError, ValueError):
+        pass
     plan = str(raw_plan).replace("_", " ").title() if raw_plan else ""
     limits = tuple(
       entry
@@ -407,8 +410,13 @@ def probe_codex(command: str | None = None) -> Probe:
     except (OSError, subprocess.TimeoutExpired):
       try:
         process.kill()
-      except OSError:
+        process.wait(timeout=1)
+      except (OSError, subprocess.TimeoutExpired):
         pass
+    finally:
+      for pipe in (process.stdin, process.stdout):
+        if pipe is not None:
+          pipe.close()
 
 
 PROVIDERS: dict[str, tuple[str, Callable[[], Probe]]] = {
