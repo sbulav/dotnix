@@ -6,6 +6,13 @@
 # named extras below, kept deliberately visible: they are historical drift,
 # preserved for now; converging opencode to claude's stricter set is a
 # planned follow-up, not a silent side effect of editing this file.
+#
+# Claude ask rules prompt in EVERY permission mode, including
+# --dangerously-skip-permissions, so the claude ask list holds only actions
+# worth a yes/no in a full-yolo run. Ask outranks allow (docs: "a matching
+# ask rule prompts even when a more specific allow rule also matches"), so a
+# catch-all allow with narrower ask rules carves prompts back out — that is
+# how the git fork surface below works.
 let
   # --- shared vocabulary: gated identically in both harnesses ---
   destructiveDeny = [
@@ -35,20 +42,51 @@ let
   ];
 
   # --- claude-only extras ---
-  claudeGitAsk = [
+  # Git: everything allowed, fork work is the exception. `git push *` is
+  # allowed wholesale; claudeGitForkAsk outranks it and prompts only for
+  # pushing to a URL or wiring a fork remote. A push to a named fork remote
+  # still passes silently — but `git remote add`/`set-url` prompted first,
+  # so a fork enters the repo only through a human checkpoint.
+  claudeGitAllow = [
+    "git clone *"
+    "git fetch *"
     "git add *"
     "git checkout *"
     "git commit *"
     "git merge *"
     "git pull *"
+    "git push *"
+    "git rebase *"
+    "git reset *"
     "git restore *"
     "git stash *"
     "git switch *"
   ];
-  claudeFileAsk = [
+  claudeGitForkAsk = [
+    "git remote add *"
+    "git remote set-url *"
+    "git push git@*"
+    "git push ssh://*"
+    "git push https://*"
+    "git push http://*"
+  ];
+  claudeFileAllow = [
     "cp *"
     "mv *"
+    "chmod *"
+  ];
+  # rm and curl stay gated even in yolo: irreversible deletion, and the one
+  # plain-text exfil channel permission rules can usefully watch.
+  claudeAsk = [
+    "rm *"
     "curl *"
+  ];
+  # System switching is denied, not asked: deny blocks in every mode
+  # (bypass included), so a yolo run cannot even prompt its way through.
+  # AGENTS.md already forbids the agent from switching by hand.
+  claudeMutationDeny = [
+    "sudo *"
+    "nixos-rebuild *"
   ];
   claudeEnvDeny = [ "declare -p *" ];
 
@@ -101,9 +139,10 @@ in
       "Bash(claude --version)"
       "WebFetch(domain:github.com)"
       "WebFetch(domain:raw.githubusercontent.com)"
-    ];
-    ask = bashify (claudeGitAsk ++ gitDangerousAsk ++ claudeFileAsk ++ systemMutationAsk);
-    deny = bashify (destructiveDeny ++ envExposureDeny ++ claudeEnvDeny);
+    ]
+    ++ bashify (claudeGitAllow ++ claudeFileAllow);
+    ask = bashify (claudeGitForkAsk ++ claudeAsk);
+    deny = bashify (destructiveDeny ++ envExposureDeny ++ claudeEnvDeny ++ claudeMutationDeny);
   };
 
   opencode = {
