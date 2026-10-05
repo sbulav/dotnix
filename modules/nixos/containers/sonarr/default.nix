@@ -22,6 +22,13 @@
 #   Settings → General → Proxy: SOCKS5 172.16.64.108:20170,
 #   Ignored: localhost,127.0.0.1,172.16.64.0/24,192.168.80.0/20
 # Calls to prowlarr/qbittorrent bypass it (local addresses).
+#
+# requireRussian owns the RU custom formats and their scores/minimum in every
+# quality profile, plus subtitle import settings. A startup/periodic API job
+# reapplies them; quality choices and other format scores remain UI-owned.
+# Unlabelled MultiSub/Dual-Audio releases wait instead of falling back. This is
+# declared-language filtering: titles can lie, and Sonarr cannot inspect media
+# tracks until after downloading. Rollback snapshot: NzbDrone/ru-policy-backup.json.
 {
   config,
   lib,
@@ -40,6 +47,7 @@ in
     enable = mkBoolOpt false "Enable sonarr nixos-container;";
     dataPath = mkOpt str "/tank/sonarr" "Sonarr state path on host machine";
     mediaPath = mkOpt str "/tank/media" "Shared arr media path on host machine";
+    requireRussian = mkBoolOpt false "Require declared Russian audio or full Russian subtitles in every quality profile";
     host = mkOpt str "sonarr.sbulav.ru" "The host to serve sonarr on";
     hostAddress = mkOpt str "172.16.64.10" "With private network, which address to use on Host";
     localAddress = mkOpt str "172.16.64.114" "With privateNetwork, which address to use in container";
@@ -103,32 +111,64 @@ in
       inherit (cfg) hostAddress;
       inherit (cfg) localAddress;
 
-      config = _: {
-        users.groups.media.gid = mediaGid;
-
-        services.sonarr = {
-          enable = true;
-          group = "media";
-        };
-
-        # Group-writable imports so jellyfin can read and future arr
-        # members can upgrade/replace files (upstream hardcodes 0022).
-        systemd.services.sonarr.serviceConfig.UMask = lib.mkForce "0002";
-
-        networking = {
-          firewall = {
-            enable = true;
-            allowedTCPPorts = [ 8989 ];
+      config =
+        { pkgs, ... }:
+        let
+          applyLanguagePolicy = pkgs.writeShellApplication {
+            name = "sonarr-language-policy";
+            runtimeInputs = [ pkgs.python3 ];
+            text = ''
+              exec python3 ${./apply-language-policy.py} \
+                --config-xml /var/lib/sonarr/.config/NzbDrone/config.xml \
+                --backup /var/lib/sonarr/.config/NzbDrone/ru-policy-backup.json
+            '';
           };
-          useHostResolvConf = false;
-        };
+        in
+        {
+          users.groups.media.gid = mediaGid;
 
-        services.resolved = {
-          enable = true;
-          settings.Resolve = householdDnsSettings;
+          services.sonarr = {
+            enable = true;
+            group = "media";
+          };
+
+          # Group-writable imports so jellyfin can read and future arr
+          # members can upgrade/replace files (upstream hardcodes 0022).
+          systemd.services.sonarr.serviceConfig.UMask = lib.mkForce "0002";
+
+          systemd.services.sonarr-language-policy = mkIf cfg.requireRussian {
+            description = "Require Russian audio or subtitles in Sonarr release selection";
+            wantedBy = [ "multi-user.target" ];
+            after = [ "sonarr.service" ];
+            wants = [ "sonarr.service" ];
+            serviceConfig = {
+              Type = "oneshot";
+              ExecStart = lib.getExe applyLanguagePolicy;
+              TimeoutStartSec = 600;
+              Restart = "on-failure";
+              RestartSec = 30;
+            };
+          };
+
+          systemd.timers.sonarr-language-policy = mkIf cfg.requireRussian {
+            wantedBy = [ "timers.target" ];
+            timerConfig.OnUnitActiveSec = "5min";
+          };
+
+          networking = {
+            firewall = {
+              enable = true;
+              allowedTCPPorts = [ 8989 ];
+            };
+            useHostResolvConf = false;
+          };
+
+          services.resolved = {
+            enable = true;
+            settings.Resolve = householdDnsSettings;
+          };
+          system.stateVersion = "26.05";
         };
-        system.stateVersion = "26.05";
-      };
     };
   };
 }

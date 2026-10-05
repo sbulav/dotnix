@@ -202,6 +202,7 @@
     };
     sonarr = {
       enable = true;
+      requireRussian = true;
       host = "sonarr.sbulav.ru";
       hostAddress = "172.16.64.10";
       localAddress = "172.16.64.114";
