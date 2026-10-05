@@ -155,7 +155,7 @@ in
             enable = true;
             allowedTCPPorts = [ 8082 ];
           };
-          useHostResolvConf = lib.mkForce false;
+          useHostResolvConf = false;
         };
 
         services.resolved = {

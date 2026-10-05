@@ -159,7 +159,7 @@ in
             ];
             allowedUDPPorts = [ cfg.torrentingPort ];
           };
-          useHostResolvConf = lib.mkForce false;
+          useHostResolvConf = false;
         };
 
         services.resolved = {

@@ -707,20 +707,6 @@ let
       # catalog and re-syncs all ~47 cached manifests — CommunityTemplateService
       # ::sync() returns early only on this flag, the empty communityIds list
       # does not spare the catalog fetch. Off until a template is selected.
-      #
-      # enable_builtin_templates is deliberately left at its default: with
-      # builtin_ids empty the apply pass is already skipped, so turning it off
-      # buys nothing. In particular it does NOT stop the undo sweep — on the
-      # first apply after each start noctalia runs the undo hook of every
-      # builtin template absent from builtin_ids, and with the flag false the
-      # enabled set is merely empty, so the sweep still covers all of them
-      # (template_apply_service.cpp: undoDisabledBuiltinTemplates, reached via
-      # reconcileDisabledBuiltinIds whenever there is no previous request).
-      # Those hooks are no-ops that fail loudly against home-manager's
-      # read-only symlinks (`touch: cannot touch
-      # '~/.config/wezterm/wezterm.lua': Permission denied`). There is no
-      # config lever for it; see the unit Environment below for the one hook
-      # that cost real time rather than just a log line.
       templates.enable_community_templates = false;
     };
 
@@ -1127,19 +1113,6 @@ in
         cfg.overrides != { }
       ) "${config.xdg.configFile."noctalia/zz-overrides.toml".source}";
       Service.RestartSec = 2;
-      # Blunt the one builtin-template undo hook that costs more than a log
-      # line (see [theme.templates] above for why the sweep cannot be turned
-      # off). starship's hook discovers its config by checking $STARSHIP_CONFIG,
-      # then `systemctl --user show-environment`, and only then by reading
-      # /proc/<pid>/environ for *every* process owned by the user — which has
-      # already been killed on the hook timeout here (exit code 143). Handing
-      # it the path it would have defaulted to anyway makes it return on the
-      # first branch. Scoped to this unit, so fish and starship itself are
-      # untouched; harmless even if the file is absent, since the hook then
-      # simply finds nothing to undo.
-      Service.Environment = [
-        "STARSHIP_CONFIG=${config.home.homeDirectory}/.config/starship.toml"
-      ];
     };
 
     # Give the declaration above authority over the tables it declares: the

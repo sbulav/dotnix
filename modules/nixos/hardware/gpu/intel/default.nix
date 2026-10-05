@@ -14,7 +14,6 @@ in
 {
   options.hardware.gpu.intel = {
     enable = mkBoolOpt false "Whether or not to enable support for Intel GPU (Arc, Iris, UHD).";
-    enableArcSupport = mkBoolOpt true "Enable additional support for Intel Arc GPUs (DG2).";
   };
 
   config = mkIf cfg.enable {
@@ -24,9 +23,6 @@ in
 
       kernelParams = [
         "i915.enable_guc=2"
-      ]
-      ++ lib.optionals cfg.enableArcSupport [
-        "i915.force_probe=*"
       ];
     };
 

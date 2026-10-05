@@ -46,7 +46,6 @@ in
       GSETTINGS_SCHEMA_DIR = "${pkgs.gsettings-desktop-schemas}/share/gsettings-schemas/${pkgs.gsettings-desktop-schemas.name}/glib-2.0/schemas";
       XDG_SESSION_TYPE = "wayland";
       NIXOS_OZONE_WL = "1";
-      MOZ_ENABLE_WAYLAND = "1";
       SDL_VIDEODRIVER = "wayland";
       CLUTTER_BACKEND = "wayland";
       XDG_CURRENT_DESKTOP = "Hyprland";

@@ -189,7 +189,7 @@ in
             # We are using Host network↲
             networking = {
               firewall.enable = false;
-              useHostResolvConf = lib.mkForce false;
+              useHostResolvConf = false;
             };
             services.resolved = {
               enable = true;

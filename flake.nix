@@ -66,9 +66,10 @@
     woomer.url = "github:sbulav/woomer";
 
     # Herdr: terminal multiplexer for AI coding agents.
-    # Intentionally NOT following our nixpkgs: herdr needs zig_0_15
-    # (absent from nixos-26.05) so it uses its own nixos-unstable lock.
-    herdr.url = "github:ogulcancelik/herdr/v0.8.0";
+    herdr = {
+      url = "github:ogulcancelik/herdr/v0.8.0";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     # Herdr-remote relay + web app with native session lifecycle and
     # structured Claude Code/OpenCode output. Plain source repo (not a flake);

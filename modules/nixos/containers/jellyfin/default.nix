@@ -341,7 +341,7 @@ in
                 7359
               ];
             };
-            useHostResolvConf = lib.mkForce false;
+            useHostResolvConf = false;
           };
 
           services.resolved = {

@@ -123,7 +123,7 @@ in
             allowedTCPPorts = [ 3000 ];
           };
 
-          useHostResolvConf = lib.mkForce false;
+          useHostResolvConf = false;
         };
 
         services.resolved = {

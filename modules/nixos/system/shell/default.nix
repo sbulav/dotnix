@@ -22,7 +22,6 @@ in
       eza
       bat
       zoxide
-      starship
       nix-search-tv
     ];
 
@@ -43,9 +42,6 @@ in
     environment.shellAliases = {
       ".." = "cd ..";
     };
-
-    home.programs.starship.enable = true;
-    home.configFile."starship.toml".source = ./starship.toml;
 
     home.programs.zoxide.enable = true;
   };

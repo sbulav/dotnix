@@ -185,7 +185,7 @@ in
             "1.1.1.2"
             "1.0.0.2"
           ];
-          useHostResolvConf = lib.mkForce false;
+          useHostResolvConf = false;
         };
         services.resolved.enable = false;
         system.stateVersion = "24.11";
