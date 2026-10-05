@@ -38,10 +38,15 @@ portable name/description metadata and `agents/openai.yaml`. The latter maps
 explicit-only planning/shipping entry points. `custom.ai.codex.skills` can
 narrow the set when needed. Claude and OpenCode use the same skill bodies.
 
-At activation, existing hand-installed files owned by this module are moved
+Each skill is linked as a complete directory with regular files inside the
+store. Codex follows directory symlinks but skips a symlinked `SKILL.md`.
+
+At activation, existing skill directories owned by this module are moved
 to `$XDG_STATE_HOME/dotnix/codex-skills-backup/<timestamp>-<pid>/` before Home
-Manager checks link targets. Store symlinks are left for Home Manager to
-update. The hook honors dry-run mode; builds do not migrate live files.
+Manager checks link targets, preserving both manual additions and the old
+per-file Home Manager layout. Directory symlinks into the store are left for
+Home Manager to update. The hook honors dry-run mode; builds do not migrate
+live files.
 
 The `dev` router selects the smallest workflow. `handoff` transfers sessions,
 `triage` prepares incoming reports, `prototype` resolves executable design

@@ -9,16 +9,26 @@ with lib.custom;
 let
   cfg = config.custom.ai.codex;
   registry = import ../shared/registry.nix { inherit lib; };
-  skillFiles = concatMap (name: [
-    {
-      name = ".agents/skills/${name}/SKILL.md";
-      value.text = registry.toCodexSkillMarkdown name registry.skills.${name};
-    }
-    {
-      name = ".agents/skills/${name}/agents/openai.yaml";
-      value.text = registry.toCodexSkillPolicy name registry.skills.${name};
-    }
-  ]) cfg.skills;
+  # Codex follows skill directory symlinks, but skips symlinked SKILL.md
+  # files. Link each complete directory with regular files inside it.
+  skillFiles = map (name: {
+    name = ".agents/skills/${name}";
+    value.source =
+      pkgs.runCommand "codex-skill-${name}"
+        {
+          skillMarkdown = registry.toCodexSkillMarkdown name registry.skills.${name};
+          skillPolicy = registry.toCodexSkillPolicy name registry.skills.${name};
+          passAsFile = [
+            "skillMarkdown"
+            "skillPolicy"
+          ];
+        }
+        ''
+          mkdir -p "$out/agents"
+          cp "$skillMarkdownPath" "$out/SKILL.md"
+          cp "$skillPolicyPath" "$out/agents/openai.yaml"
+        '';
+  }) cfg.skills;
 in
 {
   options.custom.ai.codex = {
@@ -31,8 +41,9 @@ in
   config = mkIf cfg.enable {
     home.file = listToAttrs skillFiles;
 
-    # One-time migration of hand-installed files. Preserve them before HM's
-    # collision check; subsequent generations already point into the store.
+    # Preserve existing directories (including the old per-file HM links and
+    # any manual additions) before HM's collision check. Later generations
+    # already link the whole directory into the store.
     # `run` honors HM dry-run mode. No backup or file mutation at build time.
     home.activation.backupManualCodexSkills = {
       before = [ "checkLinkTargets" ];
