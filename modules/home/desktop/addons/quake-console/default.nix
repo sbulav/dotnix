@@ -1,15 +1,12 @@
 {
   config,
   lib,
-  pkgs,
-  inputs,
   ...
 }:
 with lib;
 with lib.custom;
 let
   cfg = config.custom.desktop.addons.quake-console;
-  herdr = inputs.herdr.packages.${pkgs.stdenv.hostPlatform.system}.herdr;
   # Always spawn a separate GUI: reusing WezTerm's existing process would
   # inherit its class and send the console to the ordinary terminal workspace.
   command = concatStringsSep " " [
@@ -18,7 +15,7 @@ let
     "start --always-new-process --class org.dotnix.quake --cwd"
     (escapeShellArg cfg.directory)
     "--"
-    (escapeShellArg (getExe herdr))
+    (escapeShellArg (getExe config.custom.cli-apps.herdr.package))
     "--session"
     (escapeShellArg cfg.sessionName)
   ];

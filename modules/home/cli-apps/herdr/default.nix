@@ -15,6 +15,76 @@ with lib;
 with lib.custom;
 let
   cfg = config.custom.cli-apps.herdr;
+  raw = inputs.herdr.packages.${pkgs.stdenv.hostPlatform.system}.herdr;
+  real = getExe raw;
+  herdrDir = "${config.xdg.configHome}/herdr";
+
+  # herdr keeps one long-lived server per session, and the client/server
+  # protocol changes between releases: after a flake bump the old server
+  # keeps running while freshly built clients can no longer attach to it.
+  # The wrapper asks the session's socket which binary is listening and
+  # attaches with that one; `herdr server stop` then picks up the new build.
+  # Every lookup failure falls through to the current build. Linux-only:
+  # it reads the listener from ss and /proc.
+  wrapper = pkgs.writeShellApplication {
+    name = "herdr";
+    runtimeInputs = [
+      pkgs.iproute2
+      pkgs.coreutils
+    ];
+    text = ''
+      real=${escapeShellArg real}
+
+      # Session named on the command line: --session NAME, --session=NAME,
+      # or `session attach NAME`. --remote attaches over SSH, not here.
+      session=""
+      have_session=0
+      prev=""
+      prev2=""
+      for arg in "$@"; do
+        case "$arg" in
+          --remote | --remote=*) exec "$real" "$@" ;;
+          --session=*)
+            session="''${arg#--session=}"
+            have_session=1
+            ;;
+        esac
+        if [ "$prev" = "--session" ]; then
+          session="$arg"
+          have_session=1
+        elif [ "$prev2" = "session" ] && [ "$prev" = "attach" ]; then
+          session="$arg"
+          have_session=1
+        fi
+        prev2="$prev"
+        prev="$arg"
+      done
+
+      base="''${XDG_CONFIG_HOME:-''${HOME:-}/.config}/herdr"
+      if [ "$have_session" = 0 ]; then
+        # herdr exports HERDR_SOCKET_PATH into its panes.
+        sock="''${HERDR_SOCKET_PATH:-$base/herdr.sock}"
+        stop="herdr server stop"
+      elif [ "$session" = default ]; then
+        sock="$base/herdr.sock"
+        stop="herdr server stop"
+      else
+        sock="$base/sessions/$session/herdr.sock"
+        stop="herdr --session $session server stop"
+      fi
+
+      exe=""
+      listing="$(ss -xlpnH src "$sock" 2>/dev/null || true)"
+      if [[ "$listing" =~ pid=([0-9]+) ]]; then
+        exe="$(readlink "/proc/''${BASH_REMATCH[1]}/exe" 2>/dev/null || true)"
+      fi
+      if [ -n "$exe" ] && [ -x "$exe" ] && [ "$exe" != "$real" ]; then
+        echo "herdr: attaching with running server's binary ($exe); run '$stop' to upgrade" >&2
+        exec -a herdr "$exe" "$@"
+      fi
+      exec "$real" "$@"
+    '';
+  };
 in
 {
   options.custom.cli-apps.herdr = {
@@ -22,12 +92,47 @@ in
     prefix =
       mkOpt types.str "ctrl+a"
         "Prefix key for herdr keybindings (distinct from wezterm's ctrl+b leader).";
+    package = mkOption {
+      type = types.package;
+      readOnly = true;
+      default = if pkgs.stdenv.isLinux then wrapper else raw;
+      description = "The herdr command every client should run (the stale-server wrapper on Linux).";
+    };
   };
 
   config = mkIf cfg.enable {
-    home.packages = [
-      inputs.herdr.packages.${pkgs.stdenv.hostPlatform.system}.herdr
-    ];
+    # The raw package ships only bin/herdr, so the wrapper replaces it whole.
+    home.packages = [ cfg.package ];
+
+    # Report, never stop: a server still on the previous build keeps working
+    # through the wrapper and holds live panes, so upgrading it is the user's call.
+    home.activation.herdrStaleServer = mkIf pkgs.stdenv.isLinux (
+      config.lib.dag.entryAfter [ "linkGeneration" ] ''
+        herdrStaleServer() {
+          local sock name listing exe stop
+          for sock in ${escapeShellArg herdrDir}/herdr.sock ${escapeShellArg herdrDir}/sessions/*/herdr.sock; do
+            [ -S "$sock" ] || continue
+            listing="$(${pkgs.iproute2}/bin/ss -xlpnH src "$sock" 2>/dev/null || true)"
+            [[ "$listing" =~ pid=([0-9]+) ]] || continue
+            exe="$(${pkgs.coreutils}/bin/readlink "/proc/''${BASH_REMATCH[1]}/exe" 2>/dev/null || true)"
+            if [ -z "$exe" ] || [ "$exe" = ${escapeShellArg real} ]; then
+              continue
+            fi
+            if [ "$sock" = ${escapeShellArg herdrDir}/herdr.sock ]; then
+              name=default
+              stop="herdr server stop"
+            else
+              name="''${sock%/herdr.sock}"
+              name="''${name##*/}"
+              stop="herdr --session $name server stop"
+            fi
+            echo "herdr: session '$name' still runs $exe; new clients use ${real}." \
+              "Clients attach with the old binary until you run '$stop'."
+          done
+        }
+        herdrStaleServer || true
+      ''
+    );
 
     # force: herdr's onboarding/settings UI writes to config.toml itself;
     # without force the pre-existing file blocks home-manager activation.
