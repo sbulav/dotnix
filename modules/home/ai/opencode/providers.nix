@@ -106,9 +106,9 @@ in
       baseURL = "https://llmgtw.hhdev.ru/proxy/xai";
     };
     models = {
-      "grok-4.6" = {
-        id = "grok-4.6";
-        name = "Grok 4.6";
+      "grok-4.7" = {
+        id = "grok-4.7";
+        name = "Grok 4.7";
         cost = {
           input = 0.2;
           output = 0.6;
