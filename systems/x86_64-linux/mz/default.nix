@@ -104,6 +104,28 @@ in
     xpadneo.enable = false;
   };
 
+  # The spare ADATA LEGEND 900 (sn 2P322L1547KC, slot M2_1) hangs on the way
+  # out of APST PS4 (4 mW, 30 ms exit latency) and falls off the bus
+  # ("CSTS=0xffffffff ... D3cold to D0"), on 14 of 18 boots. The default limit
+  # of 100000 us allows PS4; 15000 excludes it and keeps PS3 (25 mW, 5 ms).
+  # Idle→wake testing dropped at cycle 203 with PS4 allowed and passed 1000/1000
+  # cycles without it. Applies to both NVMe drives, which costs about 20 mW.
+  # Once dropped, only a full power-off (not a warm reboot) brings the drive back.
+  boot.kernelParams = [ "nvme_core.default_ps_max_latency_us=15000" ];
+
+  # The same spare drive. nofail plus a short device timeout means a hung or
+  # missing drive never blocks boot (it skips the mount instead of waiting 90 s).
+  # Keep only expendable data here until it has a week of drop-free boots.
+  fileSystems."/mnt/data" = {
+    device = "/dev/disk/by-uuid/b5e861fa-3a76-4c74-8491-04b19f582660";
+    fsType = "ext4";
+    options = [
+      "nofail"
+      "noatime"
+      "x-systemd.device-timeout=10s"
+    ];
+  };
+
   environment.systemPackages = with pkgs; [
     # herdr-relay browses this host's project roots by running a python3
     # helper over non-interactive SSH; without python3 on the system PATH
