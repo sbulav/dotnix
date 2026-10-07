@@ -2,7 +2,7 @@
 # workload defaults, not benchmark scores or guarantees of gateway access.
 {
   policy = ''
-    ## Routing and effort (2026-09-29)
+    ## Routing and effort (2026-10-07)
 
     Choose by task risk, available tools, quota, and total time to a verified
     result. Subscription calls consume quota; self-hosted calls consume time.
@@ -18,7 +18,7 @@
     | Focused low-risk implementation | GPT-6 Luna with clear acceptance checks | GPT-6 Sol / Sonnet 5.5 |
     | General coding, refactoring, substantive review | GPT-6 Sol / Sonnet 5.5 | GPT-6 Astra / Opus 5.5 |
     | Ambiguous debugging, architecture, security, contested findings | parent if capable; otherwise Astra / Opus | Fable for unresolved long-horizon work |
-    | Independent-family review | Sonnet/Opus after OpenAI; Sol/Astra after Anthropic | Grok for ordinary, well-bounded changes |
+    | Independent-family review | cost-ordered review lanes in `delegate-review` | Sonnet/Opus after OpenAI; Sol/Astra after Anthropic |
     | Large input | retrieve relevant files first; partition by subsystem | supported large-context lane, including Gemini |
 
     OpenCode IDs (check `opencode models <provider>` before first use):
@@ -29,8 +29,11 @@
     - Self-hosted: `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it`,
       `hhdev-glm5-fp8/zai-org/GLM-5.3-Flash`; backup
       `hhdev-deepseek-v4-flash/deepseek-ai/DeepSeek-V4-Flash-0731`.
-    - Existing alternatives: `hhdev-grok/grok-4.6`,
+    - Existing alternatives: `hhdev-grok/grok-4.7`,
       `hhdev-google/gemini-3.1-pro-preview`, `hhdev-google/gemini-3.8-flash`.
+    - Antigravity (`agy`, subscription, not OpenCode): bare IDs such as
+      `gemini-3.8-flash-high`, `gemini-3.1-pro-high`,
+      `claude-opus-4-6-thinking`, `claude-sonnet-4-6`; list with `agy models`.
     - Gateway OpenAI fallback: `hhdev-openai/gpt-6-sol` or
       `hhdev-openai/gpt-6-astra`, only with Responses tool support confirmed.
       Existing `openai/gpt-5.6-sol`, `openai/gpt-5.6-terra`, and
@@ -52,8 +55,9 @@
     adaptive models. Gemma/GLM/DeepSeek thinking follows provider config,
     not OpenCode effort names. Gemma currently has thinking enabled.
 
-    Self-hosted models and Luna may gather review evidence; substantive
-    correctness/security verdicts use Sol/Sonnet or stronger. Two GPT tiers
+    Self-hosted models and Luna may gather evidence and propose review
+    findings; the parent verifies each one, and security verdicts use
+    Sol/Sonnet or stronger. Two GPT tiers
     are still the same family. Ask reviewers different questions before
     spending on more reviewers. A giant window alone does not justify
     sending a whole repo or adding a mandatory Gemini reviewer.
@@ -64,6 +68,9 @@
       use supported `sonnet`/`opus`/`haiku` selectors, checking resolved versions.
       Sonnet 5.5 needs Claude Code >= 2.1.284; Opus 5.5 >= 2.1.280.
       Use OpenCode for another provider or the self-hosted lane.
+    - Antigravity CLI: `agy --model <bare-id> -p "<prompt>"` runs one
+      non-interactive session in the current directory. The `agy` wrapper sets the corporate
+      proxy; invoke it by name so that wrapper is the one resolved.
     - OpenCode: use its task tool for an appropriate existing subagent, or
       `opencode run` for explicit model selection and isolated sessions.
     - ChatGPT Work / Codex app: use exposed native collaboration tools when

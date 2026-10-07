@@ -24,7 +24,7 @@ in
         # Previous Intel Arc config: HDMI-A-1,1920x1080,0x0,1 and DP-2,3840x2560@60,1920x0,2
         monitors = [
           # ",preferred,auto,auto"
-          "HDMI-A-1,1920x1080,0x0,1"
+          "HDMI-A-1,1920x1200@60,0x0,1"
           "DP-1,3840x2560@60,1920x0,2"
           ",preferred,auto,auto"
         ];
@@ -110,6 +110,7 @@ in
     };
 
     ai = {
+      antigravity = enabled;
       opencode = enabled;
       claude = enabled;
       codex = enabled;

@@ -116,6 +116,10 @@ in
   # the root password every time a recording starts.
   programs.gpu-screen-recorder.enable = true;
 
+  # Vendor-installed, self-updating generic binaries (Antigravity's
+  # /usr/local/bin/agy) need a real /lib64 loader instead of the stub-ld.
+  programs.nix-ld.enable = true;
+
   # Suites managed by nix, see suites by home-manager in homes
   suites = {
     common.enable = true; # Enables the basics, like audio, networking, ssh, etc.

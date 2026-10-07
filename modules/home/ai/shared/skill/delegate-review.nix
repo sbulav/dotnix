@@ -3,7 +3,7 @@ let
 in
 {
   name = "delegate-review";
-  version = "2.0.0";
+  version = "2.1.0";
   description = "Review PRs with independent model lenses, verify findings, and produce a fix plan. Use for PR review, review batches, or a second opinion on correctness, specification, or security.";
   "argument-hint" = "[PR number(s), or open]";
   "user-invocable" = true;
@@ -47,11 +47,11 @@ in
 
     | Change | Lenses and default delegation |
     |---|---|
-    | Small docs/mechanical change | parent review; one worker only if independent checking helps |
-    | Ordinary feature/fix | one Sol/Sonnet correctness worker; parent spec and standards |
-    | Complex behavior, concurrency, weak tests | two distinct workers: correctness and spec/architecture; parent synthesis |
-    | Auth, secrets, injection, isolation | Astra/Opus security lens plus independent correctness lens |
-    | Disputed serious finding | reproduce locally first; one stronger independent tie-break if still unresolved |
+    | Small docs/mechanical change | parent review; one tier-1 lane only if independent checking helps |
+    | Ordinary feature/fix | one cheap-lane correctness worker; parent spec and standards |
+    | Complex behavior, concurrency, weak tests | two cheap lanes from distinct families: correctness and spec/architecture; parent synthesis |
+    | Auth, secrets, injection, isolation | Astra/Opus 5.5 security lens plus an independent cheap-lane correctness lens |
+    | Disputed serious finding | reproduce locally first; Sol/Sonnet 5.5 or stronger tie-break if still unresolved |
 
     Prefer a different model family from the author when a capable lane is
     available. Distinct prompts/lenses matter more than model count; two
@@ -60,6 +60,51 @@ in
     to invent requirements. Red CI adds a failure-analysis question.
 
     ${routing}
+
+    ## Review lanes (2026-10-07)
+
+    Fill each reviewer slot from the cheapest tier that has a reachable lane
+    in a family other than the author's; descend a tier when the upper one
+    is exhausted, rate-limited, already used for this PR's other lens, or
+    the lens requires it (security, tie-break).
+
+    1. Free: `hhdev-glm5-fp8/zai-org/GLM-5.3-Flash` via OpenCode (Zhipu,
+       131k context, thinks by default). Default first reviewer for a diff
+       that fits its window.
+    2. Subscription, via `agy`: `gemini-3.1-pro-high` for spec/architecture
+       and large diffs; `gemini-3.8-flash-high` for a fast correctness pass;
+       `claude-opus-4-6-thinking` / `claude-sonnet-4-6` add independence only
+       for a non-Claude author. `gpt-oss-120b-medium` gathers evidence only.
+    3. Cheap metered: `hhdev-grok/grok-4.7` via OpenCode (xAI, 500k context,
+       $0.20/$0.60 per Mtok) for the largest diffs or a third family.
+    4. Metered strong: Sol/Sonnet 5.5, then Astra/Opus 5.5 — security lens,
+       tie-breaks, and slots tiers 1-3 cannot fill.
+
+    GLM, Gemini and Grok are three families distinct from both OpenAI and
+    Anthropic, so cheap tiers usually satisfy the diversity rule on their own.
+    Their findings are candidates: the parent verification below is what
+    makes them safe to report. Record a tier 1-3 "no findings" on a risky
+    area as thinner coverage in residual risks.
+
+    Antigravity dispatch: run `agy models` once per run to confirm IDs.
+    Headless agy writes files freely (`--mode plan` included) and auto-denies
+    every shell command, ending the turn with an empty response. So give it
+    a disposable detached worktree at the head SHA, and put the merge-base
+    diff (`git diff base...head > .scratch/review-unique/diff.patch`) beside
+    the brief; the brief says to use file reading and search only. From the
+    worktree root (the agy workspace):
+
+    ```bash
+    agy --model gemini-3.1-pro-high --output-format json \
+      --print-timeout 900s \
+      -p "Read .scratch/review-unique/brief.md and complete only the assigned review."
+    ```
+
+    `-p` takes the prompt as its value, so it goes last. Effort is chosen by
+    the model ID suffix (`-high`, `-medium`, `-low`). A `status` other than
+    `SUCCESS`, an empty `response`, or a `denied_actions` entry is a failed
+    review. Afterwards `git status` in that worktree must be clean apart
+    from the scratch directory; then remove the worktree.
 
     ## Reviewer brief extension
 
