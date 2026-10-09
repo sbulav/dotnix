@@ -367,6 +367,7 @@ in
           "initialTitle:obsidian - Obsidian"
           "ktalk"
         ];
+        "9" = [ "thunderbird" ];
       } "Workspace to application class mappings";
 
       monitorBindings =

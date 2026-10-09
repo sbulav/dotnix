@@ -15,6 +15,52 @@ let
   userJs = ".thunderbird/work/user.js";
   # What Thunderbird sends with compatMode.firefox on; verified accepted by OWA.
   firefoxUserAgent = "Mozilla/5.0 (X11; Linux x86_64; rv:154.0) Gecko/20100101 Firefox/154.0";
+  # Exchange names its special folders in the mailbox language (Russian) and
+  # subscribes none of them over IMAP, so Thunderbird — LSUB-only by default —
+  # never saw them: it made its own Trash/Archives and filed Sent and Drafts
+  # under Local Folders. Exchange lacks UTF8=ACCEPT, so folder URIs carry the
+  # raw modified UTF-7 mailbox names (trash_folder_name, by contrast, is UTF-8
+  # and Thunderbird encodes it itself).
+  imapFolder = name: "imap://${cfg.login}@${cfg.host}/${name}";
+  sentFolder = imapFolder "&BB4EQgQ,BEAEMAQyBDsENQQ9BD0ESwQ1-"; # Отправленные
+  draftsFolder = imapFolder "&BCcENQRABD0EPgQyBDgEOgQ4-"; # Черновики
+  # Exchange's non-mail folders, which IMAP lists as empty mail folders and
+  # which the server refuses to delete.
+  hiddenFolders = map imapFolder [
+    "&BBYEQwRABD0EMAQ7-" # Журнал
+    "&BBcEMAQ0BDAERwQ4-" # Задачи
+    "&BBcEMAQ8BDUEQgQ6BDg-" # Заметки
+    "&BBgEQQRFBD4ENARPBEkEOAQ1-" # Исходящие
+    "&BBoEMAQ7BDUEPQQ0BDAEQARM-" # Календарь
+    "&BBoEPgQ9BEIEMAQ6BEIESw-" # Контакты
+  ];
+  # Thunderbird can only hide a folder via CSS, and a folder-pane row carries
+  # neither name nor URI — only the id `<mode>-<base64(uri)>`
+  # (FolderPaneUtils.makeRowID). The URIs are ASCII, so bytes are chars.
+  base64 =
+    s:
+    let
+      table = stringToCharacters "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/";
+      bytes = map strings.charToInt (stringToCharacters s);
+      len = length bytes;
+      byte = i: if i < len then elemAt bytes i else 0;
+      chunk =
+        i:
+        let
+          v = byte i * 65536 + byte (i + 1) * 256 + byte (i + 2);
+          pad = max 0 (i + 3 - len);
+        in
+        concatMapStrings (elemAt table) (
+          take (4 - pad) [
+            (v / 262144)
+            (mod (v / 4096) 64)
+            (mod (v / 64) 64)
+            (mod v 64)
+          ]
+        )
+        + fixedWidthString pad "=" "";
+    in
+    concatStrings (genList (k: chunk (k * 3)) ((len + 2) / 3));
 in
 {
   options.custom.apps.thunderbird = {
@@ -79,6 +125,7 @@ in
             # "... Gecko/20100101 Firefox/N Thunderbird/N", which OWA accepts;
             # it only affects HTTP, not IMAP/SMTP.
             "general.useragent.compatMode.firefox" = true;
+            "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
           }
           (mkIf cfg.owaStyle {
             # Match OWA's light, vertical three-pane presentation. The card view
@@ -90,250 +137,366 @@ in
             "mail.threadpane.cardsview.rowcount" = 3;
             "mail.threadpane.listview" = 0;
             "mail.uidensity" = 1;
-            "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
+            # Group by sort, expanded (kGroupBySort | kExpandAll): with the
+            # default date sort this gives OWA's "last week / older" sections.
+            # Only seeds new folders; existing ones keep their stored flags.
+            "mailnews.default_view_flags" = 96;
           })
         ];
 
-        userChrome = optionalString cfg.owaStyle ''
-          /* Outlook Web Access-inspired chrome for Thunderbird's vertical mail view. */
+        userChrome =
+          concatMapStrings (uri: ''
+            #folderTree li[id$="-${base64 uri}"] { display: none !important; }
+          '') hiddenFolders
+          + optionalString cfg.owaStyle ''
+            /* Outlook Web Access-inspired chrome for Thunderbird's vertical mail view. */
 
-          :root {
-            color-scheme: light !important;
+            :root {
+              color-scheme: light !important;
 
-            --owa-blue: #0078d4;
-            --owa-blue-dark: #005a9e;
-            --owa-blue-pale: #c7e0f4;
-            --owa-blue-subtle: #deecf9;
-            --owa-canvas: #ffffff;
-            --owa-sidebar: #f3f2f1;
-            --owa-hover: #edebe9;
-            --owa-border: #e1dfdd;
-            --owa-text: #323130;
-            --owa-muted: #605e5c;
+              --owa-blue: #0078d4;
+              --owa-blue-dark: #005a9e;
+              --owa-blue-pale: #c7e0f4;
+              --owa-blue-subtle: #deecf9;
+              --owa-canvas: #ffffff;
+              --owa-sidebar: #f3f2f1;
+              --owa-hover: #edebe9;
+              --owa-border: #e1dfdd;
+              --owa-text: #323130;
+              --owa-muted: #605e5c;
 
-            --layout-background-0: var(--owa-canvas) !important;
-            --layout-background-1: var(--owa-sidebar) !important;
-            --layout-background-2: var(--owa-hover) !important;
-            --layout-background-3: #e1dfdd !important;
-            --layout-background-4: #d2d0ce !important;
-            --layout-color-0: var(--owa-text) !important;
-            --layout-color-1: var(--owa-text) !important;
-            --layout-color-2: var(--owa-muted) !important;
-            --layout-border-0: var(--owa-border) !important;
-            --layout-border-1: #d2d0ce !important;
-            --selected-item-color: var(--owa-blue) !important;
-            --selected-item-text-color: #ffffff !important;
-            --sidebar-background-color: var(--owa-sidebar) !important;
-            --sidebar-text-color: var(--owa-text) !important;
-            --sidebar-highlight-background-color: var(--owa-blue-pale) !important;
-            --sidebar-highlight-text-color: var(--owa-blue-dark) !important;
-            --toolbar-field-focus-border-color: var(--owa-blue) !important;
-            --button-border-radius: 2px !important;
-            --input-text-border-radius: 2px !important;
+              --layout-background-0: var(--owa-canvas) !important;
+              --layout-background-1: var(--owa-sidebar) !important;
+              --layout-background-2: var(--owa-hover) !important;
+              --layout-background-3: #e1dfdd !important;
+              --layout-background-4: #d2d0ce !important;
+              --layout-color-0: var(--owa-text) !important;
+              --layout-color-1: var(--owa-text) !important;
+              --layout-color-2: var(--owa-muted) !important;
+              --layout-border-0: var(--owa-border) !important;
+              --layout-border-1: #d2d0ce !important;
+              --selected-item-color: var(--owa-blue) !important;
+              --selected-item-text-color: #ffffff !important;
+              --sidebar-background-color: var(--owa-sidebar) !important;
+              --sidebar-text-color: var(--owa-text) !important;
+              --sidebar-highlight-background-color: var(--owa-blue-pale) !important;
+              --sidebar-highlight-text-color: var(--owa-blue-dark) !important;
+              --toolbar-field-focus-border-color: var(--owa-blue) !important;
+              --button-border-radius: 2px !important;
+              --input-text-border-radius: 2px !important;
 
-            font-family: "Segoe UI", "Noto Sans", sans-serif !important;
-          }
-
-          /* OWA's black suite bar and pale command strip. */
-          #unifiedToolbarContainer,
-          #unifiedToolbar {
-            background: #000000 !important;
-            color: #ffffff !important;
-          }
-
-          #unifiedToolbar {
-            min-height: 44px !important;
-          }
-
-          #unifiedToolbar .search-bar,
-          #unifiedToolbar input {
-            background: #292929 !important;
-            border-color: #605e5c !important;
-            color: #ffffff !important;
-          }
-
-          #tabs-toolbar,
-          #tabmail-tabs {
-            background: #eff6fc !important;
-            color: var(--owa-text) !important;
-          }
-
-          .tabmail-tab {
-            border-radius: 0 !important;
-          }
-
-          .tabmail-tab[selected="true"] .tab-background {
-            background: var(--owa-canvas) !important;
-            box-shadow: inset 0 2px var(--owa-blue) !important;
-          }
-
-          /* Keep the same stable proportions as OWA on wide screens. */
-          @media (min-width: 1100px) {
-            body.layout-vertical {
-              grid-template:
-                "folders folderPaneSplitter threads messagePaneSplitter message" auto
-                / 15rem min-content clamp(20rem, 22vw, 27rem) min-content minmax(30rem, 1fr) !important;
+              font-family: "Segoe UI", "Noto Sans", sans-serif !important;
             }
-          }
 
-          /* Folder rail. */
-          #folderPane,
-          #folderPaneHeaderBar {
-            background: var(--owa-sidebar) !important;
-            color: var(--owa-text) !important;
-          }
+            /* GTK is Adwaita-dark, so the system Field colour stays dark under
+               color-scheme: light while text inherits the light theme's dark
+               colour — compose's To/Subject rendered dark-on-dark. Pin fields. */
+            :root {
+              --toolbar-field-background-color: var(--owa-canvas) !important;
+              --toolbar-field-background-color-focus: var(--owa-canvas) !important;
+              --toolbar-field-color: var(--owa-text) !important;
+              --toolbar-field-text-color-focus: var(--owa-text) !important;
+              --arrowpanel-background: var(--owa-canvas) !important;
+              --arrowpanel-color: var(--owa-text) !important;
+            }
 
-          #folderPane {
-            border-inline-end: 1px solid var(--owa-border) !important;
-          }
+            #msgSubject,
+            #msgSubject:focus,
+            .address-container,
+            .address-container:is(:focus, :focus-within, [focused="true"]) {
+              background-color: var(--owa-canvas) !important;
+              color: var(--owa-text) !important;
+            }
 
-          #folderPaneHeaderBar {
-            min-height: 48px !important;
-            padding: 6px 8px !important;
-          }
+            .address-pill:not([selected], .editing, .invalid-address, .key-issue) {
+              background-color: var(--owa-blue-subtle) !important;
+              color: var(--owa-text) !important;
+            }
 
-          #folderPaneWriteMessage {
-            background-color: var(--owa-blue) !important;
-            border-color: var(--owa-blue) !important;
-            border-radius: 2px !important;
-            color: #ffffff !important;
-          }
+            .autocomplete-richlistbox {
+              background-color: var(--owa-canvas) !important;
+              color: var(--owa-text) !important;
+            }
 
-          #folderPaneWriteMessage:hover {
-            background-color: var(--owa-blue-dark) !important;
-          }
+            /* Outlook's blue suite bar with a white search box, and a pale command strip. */
+            #unifiedToolbarContainer,
+            #unifiedToolbar {
+              background: var(--owa-blue) !important;
+              color: #ffffff !important;
+            }
 
-          #folderTree .container {
-            border-radius: 0 !important;
-            min-height: 32px !important;
-            padding-inline: 12px 8px !important;
-          }
+            #unifiedToolbar {
+              min-height: 44px !important;
+            }
 
-          #folderTree li.selected > .container,
-          #folderTree li.current > .container {
-            background: var(--owa-blue-pale) !important;
-            color: var(--owa-blue-dark) !important;
-            box-shadow: inset 3px 0 var(--owa-blue) !important;
-          }
+            #unifiedToolbar .search-bar,
+            #unifiedToolbar input {
+              background: var(--owa-canvas) !important;
+              border-color: transparent !important;
+              border-radius: 4px !important;
+              color: var(--owa-text) !important;
+            }
 
-          #folderTree li:not(.selected, .current) > .container:hover {
-            background: var(--owa-hover) !important;
-          }
+            #tabs-toolbar,
+            #tabmail-tabs {
+              background: #eff6fc !important;
+              color: var(--owa-text) !important;
+            }
 
-          .folder-count-badge,
-          .unread-count {
-            background: transparent !important;
-            color: var(--owa-blue) !important;
-            font-weight: 600 !important;
-          }
+            .tabmail-tab {
+              border-radius: 0 !important;
+            }
 
-          /* Message list: retain the useful three-line cards but flatten them into rows. */
-          #threadPane,
-          #threadPane > tree-view,
-          #threadTree {
-            background: var(--owa-canvas) !important;
-            color: var(--owa-text) !important;
-          }
+            .tabmail-tab[selected="true"] .tab-background {
+              background: var(--owa-canvas) !important;
+              box-shadow: inset 0 2px var(--owa-blue) !important;
+            }
 
-          .list-header-bar {
-            min-height: 54px !important;
-            padding-inline: 14px 8px !important;
-            background: var(--owa-canvas) !important;
-            border-block-end: 1px solid var(--owa-border) !important;
-          }
+            /* Keep the same stable proportions as OWA on wide screens. */
+            @media (min-width: 1100px) {
+              body.layout-vertical {
+                grid-template:
+                  "folders folderPaneSplitter threads messagePaneSplitter message" auto
+                  / 15rem min-content clamp(20rem, 22vw, 27rem) min-content minmax(30rem, 1fr) !important;
+              }
+            }
 
-          .list-header-title {
-            font-size: 1.25rem !important;
-            font-weight: 400 !important;
-          }
+            /* Folder rail. */
+            #folderPane,
+            #folderPaneHeaderBar {
+              background: var(--owa-sidebar) !important;
+              color: var(--owa-text) !important;
+            }
 
-          #threadTree[rows="thread-card"] {
-            padding-block: 0 !important;
-            --tree-pane-background: var(--owa-canvas) !important;
-            --tree-card-background: var(--owa-canvas) !important;
-            --tree-card-border: transparent !important;
-            --tree-card-background-current: var(--owa-hover) !important;
-            --tree-card-background-selected: var(--owa-blue-subtle) !important;
-            --tree-card-background-selected-current: var(--owa-blue-pale) !important;
-            --tree-card-border-hover: transparent !important;
-            --tree-card-border-focus: transparent !important;
-            --tree-card-border-selected: transparent !important;
-          }
+            #folderPane {
+              border-inline-end: 1px solid var(--owa-border) !important;
+            }
 
-          #threadTree[rows="thread-card"] .card-layout > td {
-            padding: 0 !important;
-          }
+            #folderPaneHeaderBar {
+              min-height: 48px !important;
+              padding: 6px 8px !important;
+            }
 
-          #threadTree[rows="thread-card"] .card-layout .card-container {
-            min-height: 74px !important;
-            padding: 7px 10px !important;
-            background: var(--tree-card-background) !important;
-            border: 0 !important;
-            border-block-end: 1px solid var(--owa-border) !important;
-            border-radius: 0 !important;
-          }
+            #folderPaneWriteMessage {
+              background-color: var(--owa-blue) !important;
+              border-color: var(--owa-blue) !important;
+              border-radius: 2px !important;
+              color: #ffffff !important;
+            }
 
-          #threadTree[rows="thread-card"] .card-layout:is(.selected, .current) .card-container {
-            background: var(--owa-blue-pale) !important;
-            box-shadow: inset 3px 0 var(--owa-blue) !important;
-          }
+            #folderPaneWriteMessage:hover {
+              background-color: var(--owa-blue-dark) !important;
+            }
 
-          #threadTree[rows="thread-card"] .card-layout:not(.selected, .current):hover .card-container {
-            background: var(--owa-hover) !important;
-          }
+            #folderTree .container {
+              border-radius: 0 !important;
+              min-height: 32px !important;
+              padding-inline: 12px 8px !important;
+            }
 
-          #threadTree[rows="thread-card"] .sender {
-            color: var(--owa-text) !important;
-            font-size: 0.98rem !important;
-            font-weight: 400 !important;
-          }
+            #folderTree li.selected > .container,
+            #folderTree li.current > .container {
+              background: var(--owa-blue-pale) !important;
+              color: var(--owa-text) !important;
+              font-weight: 600 !important;
+            }
 
-          #threadTree[rows="thread-card"] [data-properties~="unread"] .sender,
-          #threadTree[rows="thread-card"] [data-properties~="unread"] .subject {
-            color: var(--owa-text) !important;
-            font-weight: 600 !important;
-          }
+            #folderTree li:not(.selected, .current) > .container:hover {
+              background: var(--owa-hover) !important;
+            }
 
-          #threadTree[rows="thread-card"] :is(.subject, .date) {
-            color: var(--owa-muted) !important;
-          }
+            .folder-count-badge,
+            .unread-count {
+              background: transparent !important;
+              color: var(--owa-blue) !important;
+              font-weight: 600 !important;
+            }
 
-          #threadTree[rows="thread-card"] .date {
-            font-size: 0.82rem !important;
-          }
+            /* Message list: retain the useful three-line cards but flatten them into rows. */
+            #threadPane,
+            #threadPane > tree-view,
+            #threadTree {
+              background: var(--owa-canvas) !important;
+              color: var(--owa-text) !important;
+            }
 
-          /* Reading pane: plain white canvas with restrained separators. */
-          #messagePane,
-          #messagepanebox,
-          .main-header-area,
-          .message-header-container,
-          .message-header-extra-container {
-            background: var(--owa-canvas) !important;
-            color: var(--owa-text) !important;
-          }
+            .list-header-bar {
+              min-height: 54px !important;
+              padding-inline: 14px 8px !important;
+              background: var(--owa-canvas) !important;
+              border-block-end: 1px solid var(--owa-border) !important;
+            }
 
-          #messagePane {
-            border-inline-start: 1px solid var(--owa-border) !important;
-          }
+            .list-header-title {
+              font-size: 1.45rem !important;
+              font-weight: 300 !important;
+            }
 
-          .main-header-area {
-            padding: 18px 28px 12px !important;
-            border-block-end: 1px solid var(--owa-border) !important;
-          }
+            #threadPaneFolderCountContainer {
+              display: none !important;
+            }
 
-          #expandedsubjectBox {
-            font-size: 1.25rem !important;
-            font-weight: 400 !important;
-          }
+            /* OWA's "Filter" is a plain blue text link. */
+            #threadPaneQuickFilterButton {
+              background: transparent !important;
+              border-color: transparent !important;
+              color: var(--owa-blue) !important;
+              font-size: 1.05rem !important;
+            }
 
-          .message-header-view-button {
-            border-radius: 2px !important;
-          }
+            #threadPaneQuickFilterButton:hover {
+              background: var(--owa-hover) !important;
+            }
 
-          splitter {
-            background: var(--owa-border) !important;
-          }
-        '';
+            /* A link has no toggle pill; show the active filter as a tint. */
+            #threadPaneQuickFilterButton::before {
+              display: none !important;
+            }
+
+            #threadPaneQuickFilterButton[aria-pressed="true"] {
+              background: var(--owa-blue-subtle) !important;
+              font-weight: 600 !important;
+            }
+
+            #threadTree[rows="thread-card"] {
+              padding-block: 0 !important;
+              --tree-pane-background: var(--owa-canvas) !important;
+              --tree-card-background: var(--owa-canvas) !important;
+              --tree-card-border: transparent !important;
+              --tree-card-background-current: var(--owa-hover) !important;
+              --tree-card-background-selected: var(--owa-blue-subtle) !important;
+              --tree-card-background-selected-current: var(--owa-blue-pale) !important;
+              --tree-card-border-hover: transparent !important;
+              --tree-card-border-focus: transparent !important;
+              --tree-card-border-selected: transparent !important;
+            }
+
+            #threadTree[rows="thread-card"] .card-layout > td {
+              padding: 0 !important;
+            }
+
+            #threadTree[rows="thread-card"] .card-layout .card-container {
+              min-height: 74px !important;
+              padding: 7px 10px !important;
+              background: var(--tree-card-background) !important;
+              border: 0 !important;
+              border-block-end: 1px solid var(--owa-border) !important;
+              border-radius: 0 !important;
+            }
+
+            #threadTree[rows="thread-card"] .card-layout:is(.selected, .current) .card-container {
+              background: var(--owa-blue-pale) !important;
+            }
+
+            /* Unread: OWA's blue edge and blue subject. */
+            #threadTree[rows="thread-card"] .card-layout[data-properties~="unread"] .card-container {
+              box-shadow: inset 3px 0 var(--owa-blue) !important;
+            }
+
+            #threadTree[rows="thread-card"] .card-layout:not(.selected, .current):hover .card-container {
+              background: var(--owa-hover) !important;
+            }
+
+            /* OWA row typography: large light sender, small dark subject, muted date. */
+            #threadTree[rows="thread-card"] .sender {
+              color: var(--owa-text) !important;
+              font-size: 1.15rem !important;
+              font-weight: 300 !important;
+            }
+
+            #threadTree[rows="thread-card"] .subject {
+              color: var(--owa-text) !important;
+              font-size: 0.88rem !important;
+              font-weight: 400 !important;
+            }
+
+            #threadTree[rows="thread-card"] .date {
+              color: var(--owa-muted) !important;
+              font-size: 0.8rem !important;
+            }
+
+            #threadTree[rows="thread-card"] [data-properties~="unread"] .subject {
+              color: var(--owa-blue) !important;
+              font-weight: 600 !important;
+            }
+
+            /* Group-by-sort headers as OWA's small blue section labels. The tree
+               gives them a full card's fixed height, so pin the label to the
+               bottom to read as the heading of the rows below, with the
+               collapse chevron before it as in OWA. */
+            #threadTree[rows="thread-card"] .card-layout[data-properties~="dummy"] .card-container {
+              align-content: end !important;
+              padding: 0 10px 6px 18px !important;
+              border-block-end: 0 !important;
+              box-shadow: none !important;
+            }
+
+            #threadTree[rows="thread-card"] .card-layout[data-properties~="dummy"] .thread-card-dynamic-row {
+              grid-template: "button subject" max-content / auto 1fr !important;
+              align-items: center !important;
+            }
+
+            #threadTree[rows="thread-card"] .card-layout[data-properties~="dummy"] .subject {
+              color: var(--owa-blue) !important;
+              font-size: 0.88rem !important;
+              font-weight: 600 !important;
+            }
+
+            #threadTree[rows="thread-card"] .card-layout[data-properties~="dummy"] .sort-header-details {
+              display: none !important;
+            }
+
+            /* Reading pane: plain white canvas with restrained separators. */
+            #messagePane,
+            #messagepanebox,
+            .main-header-area,
+            .message-header-container,
+            .message-header-extra-container {
+              background: var(--owa-canvas) !important;
+              color: var(--owa-text) !important;
+            }
+
+            #messagePane {
+              border-inline-start: 1px solid var(--owa-border) !important;
+            }
+
+            .main-header-area {
+              padding: 18px 28px 12px !important;
+              border-block-end: 1px solid var(--owa-border) !important;
+            }
+
+            /* OWA puts a large light subject above the sender. */
+            #headerSubjectSecurityContainer {
+              order: -1 !important;
+              margin-block-end: 10px !important;
+            }
+
+            #expandedsubjectBox {
+              font-size: 1.6rem !important;
+              font-weight: 300 !important;
+            }
+
+            #expandedfromBox {
+              font-size: 1.15rem !important;
+              font-weight: 300 !important;
+            }
+
+            /* One reply action plus OWA's Archive and Delete, between Reply
+               and More; the rest stay on the context menu and shortcuts
+               (Ctrl+L, J). The smart reply button (Reply / Reply All /
+               Reply List) is never hidden. */
+            :is(#hdrReplyToSenderButton, #hdrForwardButton, #hdrJunkButton) {
+              display: none !important;
+            }
+
+            .message-header-view-button {
+              border-radius: 2px !important;
+            }
+
+            splitter {
+              background: var(--owa-border) !important;
+            }
+          '';
       };
     };
 
@@ -357,7 +520,68 @@ in
       };
       # Server settings are declarative; the password is not — Thunderbird
       # prompts on first connect and keeps it in its own store.
-      thunderbird.enable = true;
+      thunderbird = {
+        enable = true;
+        settings = id: {
+          "mail.server.server_${id}.using_subscription" = false;
+          "mail.server.server_${id}.trash_folder_name" = "Удаленные";
+        };
+        # The mailbox has no Exchange archive folder, so archive goes to the
+        # `Archives` Thunderbird created — flat, like OWA, instead of the
+        # default per-year `Archives/<year>` subfolders, none of which ever
+        # appeared on the server.
+        perIdentitySettings = id: {
+          "mail.identity.id_${id}.fcc_folder" = sentFolder;
+          "mail.identity.id_${id}.fcc_folder_picker_mode" = "1";
+          "mail.identity.id_${id}.draft_folder" = draftsFolder;
+          "mail.identity.id_${id}.drafts_folder_picker_mode" = "1";
+          "mail.identity.id_${id}.archive_folder" = imapFolder "Archives";
+          "mail.identity.id_${id}.archive_folder_picker_mode" = "1";
+          "mail.identity.id_${id}.archive_granularity" = 0;
+        };
+        # Thunderbird files these; an OWA server rule (outside Nix) still
+        # moves Mattermost into `Notifications` before they run. Targets must
+        # already exist on the server, or the move fails. Type 17 is new mail
+        # (1) plus manual (16), so Tools > Run Filters on Folder applies the
+        # same rules to the backlog. First match wins.
+        messageFilters =
+          let
+            moveTo = name: folder: conditions: {
+              inherit name;
+              type = "17";
+              action = "Move to folder";
+              actionValue = imapFolder folder;
+              condition = concatMapStringsSep " " (c: "OR (${c})") conditions;
+            };
+          in
+          [
+            (moveTo "Jira and Wiki" "INBOX/Jira-Wiki" [
+              "from,is,jira@hh.ru"
+              "from,is,confluence@hh.ru"
+              "subject,begins with,[JIRA]"
+              "subject,begins with,[wiki.hh.ru]"
+            ])
+            (moveTo "Forgejo and Sentry" "INBOX/Dev" [
+              "from,is,forgejo@pyn.ru"
+              "from,is,sentry@sentry.hh.ru"
+            ])
+            # Ahead of Meetings: news@ forwards webinar invites with an ICS.
+            (moveTo "Newsletters" "INBOX/Newsletters" [
+              "from,is,news@hh.ru"
+              "from,is,pr_communications@hh.ru"
+              "from,contains,talantix"
+              "subject,contains,[MASSMAIL]"
+            ])
+            # Exchange marks invites with no header, only a text/calendar
+            # part, so match its ICS body. Body search fetches every new
+            # message before filtering, which offline sync does anyway.
+            (moveTo "Meetings" "INBOX/Meetings" [
+              "body,contains,BEGIN:VCALENDAR"
+              "subject,contains,Готова запись встречи"
+              "subject,contains,Уведомления о переадресации собрания"
+            ])
+          ];
+      };
     };
 
     # Published OWA calendar. The URL is a SOPS placeholder at eval time, so
