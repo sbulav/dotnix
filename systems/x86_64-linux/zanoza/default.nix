@@ -162,6 +162,11 @@
       host = "herdr.sbulav.ru";
       relayHost = "herdr-relay.sbulav.ru";
     };
+    # Route-only: static GymUp report rsynced from sab's laptop.
+    gymup-report = {
+      enable = true;
+      host = "gym.sbulav.ru";
+    };
     jellyfin = {
       enable = true;
       enableGPU = true;
