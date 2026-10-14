@@ -340,16 +340,16 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1790708764,
-        "narHash": "sha256-uu452Xe23pSvFk7w7fKPjiaqY5QenUIljao2SFAxpc0=",
+        "lastModified": 1791905414,
+        "narHash": "sha256-tbOVXxQCA/suZ+My71B5laNZhEpK46YLYUs7H8tdysY=",
         "owner": "herdrdev",
         "repo": "herdr",
-        "rev": "7b116c05bfda646af39d2524c54e70c751f57ee8",
+        "rev": "7e26bad94044eba205033111a0ce8033ede7e24f",
         "type": "github"
       },
       "original": {
         "owner": "herdrdev",
-        "ref": "v0.9.3",
+        "ref": "v0.9.4",
         "repo": "herdr",
         "type": "github"
       }
@@ -357,11 +357,11 @@
     "herdr-remote": {
       "flake": false,
       "locked": {
-        "lastModified": 1791884556,
-        "narHash": "sha256-uX1skxAi47AuTxnTqbArFbrOIPOWjJ+/SqFcQbkqDbc=",
+        "lastModified": 1791960853,
+        "narHash": "sha256-SSjTxym8UzFSHB4qdJ5qgBsAPh6qy3rWQ78x2FzrLAM=",
         "owner": "sbulav",
         "repo": "herdr-relay",
-        "rev": "52a9b2d1870fb1fa199e69fd0e985fed0c58ef2f",
+        "rev": "5649564ddc4522d3386788da70ea7b031a4c1082",
         "type": "github"
       },
       "original": {
