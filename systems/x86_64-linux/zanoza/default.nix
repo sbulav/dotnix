@@ -251,11 +251,13 @@
     }; # }}}
   };
 
-  # Transparent proxy gateway for the Android TV (YouTube unblock):
-  # the MikroTik policy-routes traffic from the TV here; TCP 80/443 is
+  # Transparent proxy gateway (YouTube unblock): the MikroTiks policy-route
+  # the work TV's web traffic and home Google-service web traffic (via
+  # IPIP, see homelab mikrotik/home-youtube-proxy*.rsc) here; TCP 80/443 is
   # redirected via redsocks straight into the sing-box container's SOCKS5.
   # sing-box does the RU-direct/proxy split itself (sniff + route rules).
-  # Scoped by sourceIps so no other LAN host or local service is affected.
+  # Scoped by sourceIps so no other work LAN host or local service is
+  # affected; the routers decide which home connections arrive at all.
   custom.services.linuxTransparentProxy = {
     enable = true;
     mode = "redirect";
@@ -270,6 +272,8 @@
     ];
     sourceIps = [
       "192.168.89.248" # phillips 58pus (Android TV)
+      "192.168.90.0/24" # home LAN
+      "192.168.92.0/24" # home VLAN 20 (Wi-Fi)
     ];
   };
 

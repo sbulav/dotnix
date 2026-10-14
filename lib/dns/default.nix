@@ -44,6 +44,12 @@ let
     "traefik"
   ];
   beezIngressNames = [ "grafana" ];
+  # YouTube video comes from googlevideo.com cache nodes outside Google's
+  # published ranges. The home router (HNetZ) adds every googlevideo answer
+  # it forwards to an address list it proxies via zanoza (homelab
+  # mikrotik/home-youtube-proxy.rsc), so both resolvers must ask it: home
+  # clients use either one.
+  domainUpstreams = [ "[/googlevideo.com/]192.168.92.1" ];
 in
 {
   dns = {
@@ -52,6 +58,7 @@ in
       resolverAddresses
       resolvers
       ingress
+      domainUpstreams
       ;
     resolvedSettings = {
       DNS = lib.concatStringsSep " " resolvers;

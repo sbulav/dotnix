@@ -8,6 +8,11 @@ with lib;
 with lib.custom;
 let
   cfg = config.${namespace}.containers.adguard;
+  upstreams = [
+    "tls://security.cloudflare-dns.com"
+    "quic://dns.adguard-dns.com"
+    "77.88.8.8"
+  ];
 in
 {
   options.${namespace}.containers.adguard = with types; {
@@ -121,11 +126,10 @@ in
               bind_hosts = [ "${cfg.localAddress}" ];
               port = 53;
               ratelimit = 0;
-              upstream_dns = [
-                "tls://security.cloudflare-dns.com"
-                "quic://dns.adguard-dns.com"
-                "77.88.8.8"
-              ];
+              upstream_dns = upstreams ++ lib.custom.dns.domainUpstreams;
+              # Used when every upstream for a query fails, e.g. the home
+              # router for googlevideo.com while the IPIP tunnel is down.
+              fallback_dns = upstreams;
               # Never ask another household resolver, including for reverse DNS.
               use_private_ptr_resolvers = false;
               upstream_mode = "parallel";

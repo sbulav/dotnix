@@ -50,6 +50,15 @@ but brief list-version/cache differences during updates are possible. This
 preserves the observed production policy (Cloudflare security, AdGuard and
 77.88.8.8 in parallel) rather than changing upstream filtering semantics.
 
+One exception: `googlevideo.com` goes only to the home router (HNetZ,
+192.168.92.1, `lib.custom.dns.domainUpstreams`). The router adds each answer
+to an address list whose YouTube cache nodes it proxies via zanoza (homelab
+`mikrotik/home-youtube-proxy.rsc`). It forwards these names to 1.1.1.1 and
+77.88.8.8 directly, never back to a household resolver, so there is no cycle.
+`fallback_dns` repeats the normal upstreams for when the router is
+unreachable (tunnel down); this fallback for a domain-specific upstream is
+untested.
+
 ## Router/client rollout — required manual step
 
 The router is outside this repository. This section is a reviewable runbook;
