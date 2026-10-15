@@ -75,8 +75,12 @@ in
     # does not apply here because the declarative account pins password auth.
     login = mkOpt types.str "s.bulavintsev" "IMAP/SMTP login (short, no domain).";
 
-    host = mkOpt types.str "email.hh.ru" ''
-      Mail server host. On-prem Exchange per the IT doc; if the mailbox turns
+    host = mkOpt types.str "email.pyn.ru" ''
+      Mail server host. On-prem Exchange; the IT doc says email.hh.ru, but
+      IMAP (993) and SMTP (587) there present a `*.pyn.ru`-only certificate
+      (only HTTPS on 443 carries `*.hh.ru`), so Thunderbird rejects the name.
+      email.pyn.ru is the same box — public DNS gives the same address, split
+      DNS on the VPN gives MAIL-APP-01 — and matches the cert. If the mailbox turns
       out to live in Exchange Online, IMAP/SMTP move to outlook.office365.com /
       smtp.office365.com and only work over the corporate VPN.
     '';
