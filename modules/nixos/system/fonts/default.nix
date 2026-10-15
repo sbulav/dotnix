@@ -33,10 +33,6 @@ in
         noto-fonts-color-emoji
         # Nerd Fonts
         nerd-fonts.caskaydia-cove
-        nerd-fonts.jetbrains-mono
-        nerd-fonts.fira-code
-        nerd-fonts.iosevka
-        nerd-fonts.monaspace
         nerd-fonts.symbols-only
       ]
       ++ cfg.fonts;

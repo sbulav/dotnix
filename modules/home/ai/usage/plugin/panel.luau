@@ -5,7 +5,7 @@ local state = noctalia.state.get("usage") or { providers = {} }
 local refreshing = noctalia.state.get("refreshing") == true
 local refreshError = tostring(noctalia.state.get("refreshError") or "")
 
-local MONO = "JetBrainsMono Nerd Font"
+local MONO = "CaskaydiaCove Nerd Font Mono"
 
 local function requestRefresh()
   noctalia.runAsync({ "@NOCTALIA@", "msg", "plugin", "sab/ai_usage:collector", "all", "refresh" })

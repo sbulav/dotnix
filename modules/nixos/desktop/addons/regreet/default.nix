@@ -43,7 +43,7 @@ in
       enable = true;
 
       cursorTheme.name = "Bibata-Modern-Classic";
-      font.name = "FiraCode Nerd Font Regular";
+      font.name = "CaskaydiaCove Nerd Font";
       font.size = 12;
       iconTheme.name = "Papirus-Dark";
       theme.name = "Catppuccin-Mocha-Compact-Mauve-dark";
