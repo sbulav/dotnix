@@ -24,13 +24,18 @@ in
       };
 
       extraPackages = with pkgs.bat-extras; [
-        #TODO: enable when compiling is fixec
         batdiff
         batgrep
         batman
         batpipe
         batwatch
-        prettybat
+        # rustfmt pulls in the full rustc toolchain and clang-tools pulls in
+        # clang-lib (~2.6 GiB together). The wrapper only prefixes PATH, so
+        # rustfmt/clang-format from a dev shell are still picked up.
+        (prettybat.override {
+          withRustFmt = false;
+          withClangTools = false;
+        })
       ];
     };
 
