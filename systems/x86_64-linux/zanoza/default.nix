@@ -261,9 +261,10 @@
 
   # Transparent proxy gateway (YouTube unblock): the MikroTiks policy-route
   # the work TV's web traffic and home Google-service web traffic (via
-  # IPIP, see homelab mikrotik/home-youtube-proxy*.rsc) here; TCP 80/443 is
-  # redirected via redsocks straight into the sing-box container's SOCKS5.
-  # sing-box does the RU-direct/proxy split itself (sniff + route rules).
+  # IPIP, see homelab mikrotik/home-youtube-proxy.rsc) here; TCP 80/443 is
+  # redirected via redsocks into the sing-box container's "transparent"
+  # SOCKS5 inbound, where sing-box sniffs the SNI and sends only the
+  # blocked YouTube names to the exit (the rest of Google, and RU, direct).
   # Scoped by sourceIps so no other work LAN host or local service is
   # affected; the routers decide which home connections arrive at all.
   custom.services.linuxTransparentProxy = {
@@ -271,7 +272,7 @@
     mode = "redirect";
     interface = "enp3s0";
     socksHost = "172.16.64.108";
-    socksPort = 20170;
+    socksPort = 20171;
     # 12345 (module default) is taken by Grafana Alloy's HTTP listener
     listenPort = 12346;
     tcpPorts = [
@@ -280,8 +281,7 @@
     ];
     sourceIps = [
       "192.168.89.248" # phillips 58pus (Android TV)
-      "192.168.90.0/24" # home LAN
-      "192.168.92.0/24" # home VLAN 20 (Wi-Fi)
+      "192.168.92.0/24" # home VLAN 20 (all Wi-Fi; the defconf 192.168.90.0/24 bridge has no clients)
     ];
   };
 

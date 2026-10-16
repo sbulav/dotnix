@@ -47,6 +47,7 @@ let
     import sys
 
     sub_file, out_file = sys.argv[1], sys.argv[2]
+    urltest_interval, urltest_tolerance = sys.argv[3], int(sys.argv[4])
 
     # Tags already claimed by the static config / the groups below; a
     # colliding or duplicate tag makes sing-box reject the merged config.
@@ -207,8 +208,8 @@ let
         "tag": "auto",
         "outbounds": tags,
         "url": "https://www.gstatic.com/generate_204",
-        "interval": "1m",
-        "tolerance": 50,
+        "interval": urltest_interval,
+        "tolerance": urltest_tolerance,
     })
     outbounds.append({
         "type": "selector",
@@ -283,7 +284,8 @@ let
         }'
       fi
 
-      sing-box-outbounds-gen "$work/sub.json" "$work/outbounds.json"
+      sing-box-outbounds-gen "$work/sub.json" "$work/outbounds.json" \
+        ${escapeShellArg cfg.urltest.interval} ${toString cfg.urltest.tolerance}
       sing-box check -c "$work/outbounds.json"
 
       if cmp -s "$work/outbounds.json" "$state"; then
@@ -413,6 +415,43 @@ in
       proxyUrl =
         mkOpt str "socks5h://${cfg.localAddress}:20170"
           "curl proxy tried first for the subscription fetch (the provider's host is DPI-blocked on the uplink); direct is the fallback. Empty disables";
+    };
+
+    # Second inbound for the redsocks transparent-proxy chain (TVs, home
+    # phones): the routers forward *every* Google-service connection here
+    # because an IP list cannot tell www.google.com from www.youtube.com
+    # (shared front ends). sing-box can: it sniffs the SNI/Host and sends
+    # only the DPI-blocked YouTube names to the exit, the rest direct.
+    # Android's connectivity checks (connectivitycheck.gstatic.com,
+    # www.google.com/generate_204) and push (mtalk) thus no longer ride
+    # the VLESS tunnel, which is what made phones drop Wi-Fi when an exit
+    # flapped. The main inbound (20170) keeps the old everything-via-exit
+    # behaviour for the arr apps and Telegram.
+    transparent = {
+      port = mkOpt port 20171 "SOCKS5 port for the transparent-proxy chain (redsocks upstream)";
+      proxyDomains =
+        mkOpt (listOf str)
+          [
+            "youtube.com"
+            "youtube-nocookie.com"
+            "youtu.be"
+            "googlevideo.com"
+            "ytimg.com"
+            "ggpht.com"
+            "youtubei.googleapis.com"
+            "youtube.googleapis.com"
+            "youtubeembeddedplayer.googleapis.com"
+            "play.google.com"
+          ]
+          "Domain suffixes from the transparent inbound that go to the exit; everything else sniffed there goes direct. Measured as DPI-blocked from beez on 2026-10-16";
+    };
+
+    # urltest churn: every switch of the carrying exit changes the egress
+    # IP, and googlevideo answers that with 403s mid-stream. Probe less
+    # often and only move for a clearly better exit.
+    urltest = {
+      interval = mkOpt str "3m" "urltest probe interval for the auto group";
+      tolerance = mkOpt int 150 "urltest tolerance in ms: a better exit must win by at least this much";
     };
 
     # Notifications for a failing refresh: Telegram first, email through
@@ -620,6 +659,11 @@ in
           hostPort = 20170;
           protocol = "tcp";
         }
+        {
+          containerPort = cfg.transparent.port;
+          hostPort = cfg.transparent.port;
+          protocol = "tcp";
+        }
       ];
       config = _: {
         services.sing-box = {
@@ -652,6 +696,13 @@ in
                 tag = "in";
                 listen = "0.0.0.0";
                 listen_port = 20170;
+              }
+              {
+                # redsocks upstream: SNI-split, see cfg.transparent
+                type = "socks";
+                tag = "transparent";
+                listen = "0.0.0.0";
+                listen_port = cfg.transparent.port;
               }
             ];
             # vless outbounds + "auto" urltest + "exit" selector come from
@@ -697,6 +748,18 @@ in
                     "\\.su$"
                     "\\.xn--p1ai$"
                   ];
+                  outbound = "direct";
+                }
+                # Transparent chain: only the blocked YouTube names need
+                # the exit; every other Google service (and anything the
+                # sniffer could not name) goes direct from here.
+                {
+                  inbound = [ "transparent" ];
+                  domain_suffix = cfg.transparent.proxyDomains;
+                  outbound = "exit";
+                }
+                {
+                  inbound = [ "transparent" ];
                   outbound = "direct";
                 }
                 # xray's old IPIfNonMatch equivalent: resolve what the
