@@ -327,14 +327,49 @@ in
     telegram.proxyUrl = "socks5h://${routerSocks}";
   };
 
-  # custom.services.linuxTransparentProxy = {
-  #   enable = false;
-  #   socksHost = "192.168.89.207";
-  #   socksPort = 20170;
-  #   listenPort = 12345;
-  #   interface = "enp1s0";
-  #   tcpPorts = [80 443]; # Or [] for all TCP
-  # };
+  # Home-site YouTube chain, independent of the work site: the home router
+  # (HNetZ, homelab mikrotik/home-youtube-proxy.rsc) policy-routes new
+  # TCP 80/443 connections from the Wi-Fi VLAN to Google prefixes here;
+  # redsocks hands them to the local sing-box "transparent" inbound, which
+  # sends only the DPI-blocked YouTube names to the VLESS exit and the
+  # rest direct. Same module as zanoza, own subscription device.
+  custom.containers.sing-box = {
+    enable = true;
+    host = "sing-box-beez.sbulav.ru";
+    hostAddress = "172.16.65.10";
+    localAddress = "172.16.65.108";
+    dataPath = "/var/lib/sing-box";
+    externalInterface = "enp1s0";
+    secret_file = "secrets/beez/default.yaml";
+    # No authelia on this host (same as the grafana route).
+    dashboard.middlewares = [
+      "secure-headers"
+      "allow-lan"
+      "sing-box-ui-redirect"
+    ];
+    # Bootstrap / own-proxy-down fallback through zanoza's sing-box.
+    subscription.proxyUrls = [
+      "socks5h://172.16.65.108:20170"
+      "socks5h://${routerSocks}"
+    ];
+    notify.telegram.proxyUrl = "socks5h://172.16.65.108:20170";
+  };
+  custom.services.linuxTransparentProxy = {
+    enable = true;
+    mode = "redirect";
+    interface = "enp1s0";
+    socksHost = "172.16.65.108";
+    socksPort = 20171;
+    # 12345 is Grafana Alloy's HTTP listener here too.
+    listenPort = 12346;
+    tcpPorts = [
+      80
+      443
+    ];
+    # Only the home Wi-Fi VLAN; beez itself (192.168.92.194) is excluded on
+    # the router side (yt-proxy-bypass) and never matches a PREROUTING rule.
+    sourceIps = [ "192.168.92.0/24" ];
+  };
   custom.services.nix-cache-builder = {
     enable = true;
     # Touch this volatile file to force the next cache run to build locally.

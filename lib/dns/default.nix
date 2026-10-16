@@ -43,7 +43,10 @@ let
     "sonarr"
     "traefik"
   ];
-  beezIngressNames = [ "grafana" ];
+  beezIngressNames = [
+    "grafana"
+    "sing-box-beez"
+  ];
   # YouTube video comes from googlevideo.com cache nodes outside Google's
   # published ranges. The home router (HNetZ) adds every googlevideo answer
   # it forwards to an address list it proxies via zanoza (homelab

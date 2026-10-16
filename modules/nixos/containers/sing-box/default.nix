@@ -235,8 +235,8 @@ let
   #
   # The provider's own host is DPI-blocked on zanoza's uplink (TCP opens,
   # the TLS handshake never completes), so the fetch goes through the
-  # proxy itself first and falls back to direct — the fallback is what a
-  # fresh host with no exits yet, or a different uplink, relies on.
+  # proxy itself first, then the other proxyUrls, then direct — the
+  # fallbacks are what a fresh host with no exits yet relies on.
   subscriptionUpdate = pkgs.writeShellApplication {
     name = "sing-box-subscription-update";
     runtimeInputs = with pkgs; [
@@ -262,15 +262,23 @@ let
           -A ${escapeShellArg cfg.subscription.userAgent} \
           -D "$work/headers" -o "$work/sub.json" "$@" "$url"
       }
-      proxy=${escapeShellArg cfg.subscription.proxyUrl}
-      if [ -n "$proxy" ] && fetch --proxy "$proxy"; then
-        echo "fetched via $proxy"
-      elif fetch; then
-        echo "fetched directly"
-      else
-        echo "subscription fetch failed (proxy and direct)" >&2
-        [ -s "$state" ] && echo "keeping the last good exits in $state" >&2
-        exit 1
+      fetched=""
+      proxies=(${escapeShellArgs cfg.subscription.proxyUrls})
+      for proxy in "''${proxies[@]}"; do
+        if fetch --proxy "$proxy"; then
+          echo "fetched via $proxy"
+          fetched=1
+          break
+        fi
+      done
+      if [ -z "$fetched" ]; then
+        if fetch; then
+          echo "fetched directly"
+        else
+          echo "subscription fetch failed (proxies and direct)" >&2
+          [ -s "$state" ] && echo "keeping the last good exits in $state" >&2
+          exit 1
+        fi
       fi
 
       # subscription-userinfo: upload=..; download=..; total=..; expire=<unix>
@@ -295,8 +303,8 @@ let
         install -m 0644 "$work/outbounds.json" "$state.tmp"
         mv -f "$state.tmp" "$state"
         echo "published new exits to $state"
-        # --no-block: the container is ordered After= this unit, so a
-        # blocking restart from inside it would wait on itself.
+        # --no-block: keep the oneshot short; the restart outcome is in the
+        # container's own journal.
         if systemctl is-active --quiet container@sing-box.service; then
           systemctl --no-block restart container@sing-box.service
         fi
@@ -412,10 +420,27 @@ in
       userAgent =
         mkOpt str "Happ"
           "User-Agent for the subscription fetch (some providers vary the format by client)";
-      proxyUrl =
-        mkOpt str "socks5h://${cfg.localAddress}:20170"
-          "curl proxy tried first for the subscription fetch (the provider's host is DPI-blocked on the uplink); direct is the fallback. Empty disables";
+      proxyUrls =
+        mkOpt (listOf str) [ "socks5h://${cfg.localAddress}:20170" ]
+          "curl proxies tried in order for the subscription fetch (the provider's host is DPI-blocked on the uplink); direct is the last fallback. A second host's sing-box makes a good second entry for bootstrap";
     };
+    externalInterface = mkOpt str "enp3s0" "Host uplink interface for the container's NAT egress";
+
+    dashboard.middlewares =
+      mkOpt (listOf str)
+        [
+          # auth-chain (= secure-headers + authelia) keeps the dashboard
+          # SSO-gated like every other admin UI; allow-lan additionally pins
+          # it to LAN sources. The clash API secret alone is not enough — the
+          # dashboard can pin/unpin exits.
+          "auth-chain"
+          "allow-lan"
+          # The clash API root answers 401 to anything without the bearer
+          # secret; metacubexd is served under /ui/. The redirect middleware
+          # is defined by this module next to the traefik container gate.
+          "sing-box-ui-redirect"
+        ]
+        "Traefik middlewares on the dashboard route. A host without authelia (beez) swaps auth-chain for secure-headers";
 
     # Second inbound for the redsocks transparent-proxy chain (TVs, home
     # phones): the routers forward *every* Google-service connection here
@@ -504,14 +529,7 @@ in
         # like every other admin UI; allow-lan additionally pins it to LAN
         # sources. The clash API secret alone is not enough — the dashboard can
         # pin/unpin exits.
-        middlewares = [
-          "auth-chain"
-          "allow-lan"
-          # The clash API root answers 401 to anything without the bearer
-          # secret; metacubexd is served under /ui/. Defined below, next to
-          # the traefik container gate.
-          "sing-box-ui-redirect"
-        ];
+        middlewares = cfg.dashboard.middlewares;
       };
     };
 
@@ -530,21 +548,22 @@ in
         mode = "0400";
         restartUnits = [ "sing-box-subscription.service" ];
       };
-      # Shared telegram bot token for notifications (UID 1000 for user
-      # services); restic declares the same secret on zanoza, the attrs merge.
-      "telegram-notifications-bot-token" = mkIf cfg.notify.telegram.enable (
-        lib.custom.secrets.services.sharedTelegramBot 1000
-        // {
-          sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
-        }
-      );
+      # Shared telegram bot token. Only the file path is declared here: the
+      # failure unit reads it through EnvironmentFile= (systemd, as root),
+      # so owner/uid are left to whichever other module on the host also
+      # declares it (restic's uid 1000 on zanoza, the root-owned declarations
+      # of nix-cache-builder / zanoza-external-monitoring on beez). sops-nix
+      # rejects a secret with both owner and uid set.
+      "telegram-notifications-bot-token" = mkIf cfg.notify.telegram.enable {
+        sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
+      };
     };
 
     # Pre-existing host NAT for privateNetwork container egress (unchanged).
     networking.nat = {
       enable = true;
       internalInterfaces = [ "ve-sing-box" ];
-      externalInterface = "enp3s0";
+      inherit (cfg) externalInterface;
     };
 
     systemd.tmpfiles.rules = [
@@ -567,10 +586,14 @@ in
       };
     };
 
-    # Subscription refresh. Ordered before the container so a fresh host
-    # (or a host that lost ${cfg.dataPath}) has exits before sing-box
-    # starts; Wants= (not Requires=) so a provider outage never takes the
-    # proxy down — the container then starts from the last published file.
+    # Subscription refresh, driven by the timer only. It is deliberately
+    # *not* pulled in by the container: the fetch goes through the proxy
+    # itself, so a refresh triggered by a container (re)start runs while
+    # the proxy is down, falls to the DPI-blocked direct path, fails — and
+    # on a deploy that failed unit made deploy-rs roll the whole
+    # generation back (2026-10-16). The container starts from the last
+    # published file; a fresh host gets its first exits from the timer's
+    # OnBootSec tick (falling back to proxyUrls[1..] / direct).
     systemd.services.sing-box-subscription = {
       description = "Refresh sing-box exits from the VPN subscription";
       after = [
@@ -580,8 +603,6 @@ in
       ];
       wants = [ "network-online.target" ];
       requires = [ "sing-box-data-prepare.service" ];
-      before = [ "container@sing-box.service" ];
-      wantedBy = [ "container@sing-box.service" ];
       onFailure = mkIf notifyEnabled [ "sing-box-subscription-failure.service" ];
       serviceConfig = {
         Type = "oneshot";
@@ -593,7 +614,9 @@ in
       description = "Periodic sing-box subscription refresh";
       wantedBy = [ "timers.target" ];
       timerConfig = {
-        OnBootSec = cfg.subscription.interval;
+        # Early first tick: that is the bootstrap path for a host with no
+        # published exits yet.
+        OnBootSec = "2min";
         OnUnitActiveSec = cfg.subscription.interval;
         RandomizedDelaySec = "5min";
         Persistent = true;
