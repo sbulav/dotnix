@@ -123,76 +123,15 @@ let
     '';
   };
 
-  clamshell = pkgs.writeShellApplication {
-    name = "hyprland-clamshell";
-    runtimeInputs = with pkgs; [
-      coreutils
-      gawk
-      hyprland
-      jq
-      systemd
-    ];
-    text = ''
-      set -uo pipefail
-
-      internal=${escapeShellArg cfg.clamshell.internalOutput}
-      mode=${escapeShellArg cfg.clamshell.mode}
-      position=${escapeShellArg cfg.clamshell.position}
-      scale=${escapeShellArg cfg.clamshell.scale}
-
-      lid_path=""
-      for candidate in /proc/acpi/button/lid/*/state; do
-        if [ -r "$candidate" ]; then
-          lid_path="$candidate"
-          break
-        fi
-      done
-      [ -n "$lid_path" ] || exit 0
-
-      lid_state() {
-        awk '{ print tolower($2) }' "$lid_path"
-      }
-
-      external_active() {
-        hyprctl -j monitors 2>/dev/null | jq -e --arg internal "$internal" 'any(.[]; .name != $internal)' >/dev/null
-      }
-
-      set_internal_disabled() {
-        hyprctl eval "hl.monitor({ output = \"$internal\", disabled = true })" >/dev/null 2>&1 || true
-      }
-
-      restore_internal() {
-        hyprctl eval "hl.monitor({ output = \"$internal\", mode = \"$mode\", position = \"$position\", scale = $scale })" >/dev/null 2>&1 || true
-      }
-
-      previous_lid=""
-      previous_external=""
-
-      while sleep 1; do
-        lid="$(lid_state)"
-        external=false
-        if external_active; then
-          external=true
-        fi
-
-        if [ "$lid" = "$previous_lid" ] && [ "$external" = "$previous_external" ]; then
-          continue
-        fi
-        previous_lid="$lid"
-        previous_external="$external"
-
-        if [ "$lid" = closed ]; then
-          if [ "$external" = true ]; then
-            set_internal_disabled
-          else
-            systemctl suspend
-          fi
-        else
-          restore_internal
-        fi
-      done
-    '';
-  };
+  readLid = pkgs.writeShellScript "read-lid-state" ''
+    for candidate in /proc/acpi/button/lid/*/state; do
+      if [[ -r $candidate ]]; then
+        read -r _ state < "$candidate"
+        printf '%s\n' "$state"
+        exit 0
+      fi
+    done
+  '';
 in
 {
   options.custom.desktop.addons.system-polish = with types; {
@@ -201,9 +140,10 @@ in
     clamshell = {
       enable = mkBoolOpt false "Manage the internal display according to lid and dock state.";
       internalOutput = mkOpt str "eDP-1" "Name of the laptop's internal display.";
+      switchName = mkOpt str "Lid Switch" "Hyprland input switch name for lid events.";
       mode = mkOpt str "preferred" "Mode restored when the lid opens.";
       position = mkOpt str "auto" "Position restored when the lid opens.";
-      scale = mkOpt str "1" "Scale restored when the lid opens.";
+      scale = mkOpt str "1" "Scale restored when the lid opens (a number or auto).";
     };
 
     audioOutputCycle.enable = mkBoolOpt false "Install a helper that cycles available PipeWire output devices.";
@@ -219,25 +159,20 @@ in
       tray = "never";
     };
 
-    systemd.user.services = {
-      # These are session infrastructure, not disposable application scopes.
-      udiskie.Service.Slice = "session.slice";
+    custom.desktop.hyprland.keybindings.extra = optional cfg.clamshell.enable ''
+      local clamshell = dofile("${./clamshell.lua}")
+      clamshell({
+        internal = ${builtins.toJSON cfg.clamshell.internalOutput},
+        switch = ${builtins.toJSON cfg.clamshell.switchName},
+        mode = ${builtins.toJSON cfg.clamshell.mode},
+        position = ${builtins.toJSON cfg.clamshell.position},
+        scale = ${builtins.toJSON cfg.clamshell.scale},
+        read_lid = "${readLid}",
+        suspend = "${pkgs.systemd}/bin/systemctl suspend",
+      })
+    '';
 
-      hyprland-clamshell = mkIf cfg.clamshell.enable {
-        Unit = {
-          Description = "Dock-aware Hyprland clamshell manager";
-          After = [ "graphical-session.target" ];
-          PartOf = [ "graphical-session.target" ];
-          ConditionEnvironment = "WAYLAND_DISPLAY";
-        };
-        Service = {
-          ExecStart = "${clamshell}/bin/hyprland-clamshell";
-          Restart = "on-failure";
-          RestartSec = 2;
-          Slice = "session.slice";
-        };
-        Install.WantedBy = [ "graphical-session.target" ];
-      };
-    };
+    # Session infrastructure, not a disposable application scope.
+    systemd.user.services.udiskie.Service.Slice = "session.slice";
   };
 }

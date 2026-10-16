@@ -15,6 +15,8 @@
   libnotify,
   mpv,
   procps,
+  python3,
+  util-linux,
   v4l-utils,
   ...
 }:
@@ -42,6 +44,7 @@ writeShellApplication {
     libnotify
     mpv
     procps
+    util-linux
     v4l-utils
   ];
 
@@ -49,11 +52,13 @@ writeShellApplication {
     set -euo pipefail
 
     OUT_DIR="''${RECORD_SCREEN_DIR:-$HOME/Pictures/Screenrec}"
-    STATE_DIR="''${XDG_RUNTIME_DIR:-/tmp}/record-screen"
+    STATE_DIR="''${XDG_RUNTIME_DIR:-''${XDG_STATE_HOME:-$HOME/.local/state}}/record-screen"
     PID_FILE="$STATE_DIR/pid"
     OUTPUT_FILE="$STATE_DIR/output"
     ACTIVE_FILE="$STATE_DIR/active"
     STARTING_FILE="$STATE_DIR/starting"
+    CANCEL_FILE="$STATE_DIR/cancel"
+    LOCK_FILE="$STATE_DIR/lock"
     WEBCAM_PID_FILE="$STATE_DIR/webcam-pid"
     WEBCAM_LOG="$STATE_DIR/webcam.log"
     LOG_FILE="$STATE_DIR/record-screen.log"
@@ -61,9 +66,19 @@ writeShellApplication {
     README_END="<!-- screenrec-demo:end -->"
     APP_NAME="record-screen"
 
-    ensure_dirs() {
-      mkdir -p "$OUT_DIR" "$STATE_DIR"
+    ensure_state() {
+      umask 077
+      mkdir -p "$STATE_DIR"
+      [[ -d $STATE_DIR && ! -L $STATE_DIR && -O $STATE_DIR ]] || {
+        echo "Refusing unsafe recording state directory: $STATE_DIR" >&2
+        return 1
+      }
       chmod 700 "$STATE_DIR"
+    }
+
+    ensure_dirs() {
+      ensure_state
+      mkdir -p "$OUT_DIR"
     }
 
     usage() {
@@ -73,6 +88,7 @@ writeShellApplication {
         "  record-screen start [options] [name]" \
         "  record-screen stop" \
         "  record-screen status" \
+        "  record-screen watch" \
         "  record-screen latest" \
         "  record-screen optimize <input.mp4> [name]" \
         "  record-screen readme <video-url> [README.md]" \
@@ -88,20 +104,45 @@ writeShellApplication {
     }
 
     read_pid() {
-      [[ -r $PID_FILE ]] && cat "$PID_FILE"
+      [[ -r $PID_FILE ]] && printf '%s\n' "$(<"$PID_FILE")"
     }
 
-    is_active() {
-      local pid executable
-      pid=$(read_pid || true)
+    is_recorder_pid() {
+      local pid="$1" executable
       [[ $pid =~ ^[0-9]+$ ]] || return 1
       kill -0 "$pid" 2>/dev/null || return 1
       executable=$(readlink -f "/proc/$pid/exe" 2>/dev/null || true)
       [[ $executable == */gpu-screen-recorder ]]
     }
 
+    is_active() {
+      [[ -r $ACTIVE_FILE ]] && is_recorder_pid "$(read_pid || true)"
+    }
+
+    end_recorder() {
+      local pid="$1" count=0
+      is_recorder_pid "$pid" || return 0
+      kill -SIGINT "$pid" 2>/dev/null || true
+      while is_recorder_pid "$pid" && ((count < 50)); do
+        sleep 0.1
+        count=$((count + 1))
+      done
+      if is_recorder_pid "$pid"; then
+        kill -KILL "$pid" 2>/dev/null || true
+      fi
+      wait "$pid" 2>/dev/null || true
+    }
+
     cleanup_state() {
-      rm -f "$PID_FILE" "$OUTPUT_FILE" "$ACTIVE_FILE" "$STARTING_FILE"
+      rm -f "$PID_FILE" "$OUTPUT_FILE" "$ACTIVE_FILE" "$STARTING_FILE" "$CANCEL_FILE"
+    }
+
+    cleanup_start() {
+      if [[ -r $STARTING_FILE && $(<"$STARTING_FILE") == "$$" ]]; then
+        [[ -n ''${starting_recorder:-} ]] && end_recorder "$starting_recorder"
+        cleanup_webcam
+        cleanup_state
+      fi
     }
 
     cleanup_webcam() {
@@ -237,7 +278,7 @@ writeShellApplication {
         -vf "crop=iw/2:ih,scale=$width:-1" \
         -window_title WebcamOverlay -noborder \
         -fflags nobuffer -flags low_delay -probesize 32 -analyzeduration 0 \
-        -loglevel warning >"$WEBCAM_LOG" 2>&1 &
+        -loglevel warning >"$WEBCAM_LOG" 2>&1 9>&- &
       pid=$!
       printf '%s\n' "$pid" > "$WEBCAM_PID_FILE"
       if ! position_webcam "$target" "$pid"; then
@@ -254,8 +295,6 @@ writeShellApplication {
         notify_msg "Screen recording" "A recording is already active"
         return 1
       fi
-      cleanup_state
-
       local desktop_audio=false microphone_audio=false webcam=false portal=false debug=false
       local webcam_device="" resolution="" name="" target filename pid
       local -a capture_args audio_args=()
@@ -279,19 +318,15 @@ writeShellApplication {
         target=portal
         capture_args=(-w portal)
       else
-        target=$(capture_target) || return 1
+        target=$(capture_target 9>&-) || return 1
         case "$target" in
           monitor:*) capture_args=(-w "''${target#monitor:}") ;;
           region:*) capture_args=(-w "''${target#region:}") ;;
           *) return 1 ;;
         esac
       fi
+      [[ ! -e $CANCEL_FILE ]] || return 1
       [[ -n $resolution ]] && capture_args+=(-s "$resolution")
-
-      # The Noctalia indicator polls `status` every 500 ms. Mark this process
-      # as starting before creating the webcam window so that poller does not
-      # mistake the preview for debris from a crashed recorder and kill it.
-      printf '%s\n' "$$" > "$STARTING_FILE"
 
       if [[ $webcam == true ]]; then
         # Webcam recordings are conversational by default: the preview is
@@ -302,6 +337,7 @@ writeShellApplication {
           return 1
         fi
       fi
+      [[ ! -e $CANCEL_FILE ]] || return 1
 
       local audio_devices=""
       [[ $desktop_audio == true ]] && audio_devices=default_output
@@ -317,18 +353,26 @@ writeShellApplication {
 
       gpu-screen-recorder "''${capture_args[@]}" \
         -k auto -f 60 -fm cfr -fallback-cpu-encoding yes \
-        "''${audio_args[@]}" -o "$filename" 2>> "$LOG_FILE" &
+        "''${audio_args[@]}" -o "$filename" >> "$LOG_FILE" 2>&1 9>&- &
       pid=$!
+      starting_recorder=$pid
 
       local count=0
-      while kill -0 "$pid" 2>/dev/null && [[ ! -f $filename ]] && ((count < 50)); do
+      # A portal picker can legitimately await the user longer than five
+      # seconds. KMS capture must create its output within the deadline.
+      while kill -0 "$pid" 2>/dev/null && [[ ! -f $filename ]]; do
+        if [[ -e $CANCEL_FILE ]] || { [[ $portal == false ]] && ((count >= 50)); }; then
+          end_recorder "$pid"
+          rm -f "$filename"
+          return 1
+        fi
         sleep 0.1
         count=$((count + 1))
       done
 
-      if ! kill -0 "$pid" 2>/dev/null; then
-        cleanup_webcam
-        cleanup_state
+      if ! is_recorder_pid "$pid" || [[ ! -f $filename || -e $CANCEL_FILE ]]; then
+        end_recorder "$pid"
+        rm -f "$filename"
         notify_msg -u critical "Screen recording failed" "See $LOG_FILE"
         return 1
       fi
@@ -337,6 +381,14 @@ writeShellApplication {
       printf '%s\n' "$filename" > "$OUTPUT_FILE"
       printf '%s\n' "$filename" > "$ACTIVE_FILE"
       rm -f "$STARTING_FILE"
+      # A cancellation can arrive while the ready state is being published.
+      if [[ -e $CANCEL_FILE ]]; then
+        end_recorder "$pid"
+        cleanup_webcam
+        cleanup_state
+        rm -f "$filename"
+        return 1
+      fi
       notify_msg -u low "Screen recording started" "Use the red REC indicator or the shortcut to stop"
       printf '%s\n' "$filename"
     }
@@ -378,13 +430,13 @@ writeShellApplication {
       local pid file count=0 preview action
       pid=$(cat "$PID_FILE")
       file=$(cat "$OUTPUT_FILE")
-      kill -SIGINT "$pid"
+      is_recorder_pid "$pid" && kill -SIGINT "$pid" 2>/dev/null || true
 
-      while kill -0 "$pid" 2>/dev/null && ((count < 50)); do
+      while is_recorder_pid "$pid" && ((count < 50)); do
         sleep 0.1
         count=$((count + 1))
       done
-      if kill -0 "$pid" 2>/dev/null; then
+      if is_recorder_pid "$pid"; then
         kill -KILL "$pid" 2>/dev/null || true
         notify_msg -u critical "Screen recording error" "Recorder had to be killed; the video may be incomplete"
       fi
@@ -401,7 +453,7 @@ writeShellApplication {
           "Screen recording saved" "$file" || true)
         [[ $action == default ]] && mpv "$file"
         rm -f "$preview"
-      ) >/dev/null 2>&1 &
+      ) >/dev/null 2>&1 9>&- &
       printf '%s\n' "$file"
     }
 
@@ -450,27 +502,60 @@ writeShellApplication {
     }
 
     case "''${1:-}" in
-      toggle)
+      toggle|start|stop)
+        action=$1
         shift
-        if is_active; then stop_recording; else start_recording "$@"; fi
+        ensure_dirs
+        exec 9>>"$LOCK_FILE"
+        if ! flock -n 9; then
+          # A pending picker/start is cancelled immediately instead of
+          # queueing another toggle that would unexpectedly start again.
+          if [[ $action != start && -r $STARTING_FILE ]] \
+            && starter=$(<"$STARTING_FILE") \
+            && [[ $starter =~ ^[0-9]+$ ]] \
+            && kill -0 "$starter" 2>/dev/null; then
+            touch "$CANCEL_FILE"
+            # If publication just finished, complete this request as a stop
+            # after the lock is released instead of losing the cancellation.
+            if [[ ! -r $STARTING_FILE ]]; then
+              flock 9
+              if is_active; then stop_recording; fi
+            fi
+            exit 0
+          fi
+          flock 9
+        fi
+        if [[ $action == stop ]]; then
+          stop_recording
+        elif is_active; then
+          if [[ $action == toggle ]]; then
+            stop_recording
+          else
+            notify_msg "Screen recording" "A recording is already active"
+            exit 1
+          fi
+        else
+          cleanup_webcam
+          cleanup_state
+          printf '%s\n' "$$" > "$STARTING_FILE"
+          trap cleanup_start EXIT
+          trap 'exit 130' INT
+          trap 'exit 143' TERM
+          start_recording "$@"
+        fi
         ;;
-      start) shift; start_recording "$@" ;;
-      stop) stop_recording ;;
       status)
         if is_active; then
           cat "$ACTIVE_FILE"
-        elif [[ -r $STARTING_FILE ]] \
-          && starter=$(cat "$STARTING_FILE") \
-          && [[ $starter =~ ^[0-9]+$ ]] \
-          && kill -0 "$starter" 2>/dev/null; then
-          # Startup is deliberately not reported as active yet, but its
-          # webcam process belongs to a live record-screen invocation.
-          exit 1
         else
-          cleanup_state
-          cleanup_webcam
+          # Observation must never remove files another invocation is
+          # publishing. Mutating commands own recovery of stale state.
           exit 1
         fi
+        ;;
+      watch)
+        ensure_state
+        exec ${python3}/bin/python3 ${./watch.py} "$STATE_DIR"
         ;;
       latest) latest_command ;;
       optimize) shift; optimize_command "$@" ;;

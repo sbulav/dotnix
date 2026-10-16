@@ -176,8 +176,7 @@ in
 
     custom.desktop.hyprland.keybindings.extra =
       optionals (cfg.pushToTalkBind != null) [
-        ''hl.bind(${builtins.toJSON cfg.pushToTalkBind}, hl.dsp.exec_cmd("${voxtypeBin} record start"), { description = "Start dictation (push-to-talk)" })''
-        ''hl.bind(${builtins.toJSON cfg.pushToTalkBind}, hl.dsp.exec_cmd("${voxtypeBin} record stop"), { release = true, description = "Stop dictation (push-to-talk)" })''
+        ''desktopInput.bindHold(${builtins.toJSON cfg.pushToTalkBind}, "${voxtypeBin} record start", "${voxtypeBin} record stop")''
       ]
       ++ optionals (cfg.toggleBind != null) [
         ''hl.bind(${builtins.toJSON cfg.toggleBind}, hl.dsp.exec_cmd("${voxtypeBin} record toggle"), { description = "Toggle dictation" })''

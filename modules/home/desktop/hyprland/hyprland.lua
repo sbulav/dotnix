@@ -202,20 +202,11 @@ bind("XF86MonBrightnessDown", "Lower display brightness", hl.dsp.exec_cmd("displ
 
 -- Defaults
 hl.window_rule({ match = { class = ".*" }, suppress_event = "maximize" })
-hl.window_rule({ match = { class = ".*" }, opacity = "0.97 0.9" })
 
 -- XWayland anonymous dragging fix
 hl.window_rule({
 	match = { class = "^$", title = "^$", xwayland = true, float = true, fullscreen = false, pin = false },
 	no_focus = true,
-})
-
--- No transparency on media windows
-hl.window_rule({
-	match = {
-		class = "^(zoom|vlc|mpv|org.kde.kdenlive|com.obsproject.Studio|com.github.PintaProject.Pinta|imv|feh|org.gnome.NautilusPreviewer)$",
-	},
-	opacity = "1 1",
 })
 
 -- Floating helpers

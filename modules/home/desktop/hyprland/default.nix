@@ -227,16 +227,19 @@ let
     else
       throw "translateAction: unsupported verb '${verb}' in '${action}'";
 
-  mkBind =
-    mainMod: keySpec: description: action:
+  keyString =
+    mainMod: keySpec:
     let
       keyParts = lib.splitString " " keySpec;
       hasModifiers = builtins.length keyParts > 1;
       extraMods = if hasModifiers then lib.init keyParts else [ ];
       actualKey = if hasModifiers then lib.last keyParts else keySpec;
-      keyStr = concatStringsSep " + " ([ mainMod ] ++ extraMods ++ [ actualKey ]);
     in
-    "hl.bind(${luaStr keyStr}, ${translateAction action}, { description = ${luaStr description} })";
+    concatStringsSep " + " ([ mainMod ] ++ extraMods ++ [ actualKey ]);
+
+  mkBind =
+    mainMod: keySpec: description: action:
+    "hl.bind(${luaStr (keyString mainMod keySpec)}, ${translateAction action}, { description = ${luaStr description} })";
 
   mkKeybindings =
     kb:
@@ -298,9 +301,20 @@ let
           ${mkBind mainMod kb.split "Toggle split direction" "layoutmsg, togglesplit"}
         '';
 
-      copyPasteBindings = optionalString (kb.floating != null && kb.paste != null) ''
-        ${mkBind mainMod "SHIFT ${kb.floating}" "Toggle floating" "togglefloating,"}
-      '';
+      terminalClassesLua = "{ ${concatMapStringsSep ", " luaStr cfg.terminalClasses} }";
+      clipboardBind =
+        key: action:
+        "desktopInput.bindClipboard(${luaStr (keyString mainMod key)}, ${luaStr action}, ${terminalClassesLua})";
+      copyPasteBindings =
+        optionalString (kb.copy != null) ''
+          ${clipboardBind kb.copy "copy"}
+        ''
+        + optionalString (kb.paste != null) ''
+          ${clipboardBind kb.paste "paste"}
+        ''
+        + optionalString (kb.floating != null && kb.paste != null) ''
+          ${mkBind mainMod "SHIFT ${kb.floating}" "Toggle floating" "togglefloating,"}
+        '';
 
       # `extra` entries are now expected to be full Lua statements.
       extraBindings = concatStringsSep "\n" kb.extra;
@@ -340,6 +354,28 @@ in
 {
   options.custom.desktop.hyprland = {
     enable = mkBoolOpt false "Whether or not to install Hyprland and dependencies.";
+
+    terminalClasses = mkOpt (types.listOf types.str) [
+      "wezterm"
+      "org.wezfurlong.wezterm"
+      "org.dotnix.quake"
+      "Alacritty"
+      "kitty"
+      "foot"
+      "footclient"
+      "com.mitchellh.ghostty"
+      "org.gnome.Terminal"
+      "org.gnome.Console"
+      "com.raggesilver.BlackBox"
+    ] "Application classes using terminal clipboard shortcuts (case-insensitive).";
+
+    opacity = {
+      classes =
+        mkOpt (types.listOf types.str) cfg.terminalClasses
+          "Application classes opting in to transparency; other windows stay opaque.";
+      active = mkOpt (types.numbers.between 0 1) 0.97 "Opacity of active opted-in windows.";
+      inactive = mkOpt (types.numbers.between 0 1) 0.9 "Opacity of inactive opted-in windows.";
+    };
 
     monitors = mkOpt (types.listOf types.str) [
       ",preferred,auto,auto"
@@ -413,6 +449,19 @@ in
   };
 
   config = mkIf cfg.enable {
+    assertions = [
+      {
+        assertion =
+          !config.custom.desktop.addons.noctalia.enable
+          || cfg.keybindings.clipboard == null
+          || builtins.all (key: key == null || key != cfg.keybindings.clipboard) [
+            cfg.keybindings.copy
+            cfg.keybindings.paste
+          ];
+        message = "Hyprland clipboard history must use a different key from copy/paste; set custom.desktop.hyprland.keybindings.clipboard to e.g. SHIFT C or null.";
+      }
+    ];
+
     home = {
       packages = with pkgs; [
         brightnessctl
@@ -469,6 +518,10 @@ in
           );
         in
         ''
+          local desktopInput = (function()
+          ${builtins.readFile ./input.lua}
+          end)()
+
           ${builtins.readFile ./hyprland.lua}
 
           -- Theme-driven general block
@@ -482,6 +535,14 @@ in
 
           -- Workspace assignments (windows → workspaces)
           ${mkWorkspaceRules cfg.workspaces.assignments}
+
+          -- Only selected applications opt in to transparency.
+          ${optionalString (cfg.opacity.classes != [ ]) ''
+            hl.window_rule({
+              match = { class = ${luaStr "^(${concatMapStringsSep "|" lib.escapeRegex cfg.opacity.classes})$"} },
+              opacity = "${toString cfg.opacity.active} ${toString cfg.opacity.inactive}",
+            })
+          ''}
 
           -- Host opt-in interaction polish
           ${omarchyWindowPolish}
