@@ -156,7 +156,20 @@ in
             filtering = {
               protection_enabled = true;
               filtering_enabled = true;
-              safe_search.enabled = true;
+              # Safe search for the search engines, but no YouTube Restricted Mode:
+              # the CNAME to restrictmoderate.youtube.com also hits the sing-box
+              # containers, so every client behind the transparent proxy lost
+              # comments and part of the videos regardless of its own settings.
+              safe_search = {
+                enabled = true;
+                bing = true;
+                duckduckgo = true;
+                ecosia = true;
+                google = true;
+                pixabay = true;
+                yandex = true;
+                youtube = false;
+              };
 
               rewrites = [
                 {
