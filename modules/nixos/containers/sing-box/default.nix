@@ -231,6 +231,11 @@ let
   # a restart of the container is the one visible side effect. A failed
   # fetch exits non-zero (so OnFailure= reports it) but leaves the last
   # good file in place; the container keeps running from it.
+  #
+  # The provider's own host is DPI-blocked on zanoza's uplink (TCP opens,
+  # the TLS handshake never completes), so the fetch goes through the
+  # proxy itself first and falls back to direct — the fallback is what a
+  # fresh host with no exits yet, or a different uplink, relies on.
   subscriptionUpdate = pkgs.writeShellApplication {
     name = "sing-box-subscription-update";
     runtimeInputs = with pkgs; [
@@ -250,10 +255,18 @@ let
       cleanup() { rm -rf "$work"; }
       trap cleanup EXIT
 
-      if ! curl -fsS --connect-timeout 10 --max-time 60 --retry 1 \
+      fetch() {
+        curl -fsS --connect-timeout 10 --max-time 60 \
           -A ${escapeShellArg cfg.subscription.userAgent} \
-          -D "$work/headers" -o "$work/sub.json" "$url"; then
-        echo "subscription fetch failed" >&2
+          -D "$work/headers" -o "$work/sub.json" "$@" "$url"
+      }
+      proxy=${escapeShellArg cfg.subscription.proxyUrl}
+      if [ -n "$proxy" ] && fetch --proxy "$proxy"; then
+        echo "fetched via $proxy"
+      elif fetch; then
+        echo "fetched directly"
+      else
+        echo "subscription fetch failed (proxy and direct)" >&2
         [ -s "$state" ] && echo "keeping the last good exits in $state" >&2
         exit 1
       fi
@@ -396,6 +409,9 @@ in
       userAgent =
         mkOpt str "Happ"
           "User-Agent for the subscription fetch (some providers vary the format by client)";
+      proxyUrl =
+        mkOpt str "socks5h://${cfg.localAddress}:20170"
+          "curl proxy tried first for the subscription fetch (the provider's host is DPI-blocked on the uplink); direct is the fallback. Empty disables";
     };
 
     # Notifications for a failing refresh: Telegram first, email through
