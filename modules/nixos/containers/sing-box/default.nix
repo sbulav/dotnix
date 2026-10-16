@@ -773,9 +773,21 @@ in
                   ];
                   outbound = "direct";
                 }
-                # Transparent chain: only the blocked YouTube names need
-                # the exit; every other Google service (and anything the
-                # sniffer could not name) goes direct from here.
+                # Transparent chain. redsocks hands over whatever TCP the
+                # router redirected; a connection that reached redsocks
+                # *without* NAT (a netwatch probe, a port scan) reports
+                # redsocks itself as its original destination, and dialing
+                # that would loop redsocks -> sing-box -> redsocks forever
+                # (199k connections in 2h on zanoza, 2026-10-16). Nothing
+                # legitimate behind the router points at a private IP.
+                {
+                  inbound = [ "transparent" ];
+                  ip_is_private = true;
+                  action = "reject";
+                }
+                # Only the blocked YouTube names need the exit; every other
+                # Google service (and anything the sniffer could not name)
+                # goes direct from here.
                 {
                   inbound = [ "transparent" ];
                   domain_suffix = cfg.transparent.proxyDomains;
