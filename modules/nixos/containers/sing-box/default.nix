@@ -241,6 +241,7 @@ let
     runtimeInputs = with pkgs; [
       coreutils
       curl
+      diffutils
       gawk
       gnugrep
       sing-box
