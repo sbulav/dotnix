@@ -230,6 +230,9 @@
     sing-box = {
       enable = true;
       host = "sing-box.sbulav.ru";
+      # api.telegram.org is blocked directly; deliver through sing-box
+      # itself (when the refresh fails the proxy still runs on the old exits).
+      notify.telegram.proxyUrl = "socks5h://172.16.64.108:20170";
       hostAddress = "172.16.64.10";
       localAddress = "172.16.64.108";
     };
