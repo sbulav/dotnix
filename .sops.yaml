@@ -25,6 +25,7 @@ creation_rules:
       - age:
           - *sab_beez
           - *host_beez
+          - *sab_mba13
           - *sab_mz
           - *recovery
   - path_regex: secrets/zanoza/[^/]+\.(yaml|json|env|ini)$
