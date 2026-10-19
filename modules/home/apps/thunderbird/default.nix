@@ -61,6 +61,24 @@ let
         + fixedWidthString pad "=" "";
     in
     concatStrings (genList (k: chunk (k * 3)) ((len + 2) / 3));
+  # Shared by userChrome (mail) and userContent (address book).
+  owaPalette = ''
+    --owa-blue: #0078d4;
+    --owa-blue-dark: #005a9e;
+    --owa-blue-pale: #c7e0f4;
+    --owa-blue-subtle: #deecf9;
+    --owa-command: #eff6fc;
+    --owa-canvas: #ffffff;
+    --owa-sidebar: #f3f2f1;
+    --owa-hover: #edebe9;
+    --owa-border: #e1dfdd;
+    --owa-text: #323130;
+    --owa-muted: #605e5c;
+    --owa-avatar: #a19f9d;
+  '';
+  # OWA's anonymous contact picture: a white bust on the grey disc, used
+  # instead of Thunderbird's initial letter and outlined user icon.
+  owaSilhouette = "url(\"data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 40 40'%3E%3Ccircle cx='20' cy='15' r='7.5' fill='white'/%3E%3Cpath d='M4 40c0-9.5 7-15.5 16-15.5S36 30.5 36 40z' fill='white'/%3E%3C/svg%3E\")";
 in
 {
   options.custom.apps.thunderbird = {
@@ -158,17 +176,7 @@ in
             :root {
               color-scheme: light !important;
 
-              --owa-blue: #0078d4;
-              --owa-blue-dark: #005a9e;
-              --owa-blue-pale: #c7e0f4;
-              --owa-blue-subtle: #deecf9;
-              --owa-canvas: #ffffff;
-              --owa-sidebar: #f3f2f1;
-              --owa-hover: #edebe9;
-              --owa-border: #e1dfdd;
-              --owa-text: #323130;
-              --owa-muted: #605e5c;
-
+              ${owaPalette}
               --layout-background-0: var(--owa-canvas) !important;
               --layout-background-1: var(--owa-sidebar) !important;
               --layout-background-2: var(--owa-hover) !important;
@@ -243,7 +251,7 @@ in
 
             #tabs-toolbar,
             #tabmail-tabs {
-              background: #eff6fc !important;
+              background: var(--owa-command) !important;
               color: var(--owa-text) !important;
             }
 
@@ -501,6 +509,219 @@ in
               background: var(--owa-border) !important;
             }
           '';
+
+        # The address book loads in a content docshell, which userChrome
+        # never reaches. Its rows are virtualised at a height fixed in JS
+        # (aboutAddressBook.js densityChange), so everything here fits inside
+        # it rather than resizing it.
+        userContent = optionalString cfg.owaStyle ''
+          /* Outlook Web Access "People"-inspired address book. */
+          @-moz-document url("about:addressbook") {
+            :root {
+              color-scheme: light !important;
+              ${owaPalette}
+              --layout-background-0: var(--owa-canvas) !important;
+              --layout-background-1: var(--owa-canvas) !important;
+              --layout-color-0: var(--owa-text) !important;
+              --layout-border-0: var(--owa-border) !important;
+              --sidebar-background: var(--owa-sidebar) !important;
+              --sidebar-color: var(--owa-text) !important;
+              --sidebar-border: var(--owa-border) !important;
+              --selected-item-color: var(--owa-blue) !important;
+              --in-content-deemphasized-text: var(--owa-muted) !important;
+              --search-bar-background: var(--owa-canvas) !important;
+              --search-bar-focus-background: var(--owa-canvas) !important;
+              --search-bar-color: var(--owa-text) !important;
+              --search-bar-border-color: var(--owa-border) !important;
+              --button-border-radius: 2px !important;
+              --input-text-border-radius: 2px !important;
+              --ab-contact-photo-size: 104px !important;
+
+              background: var(--owa-canvas) !important;
+              color: var(--owa-text) !important;
+              font-family: "Segoe UI", "Noto Sans", sans-serif !important;
+            }
+
+            /* The pale command strip across the top of both left panes. */
+            #booksPaneHeaderBar,
+            #cardsPaneHeader {
+              box-sizing: border-box !important;
+              min-height: 48px !important;
+              margin: 0 !important;
+              padding: 6px 8px !important;
+              background: var(--owa-command) !important;
+              border-block-end: 1px solid var(--owa-border) !important;
+            }
+
+            #booksPaneCreateContact {
+              background-color: var(--owa-blue) !important;
+              border-color: var(--owa-blue) !important;
+              color: #ffffff !important;
+            }
+
+            #booksPaneCreateContact:hover {
+              background-color: var(--owa-blue-dark) !important;
+            }
+
+            #searchInput {
+              border-radius: 2px !important;
+            }
+
+            /* Book rail: plain text rows, pale-blue selection, no icons. */
+            #booksPane {
+              border-inline-end: 1px solid var(--owa-border) !important;
+            }
+
+            #books {
+              padding-block: 8px !important;
+            }
+
+            #books :is(.bookRow-icon, .listRow-icon) {
+              display: none !important;
+            }
+
+            #books .container {
+              min-height: 36px !important;
+              border-radius: 0 !important;
+              padding-inline: 12px 8px !important;
+              color: var(--owa-text) !important;
+              font-size: 1.15rem !important;
+            }
+
+            #books li:not(.selected) > .container:hover {
+              background: var(--owa-hover) !important;
+            }
+
+            #books li.selected > .container {
+              background: var(--owa-blue-pale) !important;
+              color: var(--owa-text) !important;
+              stroke: var(--owa-text) !important;
+            }
+
+            #books .listRow-container {
+              padding-inline-start: 36px !important;
+            }
+
+            #cardCount {
+              background: var(--owa-sidebar) !important;
+              color: var(--owa-muted) !important;
+              font-weight: 400 !important;
+            }
+
+            /* Contact list: flat rows of grey avatar, light name, muted address. */
+            #cards {
+              border-block-start: 0 !important;
+            }
+
+            #cards .card-layout > td {
+              padding: 0 !important;
+            }
+
+            #cards .card-layout .card-container {
+              padding-inline: 14px 8px !important;
+              background: var(--owa-canvas) !important;
+              border: 0 !important;
+              border-radius: 0 !important;
+            }
+
+            #cards .card-layout:not(.selected):hover .card-container {
+              background: var(--owa-hover) !important;
+            }
+
+            #cards .card-layout.selected .card-container {
+              background: var(--owa-blue-pale) !important;
+            }
+
+            #cards .name {
+              color: var(--owa-text) !important;
+              font-size: 1.15rem !important;
+              font-weight: 300 !important;
+            }
+
+            #cards .address {
+              color: var(--owa-muted) !important;
+              font-size: 0.88rem !important;
+            }
+
+            :is(#cards, #selectedCards) contact-avatar:not(.is-mail-list) {
+              inline-size: 40px !important;
+              block-size: 40px !important;
+              margin-inline: 0 12px !important;
+              background: var(--owa-avatar) ${owaSilhouette} center / 100% no-repeat !important;
+              box-shadow: none !important;
+              /* Hides the initial letter, which lives in the shadow root. */
+              color: transparent !important;
+            }
+
+            /* Details: big grey picture, large light name, borderless sections
+               indented under the name. */
+            .contact-photo[src$="/user.svg"] {
+              content: ${owaSilhouette} !important;
+              background-color: var(--owa-avatar) !important;
+            }
+
+            .contact-header {
+              gap: 20px !important;
+            }
+
+            .contact-heading-name {
+              font-size: 1.9rem !important;
+              font-weight: 300 !important;
+            }
+
+            #detailsBody {
+              grid-template-columns: minmax(0, 40em) !important;
+              gap: 8px !important;
+              padding-inline-start: calc(var(--ab-contact-photo-size) + 20px) !important;
+            }
+
+            #detailsBody section {
+              padding: 0 0 16px !important;
+              background: transparent !important;
+              border: 0 !important;
+              border-radius: 0 !important;
+            }
+
+            #detailsBody h2 {
+              margin-block: 0 10px !important;
+              font-size: 1.2rem !important;
+              font-weight: 400 !important;
+            }
+
+            /* OWA's actions are small blue links. */
+            #detailsActions button {
+              background-color: transparent !important;
+              border-color: transparent !important;
+              color: var(--owa-blue) !important;
+            }
+
+            #detailsActions button:hover {
+              background-color: var(--owa-hover) !important;
+            }
+
+            .entry-type {
+              color: var(--owa-muted) !important;
+              font-size: 1rem !important;
+              font-weight: 400 !important;
+              text-transform: none !important;
+              opacity: 1 !important;
+            }
+
+            .entry-value a {
+              color: var(--owa-blue) !important;
+            }
+
+            /* GTK is Adwaita-dark; pin the edit form's fields light. */
+            #editContactForm :is(input:not([type="checkbox"], [type="radio"]), textarea, select) {
+              background-color: var(--owa-canvas) !important;
+              color: var(--owa-text) !important;
+            }
+
+            hr[is="pane-splitter"] {
+              background: var(--owa-border) !important;
+            }
+          }
+        '';
       };
     };
 
