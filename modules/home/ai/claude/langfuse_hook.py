@@ -767,7 +767,9 @@ def load_credentials_file() -> None:
         key = key.strip()
         value = value.strip().strip("'\"")
         if key.startswith(ALLOWED_CRED_PREFIXES):
-            os.environ.setdefault(key, value)
+            # The sops file wins: a long-lived shell may still export keys
+            # from before the last rotation.
+            os.environ[key] = value
             debug(f"Loaded credential: {key}")
 
 
