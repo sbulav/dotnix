@@ -19,7 +19,7 @@ import socket
 
 # Check if Langfuse is available
 try:
-    from langfuse import Langfuse
+    from langfuse import Langfuse, propagate_attributes
 except ImportError:
     print("Error: langfuse package not installed. Run: pip install langfuse", file=sys.stderr)
     sys.exit(0)
@@ -581,8 +581,16 @@ def create_trace(
     if project_name:
         tags.append(project_name)
 
-    # Create root span (implicitly creates a trace), then set trace-level attributes
-    with langfuse.start_as_current_span(
+    # Trace-level attributes (SDK v4): propagate_attributes replaces
+    # update_current_trace; its metadata values must be strings.
+    trace_metadata = {
+        "source": "claude-code",
+        "turn_number": str(turn_num),
+        "session_id": session_id,
+        "project": project_name,
+    }
+
+    with langfuse.start_as_current_observation(
         name=f"Turn {turn_num}",
         input={"role": "user", "content": user_text},
         metadata={
@@ -590,22 +598,13 @@ def create_trace(
             "turn_number": turn_num,
             "project": project_name,
         },
-    ) as trace_span:
-        # Set session_id and tags on the underlying trace
-        update_kwargs = dict(
-            session_id=session_id,
-            tags=tags,
-            metadata={
-                "source": "claude-code",
-                "turn_number": turn_num,
-                "session_id": session_id,
-                "project": project_name,
-            },
-        )
-        if user_id:
-            update_kwargs["user_id"] = user_id
-        langfuse.update_current_trace(**update_kwargs)
-
+    ) as trace_span, propagate_attributes(
+        user_id=user_id or None,
+        session_id=session_id,
+        tags=tags,
+        metadata=trace_metadata,
+        trace_name=f"Turn {turn_num}",
+    ):
         # Create generation for the LLM response
         with langfuse.start_as_current_observation(
             name="Claude Response",
@@ -619,10 +618,11 @@ def create_trace(
         ):
             pass
 
-        # Create spans for tool calls
+        # Create observations for tool calls
         for tool_call in all_tool_calls:
-            with langfuse.start_as_current_span(
+            with langfuse.start_as_current_observation(
                 name=f"Tool: {tool_call['name']}",
+                as_type="tool",
                 input=tool_call["input"],
                 metadata={
                     "tool_name": tool_call["name"],
@@ -632,7 +632,7 @@ def create_trace(
                 tool_span.update(output=tool_call["output"])
             debug(f"Created span for tool: {tool_call['name']}")
 
-        # Update trace with output
+        # Update root span with output (the trace takes its I/O from it)
         trace_span.update(output={"role": "assistant", "content": final_output})
 
     debug(f"Created trace for turn {turn_num}")

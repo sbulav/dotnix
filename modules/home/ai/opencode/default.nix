@@ -27,26 +27,51 @@ let
   proxy = import ../shared/proxy.nix;
   registry = import ../shared/registry.nix { inherit lib; };
 
+  # Langfuse keys for opencode-plugin-langfuse, read at launch from the sops
+  # env file (the same source the Claude Stop hook uses). Only the two
+  # LANGFUSE_* keys are exported, so no other credential leaks into opencode.
+  credentialsFile = "${config.home.homeDirectory}/.ssh/sops-env-credentials";
+  loadLangfuseEnv = pkgs.writeText "opencode-langfuse-env" ''
+    if [ -r "${credentialsFile}" ]; then
+      # `|| [ -n ... ]`: the decrypted file has no trailing newline.
+      while IFS='=' read -r _k _v || [ -n "$_k" ]; do
+        _k=''${_k#export }
+        case "$_k" in
+          LANGFUSE_PUBLIC_KEY | LANGFUSE_SECRET_KEY)
+            _v=''${_v#[\"\']}
+            _v=''${_v%[\"\']}
+            export "$_k=$_v"
+            ;;
+        esac
+      done <"${credentialsFile}"
+      unset _k _v
+    fi
+  '';
+
+  wrapperFlags = [
+    "--run '. ${loadLangfuseEnv}'"
+    "--set-default LANGFUSE_BASEURL https://hhfuse.hhdev.ru"
+    "--set-default LANGFUSE_ENVIRONMENT production"
+  ]
   # On Linux bake the proxy topology into the binary (same as the Claude
   # wrapper): openai/* API traffic goes via fwdproxy, the LLM gateways
   # (llmgtw.hhdev.ru, llm-gateway.pyn.ru) match NO_PROXY and go direct. --set
   # overrides whatever env a parent process (e.g. a Claude session dispatching
   # `opencode run` workers) passes down, so subagents always route correctly.
-  opencodeWrapped =
-    if pkgs.stdenv.isLinux then
-      pkgs.symlinkJoin {
-        name = "opencode";
-        paths = [ pkgs.unstable.opencode ];
-        nativeBuildInputs = [ pkgs.makeWrapper ];
-        postBuild = ''
-          wrapProgram $out/bin/opencode \
-            --set HTTPS_PROXY "${proxy.httpProxy}" \
-            --set HTTP_PROXY  "${proxy.httpProxy}" \
-            --set NO_PROXY    "${proxy.noProxy}"
-        '';
-      }
-    else
-      pkgs.unstable.opencode;
+  ++ lib.optionals pkgs.stdenv.isLinux [
+    "--set HTTPS_PROXY '${proxy.httpProxy}'"
+    "--set HTTP_PROXY '${proxy.httpProxy}'"
+    "--set NO_PROXY '${proxy.noProxy}'"
+  ];
+
+  opencodeWrapped = pkgs.symlinkJoin {
+    name = "opencode";
+    paths = [ pkgs.unstable.opencode ];
+    nativeBuildInputs = [ pkgs.makeWrapper ];
+    postBuild = ''
+      wrapProgram $out/bin/opencode ${lib.concatStringsSep " " wrapperFlags}
+    '';
+  };
 
   # Shell used by the bash tool (and TUI terminal). The proxy env above is for
   # the opencode process's API traffic only — shell commands (kubectl, nix,
@@ -202,6 +227,12 @@ let
 
     provider = providers;
     mcp = registry.mcp.opencode;
+
+    # Langfuse tracing: opencode emits OTEL spans, the plugin ships them to
+    # hhfuse (keys come from the wrapper env); username tags the traces.
+    username = "s.bulavintsev";
+    experimental.openTelemetry = true;
+    plugin = [ "opencode-plugin-langfuse" ];
 
     "$schema" = configSchema;
   }
