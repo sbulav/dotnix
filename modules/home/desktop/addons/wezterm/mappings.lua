@@ -4,6 +4,24 @@ config.leader = { key = "b", mods = "CTRL" }
 
 config.keys = {
   { key = "o", mods = "LEADER", action = act.QuickSelect },
+  -- Pick a URL and open it straight in the browser, no clipboard round-trip
+  {
+    key = "O",
+    mods = "LEADER|SHIFT",
+    action = act.QuickSelectArgs {
+      label = "open url",
+      patterns = { "https?://[\\w.-]+\\.[a-z]{2,}(?:[\\w/?.=&%#:~+-]*[\\w/=&%#~+-])?" },
+      action = wezterm.action_callback(function(window, pane)
+        wezterm.open_with(window:get_selection_text_for_pane(pane))
+        -- Hyprland won't raise Firefox for a remote new-tab request
+        if os.getenv "HYPRLAND_INSTANCE_SIGNATURE" then
+          wezterm.background_child_process {
+            "hyprctl", "dispatch", 'hl.dsp.focus({ window = "class:firefox" })',
+          }
+        end
+      end),
+    },
+  },
   {
     key = "-",
     mods = "ALT",

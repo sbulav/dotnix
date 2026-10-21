@@ -154,6 +154,9 @@ for _, m in ipairs({
 	bind("CONTROL + ALT + " .. m[1], "Swap window " .. m[1], hl.dsp.window.swap({ direction = m[2] }))
 end
 
+-- Open the URL on the clipboard in a new browser tab and focus the browser
+bind(mainMod .. " + O", "Open clipboard URL in browser", hl.dsp.exec_cmd(uwsmApp .. [[sh -c 'firefox --new-tab "$(wl-paste -n | sed "s/[.,;:!?]*$//")" && hyprctl dispatch "hl.dsp.focus({ window = \"class:firefox\" })"']]))
+
 -- Switch workspaces with mainMod + [0-9]
 for i = 1, 9 do
 	bind(mainMod .. " + " .. tostring(i), "Switch to workspace " .. tostring(i), hl.dsp.focus({ workspace = i }))
