@@ -81,7 +81,12 @@ in
   };
   hardware = {
     bluetooth.enable = true;
-    bluetoothmy.enable = true;
+    bluetoothmy = {
+      enable = true;
+      # Sony 1000X: multipoint, but on power-on it pages only the phone.
+      autoConnect = [ "58:18:62:86:41:56" ];
+      musicOnly = true;
+    };
     cpu.amd.enable = true;
     fingerprint.enable = false;
     gpu.intel.enable = false;
