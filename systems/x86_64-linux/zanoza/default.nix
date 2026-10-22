@@ -167,6 +167,11 @@
       enable = true;
       host = "gym.sbulav.ru";
     };
+    # Route-only: GStrummer guitar trainer, rsynced by `npm run deploy`.
+    gstrummer = {
+      enable = true;
+      host = "guitar.sbulav.ru";
+    };
     jellyfin = {
       enable = true;
       enableGPU = true;
