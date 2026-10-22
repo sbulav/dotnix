@@ -286,6 +286,7 @@
     ];
     sourceIps = [
       "192.168.89.248" # phillips 58pus (Android TV)
+      "192.168.89.1" # WorkNetZ: tv-proxy source-NATs the TV here for symmetric return (homelab mikrotik/work-proxy-symmetric-update.rsc)
       "192.168.92.0/24" # home VLAN 20 (all Wi-Fi; the defconf 192.168.90.0/24 bridge has no clients)
     ];
   };
