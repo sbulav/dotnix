@@ -1,5 +1,4 @@
 {
-  options,
   config,
   lib,
   pkgs,
@@ -11,47 +10,27 @@ let
   cfg = config.suites.common;
 in
 {
-  options.suites.common = with types; {
+  options.suites.common = {
     enable = mkBoolOpt false "Enable the common suite";
   };
 
+  # Workstations: the shared base plus the desktop-facing hardware and tools.
   config = mkIf cfg.enable {
+    suites.base.enable = true;
+
     system = {
-      nix.enable = true;
-
       fonts.enable = true;
-      locale.enable = true;
-      time.enable = true;
       xkb.enable = true;
-
-      memory.enable = true;
-      journald.enable = true;
-      network-tuning.enable = true;
-
-      security.doas.enable = false;
-      security.sudo.enable = true;
-      security.gpg.enable = true;
     };
 
     hardware.audio.enable = true;
     hardware.networking.enable = true;
-    hardware.storage.enable = true;
 
-    services.ssh.enable = true;
-    services.irqbalance.enable = true;
     programs.dconf.enable = true;
 
     # add sys custom build package
     environment.systemPackages = [ pkgs.custom.sys ];
 
-    custom.tools = {
-      http.enable = true;
-      misc.enable = true;
-      net.enable = true;
-    };
-    custom.cli-apps = {
-      neovim.enable = lib.mkDefault true;
-      tmux.enable = lib.mkDefault true;
-    };
+    custom.cli-apps.tmux.enable = mkDefault true;
   };
 }

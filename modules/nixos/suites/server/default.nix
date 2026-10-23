@@ -9,43 +9,14 @@ let
   cfg = config.suites.server;
 in
 {
-  options.suites.server = with types; {
-    enable = mkBoolOpt false "Enable the common suite";
+  options.suites.server = {
+    enable = mkBoolOpt false "Enable the server suite";
   };
 
+  # Headless hosts get the shared base only. Fonts, xkb, audio,
+  # NetworkManager, dconf, tmux and the sys wrapper stay at their defaults
+  # (off), which a host can still override.
   config = mkIf cfg.enable {
-    system = {
-      nix.enable = true;
-
-      fonts.enable = false;
-      locale.enable = true;
-      time.enable = true;
-      xkb.enable = false;
-
-      memory.enable = true;
-      journald.enable = true;
-      network-tuning.enable = true;
-
-      security.doas.enable = false;
-      security.sudo.enable = true;
-      security.gpg.enable = true;
-    };
-
-    hardware.audio.enable = false;
-    hardware.networking.enable = false;
-    hardware.storage.enable = true;
-
-    services.ssh.enable = true;
-    services.irqbalance.enable = true;
-
-    custom.tools = {
-      http.enable = true;
-      misc.enable = true;
-      net.enable = true;
-    };
-    custom.cli-apps = {
-      neovim.enable = lib.mkDefault true;
-      tmux.enable = lib.mkDefault false;
-    };
+    suites.base.enable = true;
   };
 }
