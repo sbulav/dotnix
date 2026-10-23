@@ -129,7 +129,7 @@
   },
   {
     "uid": "aeaje2nu3xh4wd",
-    "title": "SMART - disk errors",
+    "title": "SMART - error log grew",
     "condition": "C",
     "data": [
       {
@@ -141,8 +141,8 @@
         "datasourceUid": "prometheus",
         "model": {
           "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "rate(smartctl_device_error_log_count{job=\"smartctl\",host=~\"beez|zanoza\"}[5m])",
+          "editorMode": "code",
+          "expr": "max by(host, device, serial_number, model_name) (smartctl_device_error_log_count{job=\"smartctl\",host=~\"beez|zanoza\"} * on(host, device) group_left(serial_number, model_name) smartctl_device{job=\"smartctl\"}) - max by(host, device, serial_number, model_name) (smartctl_device_error_log_count{job=\"smartctl\",host=~\"beez|zanoza\"} offset 1d * on(host, device) group_left(serial_number, model_name) smartctl_device{job=\"smartctl\"} offset 1d)",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": true,
@@ -166,7 +166,7 @@
             {
               "evaluator": {
                 "params": [
-                  1
+                  0
                 ],
                 "type": "gt"
               },
@@ -204,14 +204,186 @@
     "for": "1m",
     "annotations": {
       "__dashboardUid__": "smartctl",
-      "__panelId__": "23"
+      "__panelId__": "23",
+      "summary": "The SMART error log of disk {{ $labels.serial_number }} ({{ $labels.model_name }}, {{ $labels.device }} on {{ $labels.host }}) grew in the last 24h. Check `smartctl -x /dev/{{ $labels.device }}` and follow docs/zanoza-disk-replacement.md."
     },
     "labels": {
       "category": "smart"
     },
     "isPaused": false,
     "notification_settings": {
-      "receiver": "default-alerts"
+      "receiver": "default-alerts",
+      "repeat_interval": "24h"
+    }
+  },
+  {
+    "uid": "smartsectorgrowth",
+    "title": "SMART - bad sector or link counter grew",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max by(host, device, serial_number, model_name, attribute_name) (smartctl_device_attribute{job=\"smartctl\",host=~\"beez|zanoza\",attribute_value_type=\"raw\",attribute_name=~\"Reallocated_Sector_Ct|Current_Pending_Sector|Offline_Uncorrectable|Reported_Uncorrect|UDMA_CRC_Error_Count\"} * on(host, device) group_left(serial_number, model_name) smartctl_device{job=\"smartctl\"}) - max by(host, device, serial_number, model_name, attribute_name) (smartctl_device_attribute{job=\"smartctl\",host=~\"beez|zanoza\",attribute_value_type=\"raw\",attribute_name=~\"Reallocated_Sector_Ct|Current_Pending_Sector|Offline_Uncorrectable|Reported_Uncorrect|UDMA_CRC_Error_Count\"} offset 1d * on(host, device) group_left(serial_number, model_name) smartctl_device{job=\"smartctl\"} offset 1d)",
+          "instant": true,
+          "intervalMs": 1000,
+          "legendFormat": "__auto",
+          "maxDataPoints": 43200,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "C",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "datasourceUid": "__expr__",
+        "model": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  0
+                ],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": [
+                  "C"
+                ]
+              },
+              "reducer": {
+                "params": [],
+                "type": "last"
+              },
+              "type": "query"
+            }
+          ],
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "expression": "A",
+          "intervalMs": 1000,
+          "maxDataPoints": 43200,
+          "refId": "C",
+          "type": "threshold"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "for": "1m",
+    "annotations": {
+      "summary": "SMART {{ $labels.attribute_name }} of disk {{ $labels.serial_number }} ({{ $labels.model_name }}, {{ $labels.device }} on {{ $labels.host }}) grew in the last 24h. UDMA_CRC_Error_Count points at the cable or port, the others at the disk itself. Follow docs/zanoza-disk-replacement.md."
+    },
+    "labels": {
+      "category": "smart"
+    },
+    "isPaused": false,
+    "notification_settings": {
+      "receiver": "default-alerts",
+      "repeat_interval": "24h"
+    }
+  },
+  {
+    "uid": "smartnvmemediagrowth",
+    "title": "SMART - NVMe media errors grew",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max by(host, device, serial_number, model_name) (smartctl_device_media_errors{job=\"smartctl\",host=~\"beez|zanoza\"} * on(host, device) group_left(serial_number, model_name) smartctl_device{job=\"smartctl\"}) - max by(host, device, serial_number, model_name) (smartctl_device_media_errors{job=\"smartctl\",host=~\"beez|zanoza\"} offset 1d * on(host, device) group_left(serial_number, model_name) smartctl_device{job=\"smartctl\"} offset 1d)",
+          "instant": true,
+          "intervalMs": 1000,
+          "legendFormat": "__auto",
+          "maxDataPoints": 43200,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "C",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "datasourceUid": "__expr__",
+        "model": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  0
+                ],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": [
+                  "C"
+                ]
+              },
+              "reducer": {
+                "params": [],
+                "type": "last"
+              },
+              "type": "query"
+            }
+          ],
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "expression": "A",
+          "intervalMs": 1000,
+          "maxDataPoints": 43200,
+          "refId": "C",
+          "type": "threshold"
+        }
+      }
+    ],
+    "noDataState": "NoData",
+    "execErrState": "Error",
+    "for": "1m",
+    "annotations": {
+      "summary": "NVMe media and data integrity errors of disk {{ $labels.serial_number }} ({{ $labels.model_name }}, {{ $labels.device }} on {{ $labels.host }}) grew in the last 24h. Check `smartctl -x /dev/{{ $labels.device }}` and the backups."
+    },
+    "labels": {
+      "category": "smart"
+    },
+    "isPaused": false,
+    "notification_settings": {
+      "receiver": "default-alerts",
+      "repeat_interval": "24h"
     }
   },
   {
@@ -384,7 +556,7 @@
   },
   {
     "uid": "ceajpo02hmlmoa",
-    "title": "ZFS - zpool TANK offline",
+    "title": "ZFS - pool not ONLINE",
     "condition": "C",
     "data": [
       {
@@ -396,8 +568,8 @@
         "datasourceUid": "prometheus",
         "model": {
           "disableTextWrap": false,
-          "editorMode": "builder",
-          "expr": "sum by(instance) (node_zfs_zpool_state{zpool=\"tank\"})",
+          "editorMode": "code",
+          "expr": "max by(host, zpool) (node_zfs_zpool_state{job=\"node\",host=\"zanoza\",state=\"online\"})",
           "fullMetaSearch": false,
           "includeNullMetadata": true,
           "instant": true,
@@ -458,6 +630,345 @@
     "labels": {
       "category": "zfs",
       "host": "zanoza"
+    },
+    "isPaused": false,
+    "notification_settings": {
+      "receiver": "default-alerts"
+    },
+    "annotations": {
+      "summary": "ZFS pool {{ $labels.zpool }} on {{ $labels.host }} is not ONLINE (degraded, faulted or suspended). Run `zpool status -x` and follow docs/zanoza-disk-replacement.md."
+    }
+  },
+  {
+    "uid": "zfsvdeverrors",
+    "title": "ZFS - vdev read, write or checksum errors",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max by(host, pool, vdev, type) (zfs_vdev_errors{host=\"zanoza\"})",
+          "instant": true,
+          "intervalMs": 1000,
+          "legendFormat": "__auto",
+          "maxDataPoints": 43200,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "C",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "datasourceUid": "__expr__",
+        "model": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  0
+                ],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": [
+                  "C"
+                ]
+              },
+              "reducer": {
+                "params": [],
+                "type": "last"
+              },
+              "type": "query"
+            }
+          ],
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "expression": "A",
+          "intervalMs": 1000,
+          "maxDataPoints": 43200,
+          "refId": "C",
+          "type": "threshold"
+        }
+      }
+    ],
+    "noDataState": "OK",
+    "execErrState": "Error",
+    "for": "1m",
+    "annotations": {
+      "summary": "ZFS vdev {{ $labels.vdev }} in pool {{ $labels.pool }} on {{ $labels.host }} has {{ $labels.type }} errors. Identify the disk by WWN (`ls -l /dev/disk/by-id`), check SMART and follow docs/zanoza-disk-replacement.md; `zpool clear` once the cause is understood silences this alert."
+    },
+    "labels": {
+      "category": "zfs"
+    },
+    "isPaused": false,
+    "notification_settings": {
+      "receiver": "default-alerts"
+    }
+  },
+  {
+    "uid": "zfsscrubstale",
+    "title": "ZFS - no scrub or resilver finished in 40 days",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "(time() - max by(host, pool) (zfs_pool_scan_end_timestamp_seconds{host=\"zanoza\"})) > bool 3456000 or max by(host, pool) (zfs_pool_data_errors{host=\"zanoza\"} * 0 + 1) unless on(host, pool) (zfs_pool_scan_end_timestamp_seconds{host=\"zanoza\"} or zfs_pool_scan_running{host=\"zanoza\"} == 1)",
+          "instant": true,
+          "intervalMs": 1000,
+          "legendFormat": "__auto",
+          "maxDataPoints": 43200,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "C",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "datasourceUid": "__expr__",
+        "model": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  0
+                ],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": [
+                  "C"
+                ]
+              },
+              "reducer": {
+                "params": [],
+                "type": "last"
+              },
+              "type": "query"
+            }
+          ],
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "expression": "A",
+          "intervalMs": 1000,
+          "maxDataPoints": 43200,
+          "refId": "C",
+          "type": "threshold"
+        }
+      }
+    ],
+    "noDataState": "OK",
+    "execErrState": "Error",
+    "for": "1m",
+    "annotations": {
+      "summary": "No scrub or resilver of pool {{ $labels.pool }} on {{ $labels.host }} finished in the last 40 days and none is running. Check `systemctl list-timers zfs-scrub*` and `zpool status`."
+    },
+    "labels": {
+      "category": "zfs"
+    },
+    "isPaused": false,
+    "notification_settings": {
+      "receiver": "default-alerts"
+    }
+  },
+  {
+    "uid": "zfsscanerrors",
+    "title": "ZFS - scrub or resilver found errors",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max by(host, pool, function) (zfs_pool_scan_errors{host=\"zanoza\"})",
+          "instant": true,
+          "intervalMs": 1000,
+          "legendFormat": "__auto",
+          "maxDataPoints": 43200,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "C",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "datasourceUid": "__expr__",
+        "model": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  0
+                ],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": [
+                  "C"
+                ]
+              },
+              "reducer": {
+                "params": [],
+                "type": "last"
+              },
+              "type": "query"
+            }
+          ],
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "expression": "A",
+          "intervalMs": 1000,
+          "maxDataPoints": 43200,
+          "refId": "C",
+          "type": "threshold"
+        }
+      }
+    ],
+    "noDataState": "OK",
+    "execErrState": "Error",
+    "for": "1m",
+    "annotations": {
+      "summary": "The last {{ $labels.function }} of pool {{ $labels.pool }} on {{ $labels.host }} found errors. Run `zpool status -v` and follow docs/zanoza-disk-replacement.md."
+    },
+    "labels": {
+      "category": "zfs"
+    },
+    "isPaused": false,
+    "notification_settings": {
+      "receiver": "default-alerts"
+    }
+  },
+  {
+    "uid": "zfsstatusexporter",
+    "title": "ZFS - status export failed or stopped",
+    "condition": "C",
+    "data": [
+      {
+        "refId": "A",
+        "relativeTimeRange": {
+          "from": 600,
+          "to": 0
+        },
+        "datasourceUid": "prometheus",
+        "model": {
+          "datasource": {
+            "type": "prometheus",
+            "uid": "prometheus"
+          },
+          "editorMode": "code",
+          "expr": "max((1 - zfs_status_exporter_success{host=\"zanoza\"}) + ((time() - zfs_status_exporter_last_run_timestamp_seconds{host=\"zanoza\"}) > bool 1800))",
+          "instant": true,
+          "intervalMs": 1000,
+          "legendFormat": "__auto",
+          "maxDataPoints": 43200,
+          "range": false,
+          "refId": "A"
+        }
+      },
+      {
+        "refId": "C",
+        "relativeTimeRange": {
+          "from": 0,
+          "to": 0
+        },
+        "datasourceUid": "__expr__",
+        "model": {
+          "conditions": [
+            {
+              "evaluator": {
+                "params": [
+                  0
+                ],
+                "type": "gt"
+              },
+              "operator": {
+                "type": "and"
+              },
+              "query": {
+                "params": [
+                  "C"
+                ]
+              },
+              "reducer": {
+                "params": [],
+                "type": "last"
+              },
+              "type": "query"
+            }
+          ],
+          "datasource": {
+            "type": "__expr__",
+            "uid": "__expr__"
+          },
+          "expression": "A",
+          "intervalMs": 1000,
+          "maxDataPoints": 43200,
+          "refId": "C",
+          "type": "threshold"
+        }
+      }
+    ],
+    "noDataState": "Alerting",
+    "execErrState": "Error",
+    "for": "1m",
+    "annotations": {
+      "summary": "The zpool status export on Zanoza failed or has not run for 30 minutes, so the ZFS vdev and scrub alerts are blind. Inspect journalctl -u zfs-status-textfile."
+    },
+    "labels": {
+      "category": "zfs"
     },
     "isPaused": false,
     "notification_settings": {

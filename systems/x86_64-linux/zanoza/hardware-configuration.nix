@@ -24,7 +24,7 @@
   boot.initrd.kernelModules = [ ];
   boot.kernelModules = [ "kvm-amd" ];
   boot.extraModulePackages = [ ];
-  # ZFS SETTINGS
+  # ZFS SETTINGS (disk replacement and alerts: docs/zanoza-disk-replacement.md)
   boot.supportedFilesystems = [ "zfs" ];
   boot.zfs.forceImportRoot = false;
   boot.zfs.extraPools = [ "tank" ];
