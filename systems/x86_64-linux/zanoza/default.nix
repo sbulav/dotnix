@@ -314,6 +314,7 @@
         "/dev/sdd"
       ];
     };
+    zfsStatus.enable = true;
   };
   services.prometheus.exporters.nut = {
     enable = true;

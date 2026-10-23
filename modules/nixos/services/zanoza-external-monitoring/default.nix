@@ -9,7 +9,7 @@ with lib;
 with lib.custom;
 let
   cfg = config.${namespace}.services.zanoza-external-monitoring;
-  textfileDirectory = "/var/lib/node_exporter/textfile_collector";
+  textfileDirectory = config.${namespace}.services.prometheus-exporters.node.textfile.directory;
   hostName = config.networking.hostName;
 
   # Three monitors share one delivery path and one alert state machine but
@@ -693,14 +693,8 @@ in
       };
     };
 
-    services.prometheus.exporters.node = {
-      enable = mkDefault true;
-      extraFlags = [ "--collector.textfile.directory=${textfileDirectory}" ];
-    };
-
-    systemd.tmpfiles.rules = [
-      "d ${textfileDirectory} 0755 root root -"
-    ];
+    services.prometheus.exporters.node.enable = mkDefault true;
+    ${namespace}.services.prometheus-exporters.node.textfile.enable = true;
 
     systemd.timers = {
       ${monitors.external.unit} = {

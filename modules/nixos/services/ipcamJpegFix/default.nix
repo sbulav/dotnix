@@ -9,6 +9,7 @@ with lib;
 with lib.custom;
 let
   cfg = config.${namespace}.services.ipcamJpegFix;
+  textfileDirectory = config.${namespace}.services.prometheus-exporters.node.textfile.directory;
 in
 {
   options.${namespace}.services.ipcamJpegFix = with types; {
@@ -66,10 +67,7 @@ in
         };
     };
 
-    services.prometheus.exporters.node.extraFlags = [
-      "--collector.textfile.directory=/var/lib/node_exporter/textfile_collector"
-    ];
-    systemd.tmpfiles.rules = [ "d /var/lib/node_exporter/textfile_collector 0755 root root -" ];
+    ${namespace}.services.prometheus-exporters.node.textfile.enable = true;
 
     systemd.services."ipcam-jpegfix" = {
       description = "Convert IP-camera JPEG files with jpegtran to fix proprietary bits";
@@ -126,7 +124,7 @@ in
 
         publish_metrics() {
           local result=$1 metrics_tmp
-          metrics_tmp="$(${pkgs.coreutils}/bin/mktemp /var/lib/node_exporter/textfile_collector/.ipcam-jpegfix.XXXXXX)" \
+          metrics_tmp="$(${pkgs.coreutils}/bin/mktemp ${textfileDirectory}/.ipcam-jpegfix.XXXXXX)" \
             && {
               echo "''${metric_prefix}_last_run_timestamp_seconds $now"
               echo "''${metric_prefix}_success $((result == 0))"
@@ -136,7 +134,7 @@ in
               echo "''${metric_prefix}_skipped_vanished_files $skipped_vanished"
             } > "$metrics_tmp" \
             && ${pkgs.coreutils}/bin/chmod 0644 "$metrics_tmp" \
-            && ${pkgs.coreutils}/bin/mv -f "$metrics_tmp" /var/lib/node_exporter/textfile_collector/"$metric_prefix".prom
+            && ${pkgs.coreutils}/bin/mv -f "$metrics_tmp" ${textfileDirectory}/"$metric_prefix".prom
         }
 
         # The trap must never change the script's exit status or leave
@@ -317,7 +315,7 @@ in
         ProtectSystem = "strict";
         ReadWritePaths = [
           cfg.directory
-          "/var/lib/node_exporter/textfile_collector"
+          textfileDirectory
         ];
         PrivateDevices = true;
         PrivateNetwork = true;
