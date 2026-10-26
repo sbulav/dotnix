@@ -86,6 +86,8 @@ in
       # Sony 1000X: multipoint, but on power-on it pages only the phone.
       autoConnect = [ "58:18:62:86:41:56" ];
       musicOnly = true;
+      # GB205 HDMI (monitor speakers), not the AKG mic's headphone out.
+      fallbackSink = "alsa_output.pci-0000_01_00.1.hdmi-stereo";
     };
     cpu.amd.enable = true;
     fingerprint.enable = false;

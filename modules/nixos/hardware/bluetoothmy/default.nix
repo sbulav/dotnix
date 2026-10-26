@@ -17,6 +17,9 @@ in
       mkOpt (listOf str) [ ]
         "Device addresses the user session keeps reconnecting while they are powered on, for headsets that page only their last host (e.g. multipoint Sonys back to the phone).";
     musicOnly = mkBoolOpt false "Whether to offer headsets only A2DP (LDAC, AAC, SBC), with no HFP fallback.";
+    fallbackSink =
+      mkOpt (nullOr str) null
+        "node.name of the sink that becomes the default when the default Bluetooth sink disconnects, instead of whatever sits next in WirePlumber's default-sink history.";
   };
 
   config = mkIf cfg.enable {
@@ -65,7 +68,9 @@ in
     services.pipewire.wireplumber = mkIf config.services.pipewire.wireplumber.enable {
       # PulseAudio's switch-on-connect: a Bluetooth sink that appears becomes the
       # configured default, which outranks every other node in default-nodes.
-      # When it goes away, WirePlumber falls back to the previous default.
+      # When it goes away, WirePlumber falls back to the previous default, or to
+      # fallbackSink when set: the history also holds every sink ever picked by
+      # hand (a USB mic's monitor output, say), and any of them outranks priority.
       extraScripts."custom/bluetooth-switch-on-connect.lua" = ''
         SimpleEventHook {
           name = "custom/bluetooth-switch-on-connect",
@@ -83,6 +88,29 @@ in
             if name and metadata then
               metadata:set (0, "default.configured.audio.sink", "Spa:String:JSON",
                   Json.Object { ["name"] = name }:to_string ())
+            end
+          end
+        }:register ()
+      ''
+      + optionalString (cfg.fallbackSink != null) ''
+
+        SimpleEventHook {
+          name = "custom/bluetooth-fallback-on-disconnect",
+          interests = {
+            EventInterest {
+              Constraint { "event.type", "=", "node-removed" },
+              Constraint { "media.class", "=", "Audio/Sink" },
+              Constraint { "device.api", "=", "bluez5" },
+            },
+          },
+          execute = function (event)
+            local name = event:get_subject ().properties ["node.name"]
+            local metadata = event:get_source ():call ("get-object-manager", "metadata")
+                :lookup { Constraint { "metadata.name", "=", "default" } }
+            local configured = metadata and metadata:find (0, "default.configured.audio.sink")
+            if name and configured and Json.Raw (configured):parse ().name == name then
+              metadata:set (0, "default.configured.audio.sink", "Spa:String:JSON",
+                  Json.Object { ["name"] = ${builtins.toJSON cfg.fallbackSink} }:to_string ())
             end
           end
         }:register ()
