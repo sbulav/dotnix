@@ -1,10 +1,10 @@
-# Adapted from mattpocock/skills `tdd` (plugin v1.2.3) — pre-agreed seams,
+# Adapted from mattpocock/skills `tdd` (plugin v1.2.3; seam catches/misses note from 3f59913) — pre-agreed seams,
 # the tautological-test ban, and vertical tracer-bullet slices (tests.md and
 # mocking.md folded in condensed), extended with an AFK rule so delegated
 # workers take seams from the issue instead of blocking on a user.
 {
   name = "tdd";
-  version = "1.0.0";
+  version = "1.1.0";
   description = "Test-driven implementation: the red-green loop over pre-agreed seams. Use when implementing a feature or fixing a bug with testable behaviour — issue work via workon or a delegated worker session — or when the user mentions TDD, red-green, test-first, or integration tests.";
   allowed-tools = [
     "Read"
@@ -47,13 +47,15 @@
 
     - **User present (HITL):** before writing any test, write down the seams
       under test and confirm them — "what's the public interface, and which
-      seams should we test?"
+      seams should we test?" Give each proposed seam a one-line note on what
+      it catches and what it misses, so the user is choosing coverage, not
+      names.
     - **Delegated / AFK worker:** the pre-agreed seams are the ones pinned in
       the issue — a "seams under test" note if the slice has one, otherwise the
       acceptance criteria (each criterion names an observable behaviour; test
       it through the interface that exposes it). Record the seams you settled
-      on in the AI-HANDOFF instead of asking, and never quietly widen them to
-      internals.
+      on in the AI-HANDOFF, each with the same catches/misses note, instead of
+      asking, and never quietly widen them to internals.
 
     When the shape of the interface is itself in question — how deep the
     module is, where the seam belongs, what it should expose — call the Skill

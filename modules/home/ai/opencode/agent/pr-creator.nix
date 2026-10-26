@@ -93,18 +93,32 @@
 
        **Body (description):**
        - Analyze 5-10 latest commits from the range `origin/$BASE..$HEAD`.
-       - Create a brief Russian description (2-4 sentences) summarizing the changes.
-       - Structure by categories if needed (feat/fix/chore/refactor).
-       - Avoid fluff and duplicate the title.
+       - Three sections, in Russian, brief and without restating the title:
+         - `## Изменения` — the smallest visual that makes the change clear
+           (a shallow file tree, a call tree, pseudocode, or a diff sketch),
+           beside 1-2 sentences.
+         - `## Проверка` — before and after: the test or check that was red
+           and is now green, with the command named.
+         - `## Риск слияния` — `Дверь:` односторонняя или двусторонняя (can a
+           revert undo it?), and `Радиус:` which hosts or consumers the merge
+           reaches and what breaks for them if it is wrong.
        - Use line breaks for readability.
 
        Example of good description:
        ```
-       ## Changes
-       Added support for creating PR via tea CLI instead of curl.
-       
-       Simplified PR creation logic: removed bash script, using native tea command.
-       Improved error handling and output results.
+       ## Изменения
+       PR создаётся через `tea pr create` вместо curl.
+
+           opencode/agent/pr-creator.nix
+       -     curl -X POST …/pulls
+       +     tea pr create --base --title --description
+
+       ## Проверка
+       До: `dry-run` печатал curl-команду. После: печатает команду tea, `tea pr create` возвращает URL.
+
+       ## Риск слияния
+       Дверь: двусторонняя, откат одним revert.
+       Радиус: только агент pr-creator в opencode; другие агенты не затронуты.
        ```
 
     5. **Create PR using tea:**

@@ -1,7 +1,7 @@
 # Adapted from mattpocock/skills v1.2.3 (c55ee46), scoped to dotnix workflows.
 {
   name = "dev";
-  version = "1.0.0";
+  version = "1.1.0";
   description = "Choose and run the appropriate development workflow. Use when the user asks which development skill to use or explicitly invokes dev with a task.";
   "user-invocable" = true;
   content = ''
@@ -31,6 +31,9 @@
       for a selected, scoped candidate.
     - Ready changes: suggest `ship`. It remains user-invoked, not an automatic phase.
     - Explicitly requested post-merge cleanup: `complete`.
+    - Looking back at a finished or derailed session to improve the agent's
+      environment rather than the code: `retro`, run in the session it reviews
+      and before that session is cleared.
 
     ## Context between phases
 

@@ -50,10 +50,18 @@ live files.
 
 The `dev` router selects the smallest workflow. `handoff` transfers sessions,
 `triage` prepares incoming reports, `prototype` resolves executable design
-questions, and `architecture-review` surveys friction in actively changed code.
-These adaptations were reviewed against mattpocock/skills v1.2.3, commit
-`c55ee46073ed923f86ce59a5eb3b6d895095d1b7`. They keep this repo's Forgejo and
-AGENTS.md conventions; they do not install the upstream plugin or its scripts.
+questions, `architecture-review` surveys friction in actively changed code,
+and `retro` looks back at a session to propose environment changes.
+These adaptations were reviewed against mattpocock/skills v1.3.1 plus its
+unreleased commits through `5beb35b` (2026-10-19). They keep this repo's
+Forgejo and AGENTS.md conventions; they do not install the upstream plugin or
+its scripts. Deliberately not taken from that review: the `CONTEXT.md` to
+`GLOSSARY.md` rename (`domain-modeling` targets AGENTS.md here), the removal
+of `resolving-merge-conflicts` (ours is extended with the AI-HANDOFF decision
+log and is called from `delegate`), and `implement-spec` and `chief-of-staff`
+(`delegate` already covers the task-graph loop). Upstream's `pr` skill is
+folded into `ship` and the opencode pr-creator as the Summary / Evidence /
+Merge danger body shape, credited to Dex Horthy's `show-me`.
 
 ## Release checklist
 

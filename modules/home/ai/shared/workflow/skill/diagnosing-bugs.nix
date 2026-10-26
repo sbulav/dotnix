@@ -1,9 +1,9 @@
-# Adapted from mattpocock/skills `diagnosing-bugs`. Model-invoked on purpose:
+# Adapted from mattpocock/skills `diagnosing-bugs` (prove-the-mutation step from f3fc563). Model-invoked on purpose:
 # debugging sessions rarely announce themselves upfront, so the agent must be
 # able to reach for this discipline mid-flight.
 {
   name = "diagnosing-bugs";
-  version = "1.2.0";
+  version = "1.3.0";
   description = "Diagnosis loop for hard bugs, flaky failures, and performance regressions. Use when the user says diagnose/debug/root-cause, reports something broken, throwing, failing, flaky, or slow, or when a previous fix did not hold.";
   allowed-tools = [
     "Read"
@@ -91,7 +91,7 @@
 
     Write the regression test **before the fix** — but only at a **correct seam**, one where the test exercises the real bug pattern as it occurs at the call site. A too-shallow seam gives false confidence; if no correct seam exists, that itself is a finding — document it and flag it.
 
-    With a correct seam: turn the minimised repro into a failing test, watch it fail, apply the fix, watch it pass, then re-run the Phase 1 loop against the original un-minimised scenario.
+    With a correct seam: turn the minimised repro into a failing test, watch it fail, apply the fix, watch it pass, then re-run the Phase 1 loop against the original un-minimised scenario. If you forced the red by mutating code or a fixture, `diff` against a pristine copy to prove the mutation landed before you trust the failure.
 
     ## Phase 6 — Cleanup + post-mortem
 

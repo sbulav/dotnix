@@ -3,7 +3,7 @@ let
 in
 {
   name = "delegate";
-  version = "2.0.0";
+  version = "2.1.0";
   description = "Delegate bounded implementation, investigations, or issue batches across available models. Use when independent work benefits from parallel execution, isolated workers, or a second model's review.";
   "argument-hint" = "[task, issue number(s), or repo issue list]";
   "user-invocable" = true;
@@ -46,13 +46,19 @@ in
     through the tracker only when authorized; otherwise keep the allocation
     local. Give each editing worker its own worktree and a branch matching
     repo convention. Serialize issues that overlap or depend on each other.
+    When a batch lands on one integration branch, each worker confirms its
+    worktree is based on that branch before starting and merges the branch
+    tip into its own before reporting done, so every merge in the parent is
+    a fast-forward.
 
     Give workers the issue brief directly. If invoking `workon`, state that
     implementation in this prepared worktree is already assigned, and that
     handoffs and shipping belong to the parent. Workers stop after changes
     and validation. The parent reviews spec compliance and code correctness
     independently, then verifies the integrated result. Use `delegate-review`
-    when an additional model's substantive review is justified.
+    when an additional model's substantive review is justified. Review the
+    integrated branch once, after the last wave, and send every finding to a
+    single fix worker rather than one worker per finding.
 
     Recompute the unblocked frontier after each completed wave. A task that
     explicitly includes commits/push/PR creation authorizes those steps;

@@ -3,7 +3,7 @@ let
 in
 {
   name = "delegate-review";
-  version = "2.1.0";
+  version = "2.2.0";
   description = "Review PRs with independent model lenses, verify findings, and produce a fix plan. Use for PR review, review batches, or a second opinion on correctness, specification, or security.";
   "argument-hint" = "[PR number(s), or open]";
   "user-invocable" = true;
@@ -38,6 +38,12 @@ in
 
     Build one brief containing PR URL, intent/AC, SHAs, change summary,
     relevant conventions, failing checks, unresolved threads, and hotspots.
+    For the conventions, search the repo for every file that documents how
+    code should be written and list each by path; `AGENTS.md`, `CLAUDE.md`,
+    `CONTRIBUTING.md` and `CODING_STANDARDS.md` must be on the list whenever
+    they exist. A convention file no reviewer saw is a coverage gap to report.
+    Dispatch one PR's lanes together and wait for all of them before
+    synthesis, so the axes are reconciled against the same evidence.
     Inline a small diff; for large changes provide paths and commands to read
     full hunks plus surrounding code. Workers must inspect source, not just
     a summarizer's rendition. Partition large diffs by subsystem and ensure

@@ -3,7 +3,7 @@ let
 in
 {
   name = "ship";
-  version = "1.2.0";
+  version = "1.3.0";
   description = "Prepare commit and PR for the current issue branch. Posts handoff before commit and PR approval gates.";
   "disable-model-invocation" = true;
   allowed-tools = [
@@ -42,7 +42,22 @@ in
      6. Ask whether to commit.
      7. If committed, draft the PR:
         - title: `#<issue> <TPL-if-any> <human title>`
-        - body includes `Closes #<issue>`
+        - body, in this order, prose kept brief and in the `## Vocabulary`
+          terms of AGENTS.md:
+          - `Closes #<issue>`
+          - **Summary** — the smallest visual that makes the change clear,
+            beside the one or two sentences it supports: a shallow file tree
+            for responsibility moves, a call tree for control flow, pseudocode
+            for logic, a diff sketch when the surrounding shape already exists,
+            Mermaid for interaction between parts. Pick one; rarely two.
+          - **Evidence** — before and after. The test or check that was red
+            and is now green, with the command named; a screenshot when the
+            change is visual.
+          - **Merge danger** — `Door:` one-way or two-way, with the reason
+            when one-way (a revert does not undo it: migrated data, rotated
+            secret, changed on-disk state). `Blast radius:` which hosts,
+            homes or consumers the merge reaches, and what breaks for them if
+            it is wrong.
      8. Post a handoff with status `ready-for-pr` using `tea comment`.
      9. Ask whether to create the PR.
      10. If PR is created, post a handoff with status `pr-open` including the PR URL.

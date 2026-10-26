@@ -1,5 +1,5 @@
-# Adapted from mattpocock/skills `resolving-merge-conflicts` (plugin v1.2.3) —
-# intent archaeology plus the never-abort rule, extended with the AI-HANDOFF
+# Adapted from mattpocock/skills `resolving-merge-conflicts` (plugin v1.2.3; upstream retired it in v1.3.0, kept here because
+# `delegate` step 5 relies on it) — intent archaeology plus the never-abort rule, extended with the AI-HANDOFF
 # decision log as a primary source and with `delegate` worktree swarms in mind.
 let
   tea = (import ../templates.nix).teaConventions;

@@ -1,6 +1,6 @@
 # Adapted from mattpocock/skills `domain-modeling` (plugin v1.2.3) — the strict
 # glossary interview and the 3-part ADR admission test, retargeted at AGENTS.md
-# sections instead of CONTEXT.md + docs/adr/, per the lifecycle rule: the
+# sections instead of GLOSSARY.md (upstream's CONTEXT.md until v1.3.0) + docs/adr/, per the lifecycle rule: the
 # tracker holds what closes, the repo holds what doesn't.
 {
   name = "domain-modeling";

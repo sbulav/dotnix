@@ -1,8 +1,8 @@
-# Adapted from mattpocock/skills `grill-me` / `grilling` (v1.2.2) — the
+# Adapted from mattpocock/skills `grill-me` / `grilling` (v1.2.2; "yes accepts the recommendation" from 95249b0) — the
 # frontier/rounds interview loop, kept as a single user-invoked skill.
 {
   name = "grill-me";
-  version = "2.2.0";
+  version = "2.3.0";
   description = "Grill the user relentlessly about a plan, decision, or idea until every branch of the design tree is resolved. Use when the user wants to stress-test their thinking, uses any 'grill' trigger phrases, or when mid-task you hit an under-specified decision only the user can own — interview instead of guessing. Requires the user present: never self-invoke in an AFK or delegated worker session.";
   "argument-hint" = "[topic]";
   "user-invocable" = true;
@@ -22,8 +22,9 @@
     Work the tree in **rounds**. The **frontier** is every decision whose
     prerequisites are already settled — the questions you can ask *now* without
     guessing at answers you haven't heard yet. Ask the whole frontier in one
-    round: number each question and give your recommended answer. Then wait for
-    the user's answers before the next round.
+    round: number each question and give your recommended answer. Word each
+    question so "yes" accepts your recommended answer. Then wait for the
+    user's answers before the next round.
 
     Each question should be formatted like so:
 
