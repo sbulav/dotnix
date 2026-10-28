@@ -155,6 +155,12 @@ in
     };
   };
   custom.services.alloy.enable = true;
+  custom.services.logrotate = {
+    enable = true;
+    # Owned by the container uid (nscd on the host), so rotation stays as root
+    # and `su root root` (the default) silences the parent-directory check.
+    rules.sing-box.files = [ "/var/lib/sing-box/logs/*.log" ];
+  };
 
   # All monitoring state is on the root NVMe; no zanoza or USB mount dependency.
   # Traefik runs as uid 997 inside its ephemeral container (the container
