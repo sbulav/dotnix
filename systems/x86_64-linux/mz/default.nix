@@ -206,12 +206,12 @@ in
     settings.Resolve = {
       # Cloudflare first is a trap: 1.1.1.1/1.0.0.1 SERVFAIL for nalog.ru
       # (they cannot reach the gi.nalog.ru delegation) and resolved treats
-      # SERVFAIL as an answer, so it never fails over. Google and Quad9
-      # resolve it; keep Cloudflare only as the last resort.
-      DNS = "8.8.8.8 9.9.9.9 1.1.1.1";
+      # SERVFAIL as an answer, so it never fails over. Quad9 resolves it;
+      # keep Cloudflare only as the last resort. Google (8.8.8.8) is left
+      # out: it drops queries from this uplink (timeouts, incl. gi.nalog.ru).
+      DNS = "9.9.9.9 1.1.1.1";
       DNSSEC = "false";
       FallbackDNS = [
-        "8.8.8.8"
         "9.9.9.9"
         "1.1.1.1"
       ];
