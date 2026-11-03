@@ -2,7 +2,7 @@
 # workload defaults, not benchmark scores or guarantees of gateway access.
 {
   policy = ''
-    ## Routing and effort (2026-10-07)
+    ## Routing and effort (2026-11-03)
 
     Choose by task risk, available tools, quota, and total time to a verified
     result. Subscription calls consume quota; self-hosted calls consume time.
@@ -13,30 +13,34 @@
 
     | Work | Preferred lane | Escalation / alternative |
     |---|---|---|
-    | Bulk extraction, summaries, text drafts | self-hosted Gemma | GPT-6 Luna |
-    | Mechanical code edits with explicit checks | self-hosted GLM | GPT-6 Sol / Sonnet 5.5 |
-    | Focused low-risk implementation | GPT-6 Luna with clear acceptance checks | GPT-6 Sol / Sonnet 5.5 |
-    | General coding, refactoring, substantive review | GPT-6 Sol / Sonnet 5.5 | GPT-6 Astra / Opus 5.5 |
+    | Bulk extraction, summaries, text drafts | self-hosted Gemma | GPT-6 Luna / Haiku 5.5 |
+    | Mechanical code edits with explicit checks | self-hosted GLM | GPT-6.1 Sol / Sonnet 5.5 |
+    | Focused low-risk implementation | GPT-6 Luna with clear acceptance checks | GPT-6.1 Sol / Sonnet 5.5 |
+    | General coding, refactoring, substantive review | GPT-6.1 Sol / Sonnet 5.5 | GPT-6 Astra / Opus 5.5 |
     | Ambiguous debugging, architecture, security, contested findings | parent if capable; otherwise Astra / Opus | Fable for unresolved long-horizon work |
     | Independent-family review | cost-ordered review lanes in `delegate-review` | Sonnet/Opus after OpenAI; Sol/Astra after Anthropic |
     | Large input | retrieve relevant files first; partition by subsystem | supported large-context lane, including Gemini |
 
-    OpenCode IDs (check `opencode models <provider>` before first use):
-    - Personal OpenAI: `openai/gpt-6-luna`, `openai/gpt-6-sol`, `openai/gpt-6-astra`.
+    OpenCode IDs (check the active model catalog before first use):
+    - Personal OpenAI: `openai/gpt-6-luna`, `openai/gpt-6.1-sol`, `openai/gpt-6-astra`.
+      Optional visual/computer-use/writing lane: `openai/gpt-6.1-terra`.
     - Work gateway: `hhdev-anthropic/claude-sonnet-5-5`,
-      `hhdev-anthropic/claude-opus-5-5`, `hhdev-anthropic/claude-fable-5-1`.
+      `hhdev-anthropic/claude-opus-5-5`, `hhdev-anthropic/claude-fable-5-1`;
+      `hhdev-anthropic/claude-haiku-5-5` for low-risk, latency-sensitive work.
       On hosts with direct Anthropic configured, the same IDs use `anthropic/`.
     - Self-hosted: `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it`,
       `hhdev-glm5-fp8/zai-org/GLM-5.3-Flash`; backup
       `hhdev-deepseek-v4-flash/deepseek-ai/DeepSeek-V4-Flash-0731`.
     - Existing alternatives: `hhdev-grok/grok-4.7`,
       `hhdev-google/gemini-3.1-pro-preview`, `hhdev-google/gemini-3.8-flash`.
+      Trial reasoning/coding lane: `hhdev-google/gemini-4-argon`; keep Flash
+      for speed and verify representative tasks before promoting Argon.
     - Antigravity (`agy`, subscription, not OpenCode): bare IDs such as
       `gemini-3.8-flash-high`, `gemini-3.1-pro-high`,
       `claude-opus-4-6-thinking`, `claude-sonnet-4-6`; list with `agy models`.
-    - Gateway OpenAI fallback: `hhdev-openai/gpt-6-sol` or
+    - Gateway OpenAI fallback: `hhdev-openai/gpt-6.1-sol` or
       `hhdev-openai/gpt-6-astra`, only with Responses tool support confirmed.
-      Existing `openai/gpt-5.6-sol`, `openai/gpt-5.6-terra`, and
+      Existing `openai/gpt-6-sol`, `openai/gpt-5.6-sol`, `openai/gpt-5.6-terra`, and
       `hhdev-openai/gpt-5.5` remain compatibility fallbacks when available.
 
     Catalog presence proves configuration, not access or working tool calls.
@@ -46,10 +50,10 @@
     model selector that expects a bare ID.
 
     Effort is per model and adapter: inspect supported variants; omit
-    `--variant` when unknown. For GPT-6 start low for extraction, medium for
+    `#variant` when unknown. For GPT-6 start low for extraction, medium for
     coding, high for difficult reasoning; raise further only for a specific
-    unresolved problem. Astra cannot use `none`; use Responses for reasoning
-    with tools across GPT-6. Claude: start with the harness default (Sonnet
+    unresolved problem. Astra and 6.1 Sol cannot use `none`; use Responses
+    for reasoning with tools across GPT-6. Claude: start with the harness default (Sonnet
     5.5 high, Opus 5.5 medium); increase only after checking missing context.
     Do not apply fixed thinking budgets or sampling knobs blindly to new
     adaptive models. Gemma/GLM/DeepSeek thinking follows provider config,
@@ -119,14 +123,15 @@
     multiline prompts through shell quoting. Example (replace paths/ID):
 
     ```bash
-    opencode run --dir /absolute/worktree -m openai/gpt-6-sol --variant medium \
+    cd /absolute/worktree
+    opencode run -m 'openai/gpt-6.1-sol#medium' \
       --title "bounded task" --format json \
       --file /absolute/worktree/.scratch/task-unique/brief.md \
       -- "Read the attached brief and complete only the assigned task."
     ```
 
     Capture exit status, event log, and session ID. Reuse that session with
-    `--session <id> --dir <same-worktree>` for one concrete correction. Keep
+    `--session <id>` from the same worktree for one concrete correction. Keep
     scratch files in scope for the worker's file permissions. Use existing
     wrapper networking; changing global proxy settings is not a retry step.
     Start with at most two workers; increase only for disjoint work and

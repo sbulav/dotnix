@@ -23,11 +23,13 @@ with lib.custom;
         # work-token models.
         settings = {
           model = "hhdev-glm5-fp8/zai-org/GLM-5.3-Flash";
+          # Keep the direct-account small model until Haiku 5.5 is verified
+          # on this host; gateway access does not establish direct access.
           small_model = "anthropic/claude-haiku-4-5-20251001";
           # Add direct Anthropic provider alongside hhdev-* providers
-          provider = {
+          providers = {
             anthropic = {
-              npm = "@ai-sdk/anthropic";
+              package = "@opencode/ai/providers/anthropic";
               name = "Anthropic";
               models = (import ../../../modules/home/ai/shared/models.nix).anthropic // {
                 "claude-haiku-4-5-20251001" = {

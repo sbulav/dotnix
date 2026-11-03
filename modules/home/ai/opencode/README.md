@@ -36,8 +36,8 @@ Edit `providers.nix` to add new AI providers:
 {
   "my-custom-provider" = {
     name = "My Custom Provider";
-    npm = "@ai-sdk/openai-compatible";
-    options = {
+    package = "@opencode/ai/providers/openai-compatible";
+    settings = {
       baseURL = "https://my-api.example.com";
       apiKey = "{env:CUSTOM_API_KEY}";
     };
@@ -49,6 +49,11 @@ Edit `providers.nix` to add new AI providers:
   };
 }
 ```
+
+Provider entries use OpenCode V2 syntax under `settings.providers`. For a
+gateway serving known models, set `canonical = "openai"` (or `anthropic`,
+`google`, `xai`, `deepseek`) to inherit the upstream catalog metadata.
+Self-hosted entries need explicit deployment limits and capabilities.
 
 ## Adding Agents
 

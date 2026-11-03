@@ -67,7 +67,7 @@ in
 
     ${routing}
 
-    ## Review lanes (2026-10-07)
+    ## Review lanes (2026-11-03)
 
     Fill each reviewer slot from the cheapest tier that has a reachable lane
     in a family other than the author's; descend a tier when the upper one
@@ -75,19 +75,24 @@ in
     the lens requires it (security, tie-break).
 
     1. Free: `hhdev-glm5-fp8/zai-org/GLM-5.3-Flash` via OpenCode (Zhipu,
-       131k context, thinks by default). Default first reviewer for a diff
+       262k deployed context, thinks by default). Default first reviewer for a diff
        that fits its window.
     2. Subscription, via `agy`: `gemini-3.1-pro-high` for spec/architecture
        and large diffs; `gemini-3.8-flash-high` for a fast correctness pass;
        `claude-opus-4-6-thinking` / `claude-sonnet-4-6` add independence only
        for a non-Claude author. `gpt-oss-120b-medium` gathers evidence only.
-    3. Cheap metered: `hhdev-grok/grok-4.7` via OpenCode (xAI, 500k context,
-       $0.20/$0.60 per Mtok) for the largest diffs or a third family.
-    4. Metered strong: Sol/Sonnet 5.5, then Astra/Opus 5.5 — security lens,
-       tie-breaks, and slots tiers 1-3 cannot fill.
+    3. Cheap metered: `hhdev-anthropic/claude-haiku-5-5` for bounded,
+       low-risk evidence gathering when the author is not Anthropic. Public
+       input/output rates are $0.10/$0.50 per Mtok up to 100k prompt tokens,
+       $0.50/$2.50 above that. Verify findings; this is not a security verdict.
+    4. Metered strong: Grok 4.7 for another family, GPT-6.1 Sol/Sonnet 5.5,
+       then Astra/Opus 5.5. Grok's public input/output rates are $2/$6 per Mtok
+       below 200k prompt tokens and $4/$12 at or above it; no hhdev discount
+       is verified. Security lenses and tie-breaks use Sol/Sonnet or stronger.
 
-    GLM, Gemini and Grok are three families distinct from both OpenAI and
-    Anthropic, so cheap tiers usually satisfy the diversity rule on their own.
+    GLM and Gemini are distinct from both OpenAI and Anthropic. Haiku is
+    independent of OpenAI but not another Claude author; Grok adds a third
+    non-OpenAI/non-Anthropic family at the metered tier.
     Their findings are candidates: the parent verification below is what
     makes them safe to report. Record a tier 1-3 "no findings" on a risky
     area as thinner coverage in residual risks.

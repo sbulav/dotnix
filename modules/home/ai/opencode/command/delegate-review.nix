@@ -1,5 +1,5 @@
 {
-  description = "Multi-lens PR review routed cheapest-first: free GLM-5.3, Antigravity Gemini, Grok 4.7, then Sol/Sonnet and Astra/Opus for security and tie-breaks.";
+  description = "Multi-lens PR review routed cheapest-first: free GLM-5.3, Antigravity Gemini, Haiku 5.5, then metered Grok/Sol/Sonnet; security and tie-breaks use Sol/Sonnet or stronger.";
   requirements = ''
     Load the `delegate-review` skill immediately and execute it end-to-end.
 

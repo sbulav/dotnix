@@ -1,6 +1,6 @@
 # Model routing maintenance
 
-Reviewed 2026-09-29 for Claude Code, OpenCode, and ChatGPT Work / Codex.
+Model catalog reviewed 2026-11-03 for Claude Code, OpenCode, and ChatGPT Work / Codex.
 
 `models.nix` owns the current OpenAI/Anthropic catalog, reused by OpenCode
 providers, the direct Anthropic provider on mba13, and the Herdr relay's
@@ -13,6 +13,13 @@ The app's model picker and subscription access remain account-managed.
 Both delegation skills interpolate it. Roles are starting policies, not
 invented benchmark scores. Preserve the self-hosted OpenCode default and
 small-model settings unless intentionally changing their cost/latency role.
+
+OpenCode gateway providers use native V2 entries with `canonical` provider
+inheritance, so upstream limits, pricing, reasoning variants, and capabilities
+reach the custom IDs. Self-hosted limits remain deployment-specific. Gateway
+GPT models explicitly use Responses; Argon retains the gateway's conservative
+32,768-token output limit. See the [dated model audit](../../../../docs/opencode-model-audit-2026-11-03.md)
+for inventory evidence and validation results.
 
 ## Evidence behind the refactor
 
@@ -67,7 +74,7 @@ Merge danger body shape, credited to Dex Horthy's `show-me`.
 
 1. Verify exact IDs and compatibility in official docs. Update `models.nix`
    and the workload policy together, preserving explicit fallback roles.
-2. Check installed CLI versions and `opencode models <provider>`. A catalog
+2. Check installed CLI versions and `/models` or `opencode api get /api/model`. A catalog
    listing alone does not prove authenticated access or successful tool use.
 3. Check supported reasoning variants and transport. GPT-6 reasoning with
    tools uses Responses; do not assume a gateway implements it. Avoid copying
@@ -79,11 +86,16 @@ Merge danger body shape, credited to Dex Horthy's `show-me`.
 5. Format/lint, evaluate generated skills and all affected hosts, build,
    and run flake checks. Activate only with explicit approval.
 
-Known compatibility gate: the pinned Claude Code package is 2.1.283 at this
-review. Sonnet 5.5 requires >=2.1.284; Opus 5.5 requires >=2.1.280. The catalog
-can expose Sonnet 5.5 for OpenCode and newer remote CLIs, but the pinned local
-Claude CLI must be upgraded before using it. No flake input was bumped as
-part of this model/prompt change. Gateway inference has not been smoke-tested.
+At the September review, the pinned Claude Code package was 2.1.283.
+Sonnet 5.5 requires >=2.1.284; Opus 5.5 requires >=2.1.280. That catalog
+exposed Sonnet 5.5 for OpenCode and newer remote CLIs, but the pinned local
+Claude CLI needed an upgrade. No flake input was bumped in that review,
+and gateway inference was not smoke-tested then.
+
+The November model update smoke-tests gateway streaming and read-tool round
+trips in isolation. The Mac's direct Haiku 4.5 title selection is unchanged:
+its account needs a separate Haiku 5.5 check. The CLI-version gate above is
+the September review's observation, not a current package-version assertion.
 
 ## Primary sources
 
@@ -92,5 +104,5 @@ part of this model/prompt change. Gateway inference has not been smoke-tested.
 - [Claude Sonnet 5.5](https://platform.claude.com/docs/en/models/sonnet-5-5/overview)
 - [Claude Opus 5.5 migration](https://platform.claude.com/docs/en/models/opus-5-5/migration-guide)
 - [Claude Code models and minimum CLI versions](https://code.claude.com/docs/en/model-config)
-- [OpenCode model configuration and variants](https://opencode.ai/docs/models/)
+- [OpenCode model configuration and variants](https://opencode.ai/v2/docs/models)
 - [Local app skill discovery](https://learn.chatgpt.com/docs/build-skills)

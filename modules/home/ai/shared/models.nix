@@ -1,5 +1,5 @@
-# Verified against official model docs on 2026-09-29. These are catalog
-# entries, not proof of account/gateway access. Keep legacy fallbacks in providers.nix.
+# Verified against official docs and hhdev inventories on 2026-11-03.
+# Catalog entries are not proof of access; keep legacy fallbacks in providers.nix.
 let
   openai = {
     "gpt-6-astra" = {
@@ -8,11 +8,20 @@ let
     "gpt-6-sol" = {
       name = "GPT-6 Sol";
     };
+    "gpt-6.1-sol" = {
+      name = "GPT-6.1 Sol";
+    };
+    "gpt-6.1-terra" = {
+      name = "GPT-6.1 Terra";
+    };
     "gpt-6-luna" = {
       name = "GPT-6 Luna";
     };
   };
   anthropic = {
+    "claude-haiku-5-5" = {
+      name = "Claude Haiku 5.5";
+    };
     "claude-sonnet-5-5" = {
       name = "Claude Sonnet 5.5";
     };

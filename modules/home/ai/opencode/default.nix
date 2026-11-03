@@ -225,7 +225,7 @@ let
       # "opencode"
     ];
 
-    provider = providers;
+    inherit providers;
     mcp = registry.mcp.opencode;
 
     # Langfuse tracing: opencode emits OTEL spans, the plugin ships them to
