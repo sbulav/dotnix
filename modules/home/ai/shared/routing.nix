@@ -32,11 +32,11 @@
       `hhdev-glm5-fp8/zai-org/GLM-5.3-Flash`; backup
       `hhdev-deepseek-v4-flash/deepseek-ai/DeepSeek-V4-Flash-0731`.
     - Existing alternatives: `hhdev-grok/grok-4.7`,
-      `hhdev-google/gemini-3.1-pro-preview`, `hhdev-google/gemini-3.8-flash`.
+      `hhdev-google/gemini-3.8-flash`.
       Trial reasoning/coding lane: `hhdev-google/gemini-4-argon`; keep Flash
       for speed and verify representative tasks before promoting Argon.
     - Antigravity (`agy`, subscription, not OpenCode): bare IDs such as
-      `gemini-3.8-flash-high`, `gemini-3.1-pro-high`,
+      `gemini-3.8-flash-high`,
       `claude-opus-4-6-thinking`, `claude-sonnet-4-6`; list with `agy models`.
     - Gateway OpenAI fallback: `hhdev-openai/gpt-6.1-sol` or
       `hhdev-openai/gpt-6-astra`, only with Responses tool support confirmed.

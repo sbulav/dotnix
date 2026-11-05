@@ -105,9 +105,6 @@ in
       baseURL = "https://llmgtw.hhdev.ru/proxy/google/v1beta";
     };
     models = {
-      "gemini-3.1-pro-preview" = {
-        name = "Gemini 3.1 Pro Preview";
-      };
       "gemini-3.8-flash" = {
         name = "Gemini 3.8 Flash";
       };

@@ -77,8 +77,8 @@ in
     1. Free: `hhdev-glm5-fp8/zai-org/GLM-5.3-Flash` via OpenCode (Zhipu,
        262k deployed context, thinks by default). Default first reviewer for a diff
        that fits its window.
-    2. Subscription, via `agy`: `gemini-3.1-pro-high` for spec/architecture
-       and large diffs; `gemini-3.8-flash-high` for a fast correctness pass;
+    2. Subscription, via `agy`: `gemini-3.8-flash-high` for spec/architecture,
+       large diffs and a fast correctness pass;
        `claude-opus-4-6-thinking` / `claude-sonnet-4-6` add independence only
        for a non-Claude author. `gpt-oss-120b-medium` gathers evidence only.
     3. Cheap metered: `hhdev-anthropic/claude-haiku-5-5` for bounded,
@@ -106,7 +106,7 @@ in
     worktree root (the agy workspace):
 
     ```bash
-    agy --model gemini-3.1-pro-high --output-format json \
+    agy --model gemini-3.8-flash-high --output-format json \
       --print-timeout 900s \
       -p "Read .scratch/review-unique/brief.md and complete only the assigned review."
     ```
