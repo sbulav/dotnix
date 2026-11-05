@@ -546,7 +546,12 @@ in
       "sing-box/subscription_url" = {
         sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
         mode = "0400";
-        restartUnits = [ "sing-box-subscription.service" ];
+        # The timer, not the service: a switch that rotates the URL usually
+        # also stop-starts the containers, and a refresh run inside the
+        # activation finds the proxy down, fails, and makes deploy-rs roll
+        # the generation back (2026-11-05). Restarting the timer re-arms
+        # OnActiveSec, so the refresh runs once the switch has settled.
+        restartUnits = [ "sing-box-subscription.timer" ];
       };
       # Shared telegram bot token. Only the file path is declared here: the
       # failure unit reads it through EnvironmentFile= (systemd, as root),
@@ -593,7 +598,7 @@ in
     # on a deploy that failed unit made deploy-rs roll the whole
     # generation back (2026-10-16). The container starts from the last
     # published file; a fresh host gets its first exits from the timer's
-    # OnBootSec tick (falling back to proxyUrls[1..] / direct).
+    # OnActiveSec tick (falling back to proxyUrls[1..] / direct).
     systemd.services.sing-box-subscription = {
       description = "Refresh sing-box exits from the VPN subscription";
       after = [
@@ -614,9 +619,10 @@ in
       description = "Periodic sing-box subscription refresh";
       wantedBy = [ "timers.target" ];
       timerConfig = {
-        # Early first tick: that is the bootstrap path for a host with no
-        # published exits yet.
-        OnBootSec = "2min";
+        # Early first tick after the timer (re)starts — at boot, and after a
+        # subscription_url rotation: the bootstrap path for a host with no
+        # published exits yet, and how a new URL is picked up.
+        OnActiveSec = "2min";
         OnUnitActiveSec = cfg.subscription.interval;
         RandomizedDelaySec = "5min";
         Persistent = true;
