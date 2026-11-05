@@ -67,7 +67,7 @@
 
     # Herdr: terminal multiplexer for AI coding agents.
     herdr = {
-      url = "github:herdrdev/herdr/v0.9.4";
+      url = "github:herdrdev/herdr/v0.9.5";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
