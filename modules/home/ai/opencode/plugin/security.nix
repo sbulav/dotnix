@@ -57,23 +57,30 @@ in
     return isAbsolute(expanded) && resolve(expanded) === resolve(process.env.HOME, ".ssh/config")
   }
 
-  export const SecurityPlugin = async ({ directory, worktree }) => {
-    const workspace = worktree || directory
-    const dangerousPatterns = [
-      ${jsPatterns}
-    ]
+  export default {
+    id: "security",
+    async setup(ctx) {
+      // Relative-escape checks resolve against the location this plugin
+      // instance serves.
+      const workspace = ctx.location.directory
 
-    return {
-      "tool.execute.before": async (input, output) => {
-        // Block dangerous bash patterns that permission lists can't express
-        if (input.tool === "bash") {
-          const cmd = output.args.command || ""
+      const dangerousPatterns = [
+        ${jsPatterns}
+      ]
+
+      await ctx.tool.hook("execute.before", (event) => {
+        const tool = event.tool
+        const args = event.input || {}
+
+        // Block dangerous shell patterns that permission lists can't express
+        if (tool === "shell") {
+          const cmd = args.command || ""
           for (const pattern of dangerousPatterns) {
             if (pattern.test(cmd)) {
               throw new Error("Dangerous command pattern detected")
             }
           }
-          // Block bash commands that reference .env files
+          // Block shell commands that reference .env files
           if (commandReferencesProtectedEnvFile(cmd)) {
             throw new Error(".env files are protected")
           }
@@ -86,28 +93,28 @@ in
         // Block relative paths that escape the workspace while allowing
         // normalized paths like ./foo/../bar and absolute paths that the
         // regular permission system can still govern.
-        if (["read", "write", "edit", "multiedit"].includes(input.tool)) {
-          assertRelativePathStaysInWorkspace(workspace, output.args.filePath, "filePath")
-          if (isProtectedEnvFile(output.args.filePath)) {
+        if (["read", "write", "edit"].includes(tool)) {
+          assertRelativePathStaysInWorkspace(workspace, args.path, "path")
+          if (isProtectedEnvFile(args.path)) {
             throw new Error(".env files are protected")
           }
-          if (isProtectedPath(output.args.filePath) && !(input.tool === "read" && isSshConfig(output.args.filePath))) {
+          if (isProtectedPath(args.path) && !(tool === "read" && isSshConfig(args.path))) {
             throw new Error("~/.ssh, ~/.kube, and kubeconfig files are protected")
           }
         }
 
-        if (["grep", "glob", "list"].includes(input.tool)) {
-          assertRelativePathStaysInWorkspace(workspace, output.args.path, "path")
-          if (input.tool === "grep" && output.args.path && isProtectedEnvFile(output.args.path)) {
+        if (["grep", "glob"].includes(tool)) {
+          assertRelativePathStaysInWorkspace(workspace, args.path, "path")
+          if (tool === "grep" && args.path && isProtectedEnvFile(args.path)) {
             throw new Error(".env files are protected")
           }
-          if (isProtectedPath(output.args.path)) {
+          if (isProtectedPath(args.path)) {
             throw new Error("~/.ssh, ~/.kube, and kubeconfig files are protected")
           }
         }
 
-        if (input.tool === "glob") {
-          const pattern = output.args.pattern || ""
+        if (tool === "glob") {
+          const pattern = args.pattern || ""
           if (pattern === ".." || pattern.startsWith("../") || pattern.includes("/../")) {
             throw new Error("Glob pattern escapes the workspace")
           }
@@ -115,7 +122,23 @@ in
             throw new Error("~/.ssh, ~/.kube, and kubeconfig files are protected")
           }
         }
-      }
-    }
+
+        // Apply the write/edit checks to every path a patch touches.
+        if (tool === "patch") {
+          const patchText = typeof args.patchText === "string" ? args.patchText : ""
+          const headerPattern = /^\s*\*\*\* (?:Add File|Delete File|Update File|Move to):\s*(.+?)\s*$/gm
+          for (const match of patchText.matchAll(headerPattern)) {
+            const p = match[1]
+            assertRelativePathStaysInWorkspace(workspace, p, "path")
+            if (isProtectedEnvFile(p)) {
+              throw new Error(".env files are protected")
+            }
+            if (isProtectedPath(p)) {
+              throw new Error("~/.ssh, ~/.kube, and kubeconfig files are protected")
+            }
+          }
+        }
+      })
+    },
   }
 ''
