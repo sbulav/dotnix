@@ -32,7 +32,7 @@ in
         slack = disabled;
         zoom-us = disabled;
         telegram = disabled;
-        vlc = enabled;
+        mpv = enabled;
         zathura = enabled;
         pcmanfm-qt = enabled;
       };

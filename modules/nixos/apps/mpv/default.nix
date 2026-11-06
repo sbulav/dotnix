@@ -1,5 +1,4 @@
 {
-  options,
   config,
   lib,
   pkgs,
@@ -8,20 +7,20 @@
 with lib;
 with lib.custom;
 let
-  cfg = config.custom.apps.vlc;
+  cfg = config.custom.apps.mpv;
 
   associations = {
-    "audio/*" = [ "vlc.desktop" ];
-    "video/*" = [ "vlc.desktop" ];
+    "audio/*" = [ "mpv.desktop" ];
+    "video/*" = [ "mpv.desktop" ];
   };
 in
 {
-  options.custom.apps.vlc = with types; {
-    enable = mkBoolOpt false "Whether or not to enable vlc.";
+  options.custom.apps.mpv = {
+    enable = mkBoolOpt false "Whether or not to enable mpv as the default audio/video player.";
   };
 
   config = mkIf cfg.enable {
-    environment.systemPackages = with pkgs; [ vlc ];
+    environment.systemPackages = with pkgs; [ mpv ];
 
     xdg = {
       mime = {

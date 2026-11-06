@@ -432,7 +432,6 @@ in
         ];
         "5" = [
           "mpv"
-          "vlc"
           "mpdevil"
         ];
         "6" = [ "virt-manager" ];
