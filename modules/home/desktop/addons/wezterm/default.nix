@@ -1,5 +1,4 @@
 {
-  inputs,
   pkgs,
   config,
   lib,
@@ -33,7 +32,8 @@ in
   config = mkIf cfg.enable {
     programs.wezterm = {
       enable = true;
-      # package = inputs.wezterm.packages.${pkgs.stdenv.hostPlatform.system}.default;
+      # Upstream has not tagged a release since 2024; stable nixpkgs lags main by months.
+      package = pkgs.unstable.wezterm;
       extraConfig =
         # Generate wezterm.lua; order of files are important
         ''
