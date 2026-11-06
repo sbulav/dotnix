@@ -712,7 +712,7 @@ let
 
     # Slice 3: the shell owns the wallpaper engine. Seeded from the repo-wide
     # addons.wallpaper option (as the removed hyprpaper module once was); the
-    # picker directory is host-specific and comes in via cfg.settings.
+    # picker directory is host-specific and comes in via pickerDirectory.
     wallpaper = {
       enabled = true;
       default.path = toString config.custom.desktop.addons.wallpaper;
@@ -726,6 +726,15 @@ let
       # no transition key today, but one GUI tweak of the transition set
       # pins it there and this value stops mattering.
       transition = [ "fade" ];
+    }
+    # The picker stores the absolute path of whatever is picked in the
+    # GUI-owned sidecar, without resolving symlinks. Pointed at the store
+    # tree it saves /nix/store/<hash>-wallpapers-nix…, which the sidecar does
+    # not root — one wallpapers-nix bump plus a gc and the saved wallpaper
+    # (and the palette derived from it) is gone. Through the stable
+    # ~/.local/share/wallpapers symlink the saved path survives store churn.
+    // optionalAttrs (cfg.pickerDirectory != null) {
+      directory = "${config.xdg.dataHome}/wallpapers";
     };
     # Slice 5: the shell owns locking and idle (PAM stack "login" — ships
     # with NixOS, no pam.d registration needed). Survived the 10x manual
@@ -741,6 +750,9 @@ let
       # Parity with swaylock --image: the lock background is the same
       # wallpaper, not noctalia's default plain scrim.
       wallpaper = toString config.custom.desktop.addons.wallpaper;
+      # New upstream key: no notification toasts while locked, so message
+      # previews never render on the lock screen. Restored on unlock.
+      dnd = true;
     };
     # Parity with the old hypridle "pc" profile: lock at 10 min, DPMS off
     # at 15 min, no suspend. Every field must be spelled out: [idle.behavior.*]
@@ -1079,6 +1091,14 @@ in
       programs.noctalia.customPalettes.
     '';
 
+    pickerDirectory = mkOpt (nullOr path) null ''
+      Wallpaper tree exposed to the wallpaper picker through the stable
+      symlink ~/.local/share/wallpapers (and set as wallpaper.directory).
+      The picker saves picked paths verbatim into the GUI-owned sidecar, so
+      a /nix/store path given directly would dangle after the next bump and
+      gc; the symlink keeps saved picks valid across store-path churn.
+    '';
+
     micVuMeter = {
       enable = mkBoolOpt false ''
         Whether to enable the mic VU meter bar widget (Luau plugin that
@@ -1137,6 +1157,11 @@ in
       "noctalia/zz-overrides.toml" = mkIf (cfg.overrides != { }) { source = overridesFile; };
       "autostart/nm-applet.desktop".text = hiddenAutostart;
       "autostart/blueman.desktop".text = hiddenAutostart;
+    };
+
+    # Stable picker root (see pickerDirectory and wallpaper.directory).
+    xdg.dataFile."wallpapers" = mkIf (cfg.pickerDirectory != null) {
+      source = cfg.pickerDirectory;
     };
 
     # notify-send for the modules that shell out to it; the daemon side used

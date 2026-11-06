@@ -73,9 +73,10 @@ in
           # M3 roles rather than vu-neon literals — literal neons over a
           # wallpaper palette clash. Flip to "theme" together with the GUI.
           colorSource = "wallpaper";
-          # Same picker directory waypaper used; the default wallpaper still
-          # flows through the shared addons.wallpaper option below.
-          settings.wallpaper.directory = "${wallpapers}/share/wallpapers";
+          # Same picker directory waypaper used, behind a stable symlink;
+          # the default wallpaper still flows through the shared
+          # addons.wallpaper option below.
+          pickerDirectory = "${wallpapers}/share/wallpapers";
           # Port of the old waybar akg-vu-meter (default sourceMatch AKG_C44).
           micVuMeter.enable = true;
         };

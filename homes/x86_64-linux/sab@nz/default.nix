@@ -39,10 +39,11 @@ in
         # waypaper/swaylock/hypridle stack is gone from the repo).
         noctalia = {
           enable = true;
+          # Same picker directory waypaper used, behind a stable symlink; the
+          # default wallpaper still flows through the shared addons.wallpaper
+          # option below.
+          pickerDirectory = "${wallpapers}/share/wallpapers";
           settings = {
-            # Same picker directory waypaper used; the default wallpaper still
-            # flows through the shared addons.wallpaper option below.
-            wallpaper.directory = "${wallpapers}/share/wallpapers";
             # Parity with the old hypridle "laptop" profile: lock at 5 min,
             # screen off at 10 min, suspend at 20 min. Complete entries only —
             # noctalia drops partial [idle.behavior.*] tables.
