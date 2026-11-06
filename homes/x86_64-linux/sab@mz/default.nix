@@ -142,6 +142,7 @@ in
         syncEngine = enabled;
       };
       ktalk = enabled;
+      mpv = enabled;
       libreoffice = enabled;
       thunderbird = enabled;
     };
@@ -168,6 +169,7 @@ in
       k9s = enabled;
       opentofu = disabled;
       tea = enabled;
+      disktree = enabled;
       record-screen = enabled;
       sqlite-jira = enabled;
       yandex-cloud = disabled;

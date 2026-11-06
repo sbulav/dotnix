@@ -67,6 +67,18 @@ hl.config({
 		-- middle), xdg-activation via focus_on_activate below, and keyboard
 		-- movefocus/focuswindow binds.
 		no_warps = true,
+		-- Typing hides the pointer until it moves again (Omarchy).
+		hide_on_key_press = true,
+	},
+	render = {
+		-- Stay SDR when a window goes fullscreen on an HDR panel; apps opt
+		-- in to HDR explicitly instead of the compositor guessing.
+		cm_auto_hdr = 0,
+	},
+	binds = {
+		-- Switching workspaces also hides an open special workspace (quake
+		-- console) instead of carrying it along.
+		hide_special_on_workspace_change = true,
 	},
 	decoration = {
 		rounding = 10,
@@ -89,6 +101,11 @@ hl.config({
 		disable_hyprland_logo = true,
 		disable_splash_rendering = true,
 		focus_on_activate = true,
+		-- A crashed locker no longer strands the session behind a dead lock.
+		allow_session_lock_restore = true,
+		disable_scale_notification = true,
+		-- Flag an unresponsive app after 3 missed pings instead of 5.
+		anr_missed_pings = 3,
 	},
 })
 

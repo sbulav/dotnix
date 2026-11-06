@@ -118,6 +118,27 @@ let
       move = "(monitor_w-window_w-40) (monitor_h*0.04)",
     })
 
+    -- Google Meet's Chromium PiP is a plain "Meet - ..." window, not the
+    -- Picture-in-Picture title Firefox uses. Inert until a Chromium-family
+    -- browser is installed. Omarchy's title match, kept verbatim: a Chromium
+    -- window with a "Meet - ..." *tab* title also matches, so a Chromium
+    -- Meet tab becomes the floating 600x338 overlay. Hyprland's regex has no
+    -- lookahead to exclude the " - Google Chrome" suffix; narrow it if that
+    -- ever bites.
+    hl.window_rule({
+      match = {
+        class = "^(chromium|chromium-browser|google-chrome|brave-browser|vivaldi-stable|microsoft-edge)$",
+        title = "^Meet - .+",
+      },
+      float = true,
+      pin = true,
+      size = { 600, 338 },
+      keep_aspect_ratio = true,
+      border_size = 0,
+      opacity = "1 1",
+      move = "(monitor_w-window_w-40) (monitor_h-window_h-40)",
+    })
+
     hl.window_rule({
       match = {
         class = "^(xdg-desktop-portal-gtk|org.gnome.Nautilus)$",
@@ -144,6 +165,23 @@ let
       no_dim = true,
       move = "(monitor_w-window_w-40) (monitor_h-window_h-40)",
     })
+
+    -- A floating window moved to a workspace on another monitor keeps its
+    -- old pixel offset (Omarchy pop.lua). The event fires before the move
+    -- lands, so center it one tick later. Pinned windows have their own
+    -- placement rules above.
+    hl.on("window.move_to_workspace", function(window, workspace)
+      if not (window and workspace and window.monitor and workspace.monitor) then
+        return
+      end
+      if not window.floating or window.pinned or window.monitor.id == workspace.monitor.id then
+        return
+      end
+      local target = "address:" .. window.address
+      hl.timer(function()
+        hl.dispatch(hl.dsp.window.center({ window = target }))
+      end, { timeout = 1, type = "oneshot" })
+    end)
   '';
 
   keybindingGuide = pkgs.writeShellApplication {
@@ -506,6 +544,10 @@ in
                 gaps_in = 5,
                 gaps_out = 5,
                 border_size = 2,
+                -- Drag a border to resize; the grab zone extends past the
+                -- 2 px border so it is reachable (Omarchy).
+                resize_on_border = true,
+                extend_border_grab_area = 8,
                 ["col.active_border"] = { colors = { "rgba(${c.cyan}ff)", "rgba(${c.pink}ff)" }, angle = 45 },
                 ["col.inactive_border"] = "rgba(${c.separator}aa)",
                 layout = "dwindle",

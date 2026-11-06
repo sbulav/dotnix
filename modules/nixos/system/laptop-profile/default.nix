@@ -447,6 +447,16 @@ in
   };
 
   config = mkIf cfg.enable {
+    # A docked laptop has Ethernet and Wi-Fi on the same LAN; by default
+    # either interface answers ARP for both addresses and the peer caches
+    # the wrong MAC when one link drops (Omarchy 90-omarchy-arp.conf).
+    boot.kernel.sysctl = {
+      "net.ipv4.conf.all.arp_ignore" = mkDefault 1;
+      "net.ipv4.conf.default.arp_ignore" = mkDefault 1;
+      "net.ipv4.conf.all.arp_announce" = mkDefault 2;
+      "net.ipv4.conf.default.arp_announce" = mkDefault 2;
+    };
+
     environment.systemPackages = [
       userController
       pkgs.libnotify

@@ -57,6 +57,7 @@ in
     wallpaper = "${wallpapers}/share/wallpapers/unorganized/vu_meter_code_neon.png";
     # Enable Bootloader
     boot.efi.enable = true;
+    boot.efi.quiet = true;
     battery.enable = false; # Only for laptops, they will still work without it, just improves battery life
     sleep = {
       enable = true;

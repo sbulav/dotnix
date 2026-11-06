@@ -87,6 +87,7 @@ in
     apps = {
       obsidian = enabled;
       ktalk = enabled;
+      mpv = enabled;
     };
 
     cli-apps = {
@@ -107,6 +108,7 @@ in
       opentofu = enabled;
       yandex-cloud = enabled;
       tea = enabled;
+      disktree = enabled;
       sqlite-jira = enabled;
     };
     security = {
