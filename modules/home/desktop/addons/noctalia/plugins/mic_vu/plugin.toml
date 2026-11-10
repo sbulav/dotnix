@@ -6,10 +6,12 @@
 id          = "sab/mic_vu"
 name        = "Mic VU Meter"
 version     = "1.0.0"
-# Written against the pinned rev's current API (28). Declaring the floor (3)
+# Written against the pinned rev's current API (51). Declaring the floor (3)
 # instead would make the first upstream floor bump silently drop the plugin;
-# manifest widget actions below additionally require >= 14.
-plugin_api  = 28
+# what this plugin actually needs is >= 14 (manifest widget actions below),
+# >= 24 (argv runAsync for the mute/gain queries) and >= 31 (getColor for the
+# palette-coloured face).
+plugin_api  = 51
 author      = "sab"
 license     = "MIT"
 icon        = "microphone"
@@ -41,7 +43,8 @@ entry = "widget.luau"
   key       = "meter_width"
   type      = "int"
   label_key = "settings.meter_width.label"
-  default   = 46
+  # 2:1 face: 44 wide is 22 tall, the full height of the 22 px bar.
+  default   = 44
   min       = 16
   max       = 200
 
