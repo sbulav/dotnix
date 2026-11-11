@@ -52,7 +52,14 @@ let
   # it forwards to an address list it proxies via zanoza (homelab
   # mikrotik/home-youtube-proxy.rsc), so both resolvers must ask it: home
   # clients use either one.
-  domainUpstreams = [ "[/googlevideo.com/]192.168.92.1" ];
+  # TMDB's image CDN (BunnyCDN) geo-answers Russian resolvers (Yandex,
+  # Cloudflare's local PoP) with 127.0.0.1, yet its edges serve this uplink
+  # fine; browsers load Radarr Discover posters straight from it. Quad9 over
+  # DoH answers with a real edge.
+  domainUpstreams = [
+    "[/googlevideo.com/]192.168.92.1"
+    "[/image.tmdb.org/]https://dns.quad9.net/dns-query"
+  ];
 in
 {
   dns = {

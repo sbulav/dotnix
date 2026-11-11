@@ -50,7 +50,16 @@ but brief list-version/cache differences during updates are possible. This
 preserves the observed production policy (Cloudflare security, AdGuard and
 77.88.8.8 in parallel) rather than changing upstream filtering semantics.
 
-One exception: `googlevideo.com` goes only to the home router (HNetZ,
+Two exceptions, both in `lib.custom.dns.domainUpstreams`.
+
+`image.tmdb.org` goes only to Quad9 over DoH. TMDB's image CDN (BunnyCDN)
+answers resolvers it locates in Russia, Yandex and Cloudflare's local PoP
+included, with 127.0.0.1, although its edges serve this uplink normally.
+Browsers fetch Radarr Discover posters straight from it, so without the
+exception those posters stay blank. If Quad9 ever starts answering from a
+Russian PoP, the posters break again the same way.
+
+`googlevideo.com` goes only to the home router (HNetZ,
 192.168.92.1, `lib.custom.dns.domainUpstreams`). The router adds each answer
 to an address list whose YouTube cache nodes it proxies via zanoza (homelab
 `mikrotik/home-youtube-proxy.rsc`). It forwards these names to 1.1.1.1 and
