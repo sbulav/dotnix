@@ -118,56 +118,67 @@ in
         }
       ];
 
-      config = _: {
-        users.groups.media.gid = mediaGid;
+      config =
+        { config, ... }:
+        {
+          users.groups.media.gid = mediaGid;
 
-        services.qbittorrent = {
-          enable = true;
-          group = "media";
-          inherit (cfg) webuiPort;
-          inherit (cfg) torrentingPort;
-          # NOTE: serverConfig is reinstalled on every service start —
-          # preferences changed in the WebUI do not survive a restart,
-          # torrents/categories do. Keep durable settings here.
-          serverConfig = {
-            LegalNotice.Accepted = true;
-            BitTorrent.Session = {
-              DefaultSavePath = "/data/torrents";
-              Port = cfg.torrentingPort;
-            };
-            Preferences.WebUI = {
-              # UIs are only reachable through the LAN-only traefik route
-              # (same trust model as flood's --noauth).
-              AuthSubnetWhitelistEnabled = true;
-              AuthSubnetWhitelist = "172.16.64.0/24, 192.168.80.0/20";
-              # Traefik passes Host: ${cfg.host} (passHostHeader);
-              # qBittorrent would otherwise reject the proxied requests.
-              HostHeaderValidation = false;
-            };
-          };
-        };
-
-        # Group-writable files so sonarr (group media) can import/hardlink.
-        systemd.services.qbittorrent.serviceConfig.UMask = "0002";
-
-        networking = {
-          firewall = {
+          services.qbittorrent = {
             enable = true;
-            allowedTCPPorts = [
-              cfg.webuiPort
-              cfg.torrentingPort
-            ];
-            allowedUDPPorts = [ cfg.torrentingPort ];
+            group = "media";
+            inherit (cfg) webuiPort;
+            inherit (cfg) torrentingPort;
+            # NOTE: serverConfig is reinstalled on every service start —
+            # preferences changed in the WebUI do not survive a restart,
+            # torrents/categories do. Keep durable settings here.
+            serverConfig = {
+              LegalNotice.Accepted = true;
+              BitTorrent.Session = {
+                DefaultSavePath = "/data/torrents";
+                Port = cfg.torrentingPort;
+              };
+              Preferences.WebUI = {
+                # UIs are only reachable through the LAN-only traefik route
+                # (same trust model as flood's --noauth).
+                AuthSubnetWhitelistEnabled = true;
+                AuthSubnetWhitelist = "172.16.64.0/24, 192.168.80.0/20";
+                # Traefik passes Host: ${cfg.host} (passHostHeader);
+                # qBittorrent would otherwise reject the proxied requests.
+                HostHeaderValidation = false;
+              };
+            };
           };
-          useHostResolvConf = false;
-        };
 
-        services.resolved = {
-          enable = true;
-          settings.Resolve = householdDnsSettings;
+          # Group-writable files so sonarr (group media) can import/hardlink.
+          systemd.services.qbittorrent.serviceConfig.UMask = "0002";
+
+          # The ephemeral container boots identically, so qbittorrent-nox gets
+          # the same PID every time. A lockfile left by an unclean stop then
+          # names a live PID — its own — and it exits 0 as a "second instance",
+          # which Restart=on-failure never retries. systemd already guarantees
+          # a single instance, so drop the lock before every start.
+          systemd.services.qbittorrent.preStart = ''
+            rm -f "${config.services.qbittorrent.profileDir}/qBittorrent/config/lockfile"
+          '';
+
+          networking = {
+            firewall = {
+              enable = true;
+              allowedTCPPorts = [
+                cfg.webuiPort
+                cfg.torrentingPort
+              ];
+              allowedUDPPorts = [ cfg.torrentingPort ];
+            };
+            useHostResolvConf = false;
+          };
+
+          services.resolved = {
+            enable = true;
+            settings.Resolve = householdDnsSettings;
+          };
+          system.stateVersion = "26.05";
         };
-        system.stateVersion = "26.05";
-      };
     };
   };
 }
