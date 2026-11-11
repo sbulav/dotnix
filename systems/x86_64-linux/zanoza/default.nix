@@ -206,6 +206,9 @@
       # filmix-torznab bridge; needs the filmix-env secret in
       # secrets/zanoza/default.yaml (see the prowlarr module header).
       enableFilmix = true;
+      # filmix.gg sits behind Cloudflare, unreachable direct from this
+      # uplink; go through the sing-box mixed inbound.
+      filmixProxy = "socks5h://172.16.64.108:20170";
       host = "prowlarr.sbulav.ru";
       hostAddress = "172.16.64.10";
       localAddress = "172.16.64.113";

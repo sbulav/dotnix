@@ -33,7 +33,12 @@
 # secret shaped as an env file:
 #   FILMIX_COOKIE=dle_user_id=NNN; dle_password=HEXHASH
 # (long-lived "remember me" DLE cookies, copied from a logged-in browser;
-# add HTTPS_PROXY=socks5h://... there if filmix must egress via sing-box).
+# they are not tied to a domain, so they survive filmix mirror moves).
+# filmixUrl follows filmix's current mirror (filmix.tech went dark on
+# 2026-11-11; the others redirect to filmix.gg). filmixProxy routes the
+# bridge's filmix traffic through sing-box: filmix.gg is behind
+# Cloudflare, which this uplink cannot reach directly. Tracker swarm
+# scrapes always go direct.
 # One-time UI step: Indexers → Add → Generic Torznab,
 # URL http://127.0.0.1:9117, API path /api, no API key.
 {
@@ -54,6 +59,10 @@ in
     enable = mkBoolOpt false "Enable prowlarr nixos-container;";
     enableFlareSolverr = mkBoolOpt false "Enable FlareSolverr alongside Prowlarr for protected indexers";
     enableFilmix = mkBoolOpt false "Run the filmix-torznab bridge alongside Prowlarr";
+    filmixUrl = mkOpt str "https://filmix.gg" "Base URL of the filmix mirror the bridge talks to";
+    filmixProxy =
+      mkOpt str ""
+        "HTTPS_PROXY for the bridge's filmix requests (e.g. socks5h://host:port); empty = direct";
     secret_file = mkOpt str "secrets/zanoza/default.yaml" "SOPS file with the filmix-env secret";
     dataPath = mkOpt str "/tank/prowlarr" "Prowlarr state path on host machine";
     host = mkOpt str "prowlarr.sbulav.ru" "The host to serve prowlarr on";
@@ -148,6 +157,10 @@ in
           description = "Filmix Torznab bridge";
           wantedBy = [ "multi-user.target" ];
           after = [ "network.target" ];
+          environment = {
+            FILMIX_URL = cfg.filmixUrl;
+          }
+          // lib.optionalAttrs (cfg.filmixProxy != "") { HTTPS_PROXY = cfg.filmixProxy; };
           serviceConfig = {
             ExecStart = lib.getExe pkgs.custom.filmix-torznab;
             EnvironmentFile = config.sops.secrets."filmix-env".path;

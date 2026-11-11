@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Filmix -> Torznab bridge (issue #39).
 
-Filmix (filmix.tech, DLE engine) hides .torrent files one hop behind
+Filmix (filmix.gg, DLE engine) hides .torrent files one hop behind
 search: search returns *posts* (films/series), while each post's
 /download/{post_id} page lists several quality variants, each with a
 scene-style filename and a /download-file/{file_id} .torrent link.
@@ -21,7 +21,7 @@ long-lived "remember me" cookies; grab them from a logged-in browser.
 
 Environment:
   FILMIX_COOKIE     required
-  FILMIX_URL        default https://filmix.tech
+  FILMIX_URL        default https://filmix.gg
   FILMIX_BIND       default 127.0.0.1
   FILMIX_PORT       default 9117
   FILMIX_MAX_POSTS  download pages fetched per query, default 5
@@ -100,7 +100,7 @@ class Config:
             log.error("FILMIX_COOKIE is not set (dle_user_id=..; dle_password=..)")
             sys.exit(1)
         self.cookie = cookie
-        self.base_url = os.environ.get("FILMIX_URL", "https://filmix.tech").rstrip("/")
+        self.base_url = os.environ.get("FILMIX_URL", "https://filmix.gg").rstrip("/")
         self.bind = os.environ.get("FILMIX_BIND", "127.0.0.1")
         self.port = int(os.environ.get("FILMIX_PORT", "9117"))
         self.max_posts = int(os.environ.get("FILMIX_MAX_POSTS", "5"))
