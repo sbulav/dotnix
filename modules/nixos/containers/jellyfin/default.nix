@@ -30,10 +30,18 @@ in
     # Libraries with realtime monitoring off (IPCAM: thousands of jpgs a day
     # made the inotify watcher burn a core) are re-scanned from the host on a
     # timer instead. Needs the "jellyfin/api_key" secret in secret_file.
+    # Libraries laid out as YYYY-MM-DD day folders (IPCAM) only get
+    # yesterday's and today's folders refreshed; a whole-library recursive
+    # walk of ~65k jpgs pegged all cores and tripped the CPU temp alert.
     scheduledScan = {
       libraries = mkOpt (listOf str) [ ] "Jellyfin library names to refresh on the timer";
       onCalendar = mkOpt str "*:0/15" "systemd OnCalendar expression for the library refresh";
     };
+    # 0 (Jellyfin's default) fans scans out over every core; zanoza's 5825U
+    # then hits 90+°C during the 12h "Scan Media Library" task.
+    scanConcurrency =
+      mkOpt int 4
+        "LibraryScanFanoutConcurrency/LibraryMetadataRefreshConcurrency enforced on start; 0 = all cores";
   };
   imports = [
     (import ../shared/shared-adguard-dns-rewrite.nix {
@@ -96,6 +104,12 @@ in
       script = ''
         base="http://${cfg.localAddress}:8096"
         auth="Authorization: MediaBrowser Token=$(cat "$CREDENTIALS_DIRECTORY/api_key")"
+        refresh() {
+          curl -sSf -m 30 -o /dev/null -X POST -H "$auth" \
+            "$base/Items/$1/Refresh?Recursive=true&ImageRefreshMode=Default&MetadataRefreshMode=Default&ReplaceAllImages=false&ReplaceAllMetadata=false"
+        }
+        today=$(date +%F)
+        yesterday=$(date -d yesterday +%F)
         folders=$(curl -sSf -m 30 -H "$auth" "$base/Library/VirtualFolders")
         for name in ${lib.escapeShellArgs cfg.scheduledScan.libraries}; do
           id=$(jq -r --arg n "$name" '.[] | select(.Name == $n) | .ItemId' <<<"$folders")
@@ -103,9 +117,20 @@ in
             echo "library '$name' not found" >&2
             continue
           fi
-          curl -sSf -m 30 -o /dev/null -X POST -H "$auth" \
-            "$base/Items/$id/Refresh?Recursive=true&ImageRefreshMode=Default&MetadataRefreshMode=Default&ReplaceAllImages=false&ReplaceAllMetadata=false"
-          echo "refresh requested: $name ($id)"
+          children=$(curl -sSf -m 30 -H "$auth" "$base/Items?ParentId=$id")
+          today_id=$(jq -r --arg d "$today" '.Items[] | select(.Name == $d) | .Id' <<<"$children")
+          if [ -z "$today_id" ]; then
+            # New day folder not indexed yet (or not a day-folder library):
+            # a full walk picks it up, later runs go back to the cheap path.
+            refresh "$id"
+            echo "refresh requested: $name ($id), full"
+            continue
+          fi
+          yesterday_id=$(jq -r --arg d "$yesterday" '.Items[] | select(.Name == $d) | .Id' <<<"$children")
+          for child in $yesterday_id $today_id; do
+            refresh "$child"
+          done
+          echo "refresh requested: $name ($id), day folders $yesterday $today"
         done
       '';
     };
@@ -318,6 +343,12 @@ in
                   CLIENT_SECRET="$(cat ${config.sops.secrets."jellyfin/oidc_client_secret".path})"
                   sed "s/CLIENT_SECRET_REPLACE/$CLIENT_SECRET/" ${ssoConfig} > /var/lib/jellyfin/plugins/configurations/SSO-Auth.xml
                   cat ${brandingConfig} > /var/lib/jellyfin/config/branding.xml
+
+                  # Cap scan parallelism (Dashboard edits last until restart)
+                  if [ -f /var/lib/jellyfin/config/system.xml ]; then
+                    sed -i -E 's#<(LibraryScanFanoutConcurrency|LibraryMetadataRefreshConcurrency)>[0-9]+<#<\1>${toString cfg.scanConcurrency}<#' \
+                      /var/lib/jellyfin/config/system.xml
+                  fi
 
                   # Setting up SSO plugin
                   rm -rf /var/lib/jellyfin/plugins/sso-authentication-plugin
