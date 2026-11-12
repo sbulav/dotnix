@@ -24,7 +24,7 @@ Sources: `opencode --version`, `opencode api get /api/model`, and the gateway en
 | `hhdev-grok` | Grok 4.7 | No version bump: xAI still recommends 4.7 for coding and chat, and hhdev lists it. Correct or document the pricing discrepancy below. [R2], [H4], [X1]. |
 | `hhdev-glm5-fp8` | GLM-5.3 Flash, default model | No model-ID bump: this endpoint still serves `zai-org/GLM-5.3-Flash`. Its reported deployment context is now 262,144, versus 131,072 configured locally. [R2], [R3], [H6]. |
 | `hhdev-gemma4-26b` | Gemma 4 26B A4B, default small model | Do not rename or bump blindly: `/models` returns only `id: "unknown"`. Validate the configured ID with generation before changing it. This response alone does not prove the configured model is broken. [R2], [R3], [H7]. |
-| `hhdev-deepseek-v4-flash` | Self-hosted DeepSeek V4 Flash 0731 | No model-ID bump available on this endpoint. Set an explicit context limit of 131,072, matching the deployed inventory. Do not apply public V4.1 limits to this older deployment. [R2], [H8]. |
+| `hhdev-deepseek-v4-flash` | Self-hosted DeepSeek V41 Flash 1017 | No model-ID bump available on this endpoint. Set an explicit context limit of 131,072, matching the deployed inventory. Do not apply public V4.1 limits to this older deployment. [R2], [H8]. |
 | `hhdev-deepseek` | `deepseek-flash`, `deepseek-v4-pro`, with 2,048/4,096-token settings | Re-evaluate rather than rename: the gateway now labels `deepseek-flash` as V4.1 Flash. DeepSeek's official alias currently serves V4.1-Flash-1017. Check the old output-budget restrictions before restoring this route. Neither actual gateway output capacity nor tool behavior was tested. [R2], [H5], [D1]. |
 
 ## Metadata fixes are as important as model bumps
@@ -38,7 +38,7 @@ Before the update, the resolved catalog reported these values rather than the up
 | `hhdev-openai/gpt-6-sol` | 200,000 | 32,000 | `opencode api get /api/model` |
 | `hhdev-anthropic/claude-sonnet-5-5` | 200,000 | 32,000 | Same command |
 | `hhdev-google/gemini-3.8-flash` | 200,000 | 32,000 | Same command |
-| Self-hosted DeepSeek V4 Flash 0731 | 200,000 | 32,000 | Same command; backend reports only 131,072 context [H8] |
+| Self-hosted DeepSeek V41 Flash 1017 | 200,000 | 32,000 | Same command; backend reports only 131,072 context [H8] |
 | Self-hosted GLM-5.3 Flash | 131,072 | 32,768 | Same command; backend reports 262,144 context [H6] |
 
 OpenCode documents 200,000/32,000 as fallback values for unknown custom models.
@@ -138,7 +138,7 @@ Self-hosted models omitted `#low`, retaining their configured template controls.
 | Grok 4.7 | PASS | `ses_e5f43356dffeIYgF1vtIm17gTL` |
 | Self-hosted GLM-5.3 Flash | PASS | `ses_e5f432389ffeWc63nsWKJfGv6g` |
 | Self-hosted Gemma 4 | PASS despite `unknown` inventory ID | `ses_e5f431664ffeeya9VRE6vmEhmH` |
-| Self-hosted DeepSeek V4 Flash 0731 | PASS | `ses_e5f430efeffeFNRYcoBdUuI4dC` |
+| Self-hosted DeepSeek V41 Flash 1017 | PASS | `ses_e5f430efeffeFNRYcoBdUuI4dC` |
 | Gateway DeepSeek Flash | PASS with existing output budget | `ses_e5f430d42ffeilAztanGUMBWoA` |
 
 These checks establish small streaming/tool requests, not full-context capacity,
@@ -190,7 +190,7 @@ No repository content was sent for inference.
 [H5]: https://llmgtw.hhdev.ru/proxy/deepseek/models
 [H6]: https://llm-gateway.pyn.ru/proxy/glm5-fp8/v1/models
 [H7]: https://llm-gateway.pyn.ru/proxy/gemma-4-26b-a4b-it/v1/models
-[H8]: https://llm-gateway.pyn.ru/proxy/deepseek-v4-flash-0731/v1/models
+[H8]: https://llm-gateway.pyn.ru/proxy/deepseek-v41-flash-1017/v1/models
 [O1]: https://developers.openai.com/api/docs/models
 [O2]: https://developers.openai.com/api/docs/models/gpt-6.1-sol
 [O3]: https://developers.openai.com/api/docs/models/gpt-6.1-terra

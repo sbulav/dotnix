@@ -244,11 +244,11 @@ in
     name = "HHDev DeepSeek V4 Flash";
     package = "@opencode/ai/providers/openai-compatible";
     settings = {
-      baseURL = "https://llm-gateway.pyn.ru/proxy/deepseek-v4-flash-0731/v1";
+      baseURL = "https://llm-gateway.pyn.ru/proxy/deepseek-v41-flash-1017/v1";
       apiKey = "{env:OPENAI_API_PYN_KEY}";
     };
     models = {
-      "deepseek-ai/DeepSeek-V4-Flash-0731" = {
+      "deepseek-ai/DeepSeek-V41-Flash-1017" = {
         name = "HHDev DeepSeek V4 Flash";
         capabilities = {
           tools = true;

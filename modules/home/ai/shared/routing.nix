@@ -30,7 +30,7 @@
       On hosts with direct Anthropic configured, the same IDs use `anthropic/`.
     - Self-hosted: `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it`,
       `hhdev-glm5-fp8/zai-org/GLM-5.3-Flash`; backup
-      `hhdev-deepseek-v4-flash/deepseek-ai/DeepSeek-V4-Flash-0731`.
+      `hhdev-deepseek-v4-flash/deepseek-ai/DeepSeek-V41-Flash-1017`.
     - Existing alternatives: `hhdev-grok/grok-4.7`,
       `hhdev-google/gemini-3.8-flash`.
       Trial reasoning/coding lane: `hhdev-google/gemini-4-argon`; keep Flash
