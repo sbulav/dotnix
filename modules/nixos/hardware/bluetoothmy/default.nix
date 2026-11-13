@@ -19,7 +19,7 @@ in
     musicOnly = mkBoolOpt false "Whether to offer headsets only A2DP (LDAC, AAC, SBC), with no HFP fallback.";
     fallbackSink =
       mkOpt (nullOr str) null
-        "node.name of the sink that becomes the default when the default Bluetooth sink disconnects, instead of whatever sits next in WirePlumber's default-sink history.";
+        "node.name of an ALSA sink that outranks every sink but the configured one, so it becomes the default whenever the configured sink is gone (a headset disconnected, or absent at boot or resume) instead of whatever WirePlumber's default-sink history ranks next.";
   };
 
   config = mkIf cfg.enable {
@@ -68,9 +68,10 @@ in
     services.pipewire.wireplumber = mkIf config.services.pipewire.wireplumber.enable {
       # PulseAudio's switch-on-connect: a Bluetooth sink that appears becomes the
       # configured default, which outranks every other node in default-nodes.
-      # When it goes away, WirePlumber falls back to the previous default, or to
-      # fallbackSink when set: the history also holds every sink ever picked by
-      # hand (a USB mic's monitor output, say), and any of them outranks priority.
+      # When the configured sink is missing, WirePlumber picks from its history,
+      # but each history slot is worth only 1 point against priority.session, so
+      # a high-priority sink once picked by hand (a USB mic's headphone out, say)
+      # wins. fallbackSink's priority is raised below to settle that instead.
       extraScripts."custom/bluetooth-switch-on-connect.lua" = ''
         SimpleEventHook {
           name = "custom/bluetooth-switch-on-connect",
@@ -91,29 +92,6 @@ in
             end
           end
         }:register ()
-      ''
-      + optionalString (cfg.fallbackSink != null) ''
-
-        SimpleEventHook {
-          name = "custom/bluetooth-fallback-on-disconnect",
-          interests = {
-            EventInterest {
-              Constraint { "event.type", "=", "node-removed" },
-              Constraint { "media.class", "=", "Audio/Sink" },
-              Constraint { "device.api", "=", "bluez5" },
-            },
-          },
-          execute = function (event)
-            local name = event:get_subject ().properties ["node.name"]
-            local metadata = event:get_source ():call ("get-object-manager", "metadata")
-                :lookup { Constraint { "metadata.name", "=", "default" } }
-            local configured = metadata and metadata:find (0, "default.configured.audio.sink")
-            if name and configured and Json.Raw (configured):parse ().name == name then
-              metadata:set (0, "default.configured.audio.sink", "Spa:String:JSON",
-                  Json.Object { ["name"] = ${builtins.toJSON cfg.fallbackSink} }:to_string ())
-            end
-          end
-        }:register ()
       '';
 
       extraConfig."99-bluetooth-policy" = {
@@ -128,6 +106,19 @@ in
         # Any capture from a headset's mic (pavucontrol's level meters included)
         # would flip it into HFP; on mz's adapter that link drops the headset.
         "wireplumber.settings"."bluetooth.autoswitch-to-headset-profile" = false;
+      }
+      // optionalAttrs (cfg.fallbackSink != null) {
+        # A stored node scores priority.session + 20001 - its history index; ALSA
+        # sinks sit around 600-1200, so 3000 wins over a history up to ~1800 deep.
+        # A sink picked by hand or a connected headset is configured (+30000) and
+        # still wins. An HDMI sink whose monitor is off has no available route, so
+        # WirePlumber skips it and falls through to the rest.
+        "monitor.alsa.rules" = [
+          {
+            matches = [ { "node.name" = cfg.fallbackSink; } ];
+            actions.update-props."priority.session" = 3000;
+          }
+        ];
       }
       // optionalAttrs cfg.musicOnly {
         # Without HFP a failed A2DP stream can't fall back to an 8 kHz call profile.
