@@ -2,7 +2,7 @@
 # workload defaults, not benchmark scores or guarantees of gateway access.
 {
   policy = ''
-    ## Routing and effort (2026-11-03)
+    ## Routing and effort (2026-11-13)
 
     Choose by task risk, available tools, quota, and total time to a verified
     result. Subscription calls consume quota; self-hosted calls consume time.
@@ -25,23 +25,28 @@
     - Personal OpenAI: `openai/gpt-6-luna`, `openai/gpt-6.1-sol`, `openai/gpt-6-astra`.
       Optional visual/computer-use/writing lane: `openai/gpt-6.1-terra`.
     - Work gateway: `hhdev-anthropic/claude-sonnet-5-5`,
-      `hhdev-anthropic/claude-opus-5-5`, `hhdev-anthropic/claude-fable-5-1`;
+      `hhdev-anthropic/claude-opus-5-5`, `hhdev-anthropic/claude-fable-5-2`;
       `hhdev-anthropic/claude-haiku-5-5` for low-risk, latency-sensitive work.
       On hosts with direct Anthropic configured, the same IDs use `anthropic/`.
     - Self-hosted: `hhdev-gemma4-26b/google/gemma-4-26B-A4B-it`,
       `hhdev-glm5-fp8/zai-org/GLM-5.3-Flash`; backup
       `hhdev-deepseek-v4-flash/deepseek-ai/DeepSeek-V41-Flash-1017`.
+      Trial lane: `hhdev-qwen38-27b/qwen38-27b` (Alibaba family, vision
+      input, ~2x faster than GLM on a review probe); verify representative
+      tasks before relying on it.
     - Existing alternatives: `hhdev-grok/grok-4.7`,
       `hhdev-google/gemini-3.8-flash`.
       Trial reasoning/coding lane: `hhdev-google/gemini-4-argon`; keep Flash
       for speed and verify representative tasks before promoting Argon.
+      `hhdev-google/gemini-4-carbon` and `hhdev-google/gemini-4-hydrogen`
+      are configured but untested.
     - Antigravity (`agy`, subscription, not OpenCode): bare IDs such as
       `gemini-3.8-flash-high`,
       `claude-opus-4-6-thinking`, `claude-sonnet-4-6`; list with `agy models`.
-    - Gateway OpenAI fallback: `hhdev-openai/gpt-6.1-sol` or
-      `hhdev-openai/gpt-6-astra`, only with Responses tool support confirmed.
-      Existing `openai/gpt-6-sol`, `openai/gpt-5.6-sol`, `openai/gpt-5.6-terra`, and
-      `hhdev-openai/gpt-5.5` remain compatibility fallbacks when available.
+    - Gateway OpenAI fallback: `hhdev-openai/gpt-6.1-sol` (Responses tool
+      calls confirmed 2026-11-13) or `hhdev-openai/gpt-6-astra`.
+      Existing `openai/gpt-6-sol`, `openai/gpt-5.6-sol`, and
+      `openai/gpt-5.6-terra` remain compatibility fallbacks when available.
 
     Catalog presence proves configuration, not access or working tool calls.
     Use the first scoped task to check tool execution and a usable final result.

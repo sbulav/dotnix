@@ -1,5 +1,5 @@
-# Verified against official docs and hhdev inventories on 2026-11-03.
-# Catalog entries are not proof of access; keep legacy fallbacks in providers.nix.
+# Verified against official docs and hhdev inventories on 2026-11-13.
+# Catalog entries are not proof of access; probe a new ID before routing to it.
 let
   openai = {
     "gpt-6-astra" = {
@@ -28,8 +28,8 @@ let
     "claude-opus-5-5" = {
       name = "Claude Opus 5.5";
     };
-    "claude-fable-5-1" = {
-      name = "Claude Fable 5.1";
+    "claude-fable-5-2" = {
+      name = "Claude Fable 5.2";
     };
   };
 in

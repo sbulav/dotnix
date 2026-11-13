@@ -15,21 +15,9 @@ in
       apiKey = "{env:OPENAI_API_KEY}";
       transport = "http";
     };
-    models = {
-      "gpt-5.5" = {
-        name = "ChatGPT 5.5";
-      };
-      "gpt-5.6-sol" = {
-        name = "ChatGPT 5.6 Sol";
-      };
-      "gpt-5.6-terra" = {
-        name = "ChatGPT 5.6 Terra";
-      };
-      "gpt-5.6-luna" = {
-        name = "ChatGPT 5.6 Luna";
-      };
-    }
-    // models.openai;
+    # gpt-6.1-sol Responses calls with function tools verified through the
+    # gateway on 2026-11-13, so the legacy GPT-5.x extras are dropped.
+    models = models.openai;
   };
 
   "hhdev-anthropic" = {
@@ -38,26 +26,13 @@ in
     package = "@opencode/ai/providers/anthropic";
     # hhdev rejects thinking.adaptive.block_binding even for current Claude
     # models. This override is model-only and leaves direct Anthropic intact.
-    models =
-      builtins.mapAttrs
-        (
-          _: model:
-          model
-          // {
-            compatibility.supportsThinkingBlockBinding = false;
-          }
-        )
-        (
-          {
-            "claude-opus-4-8" = {
-              name = "Claude Opus 4.8";
-            };
-            "claude-opus-5" = {
-              name = "Claude Opus 5";
-            };
-          }
-          // models.anthropic
-        );
+    models = builtins.mapAttrs (
+      _: model:
+      model
+      // {
+        compatibility.supportsThinkingBlockBinding = false;
+      }
+    ) models.anthropic;
     settings = {
       apiKey = "{env:OPENAI_API_KEY}";
       baseURL = "https://llmgtw.hhdev.ru/proxy/anthropic/v1";
@@ -115,6 +90,20 @@ in
         limit = {
           context = 1048576;
           output = 32768;
+        };
+      };
+      "gemini-4-carbon" = {
+        name = "Gemini 4 Carbon";
+        limit = {
+          context = 1048576;
+          output = 32768;
+        };
+      };
+      "gemini-4-hydrogen" = {
+        name = "Gemini 4 Hydrogen";
+        limit = {
+          context = 1048576;
+          output = 65536;
         };
       };
     };
@@ -195,9 +184,9 @@ in
   };
 
   # Self-hosted on the pyn.ru gateway (same box family as GLM-5.3 Flash): free, fast,
-  # 128k context. Reasoning is OFF unless the request explicitly carries
-  # chat_template_kwargs.enable_thinking — vLLM's chat template gates it there,
-  # not behind a `reasoning` flag.
+  # 256k context (vLLM max 262144). Reasoning is OFF unless the request
+  # explicitly carries chat_template_kwargs.enable_thinking — vLLM's chat
+  # template gates it there, not behind a `reasoning` flag.
   "hhdev-gemma4-26b" = {
     name = "Gemma 4 26B A4B it";
     package = "@opencode/ai/providers/openai-compatible";
@@ -227,8 +216,47 @@ in
           };
         };
         limit = {
-          context = 128000;
+          context = 262144;
           output = 16000;
+        };
+        cost = {
+          input = 0;
+          output = 0;
+        };
+      };
+    };
+  };
+
+  # Dense 27B VLM (Alibaba Qwen family), FP8, self-hosted on the pyn.ru
+  # gateway. Thinks by default — emits reasoning_content without kwargs, so
+  # no body override. Deployment context 131072 checked on 2026-11-13.
+  "hhdev-qwen38-27b" = {
+    name = "Qwen3.8 27B";
+    package = "@opencode/ai/providers/openai-compatible";
+    settings = {
+      baseURL = "https://llm-gateway.pyn.ru/proxy/qwen38-27b-fp8/v1";
+      apiKey = "{env:OPENAI_API_PYN_KEY}";
+    };
+    models = {
+      # Served id, not the HF name Qwen/Qwen3.8-27B-FP8.
+      "qwen38-27b" = {
+        name = "Qwen3.8 27B";
+        capabilities = {
+          tools = true;
+          input = [
+            "text"
+            "image"
+          ];
+          output = [ "text" ];
+          reasoning.supported = true;
+        };
+        compatibility = {
+          reasoningField = "reasoning_content";
+          maxTokensField = "max_tokens";
+        };
+        limit = {
+          context = 131072;
+          output = 32768;
         };
         cost = {
           input = 0;
