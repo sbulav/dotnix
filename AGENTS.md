@@ -28,8 +28,7 @@ the flake root.
 ## Gotchas
 
 - `nixpkgs` is pinned to `nixos-26.05` (stable); `nixos-unstable` is exposed as `pkgs.unstable` via overlay in `flake.nix`.
-- The sops-nix modules are auto-imported into every system and home, and `determinate.darwinModules.default` into Darwin systems — never import them by hand.
-- NixOS hosts run nixpkgs' stock Nix; only `mba13` still runs Determinate Nix.
+- The sops-nix modules are auto-imported into every system and home — never import them by hand.
 - Retired modules and hosts are deleted, not quarantined: git history is the archive (`docs/module-lifecycle.md`). The live Darwin host is `mba13`.
 - CI (`.github/workflows/cachix.yaml`) builds every host and `checks/` on every push, and statix and deadnix are blocking. Renovate automerges its weekly lock file PR once CI is green, so a red build on it stalls every input bump.
 

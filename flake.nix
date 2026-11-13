@@ -7,22 +7,6 @@
 
     unstable.url = "github:nixos/nixpkgs/nixos-unstable";
 
-    # Determinate Nix, on mba13 only (NixOS hosts run nixpkgs' Nix).
-    # Every flakehub.com URL in Determinate's input tree is replaced with its
-    # GitHub equivalent. `nix` must be the nix-src release matching the
-    # determinate tag (determinate-nixd takes its version from it), so bump
-    # both tags together — Renovate's lock file maintenance cannot move them.
-    determinate = {
-      url = "github:DeterminateSystems/determinate/v3.22.5";
-      inputs.nix.url = "github:DeterminateSystems/nix-src/v3.22.5";
-      inputs.nix.inputs.flake-parts.url =
-        "github:hercules-ci/flake-parts/49f0870db23e8c1ca0b5259734a02cd9e1e371a1";
-      inputs.nix.inputs.git-hooks-nix.url =
-        "github:cachix/git-hooks.nix/80479b6ec16fefd9c1db3ea13aeb038c60530f46";
-      inputs.nix.inputs.nixpkgs.follows = "nixpkgs";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
-
     snowfall-lib = {
       # Maintained Snowfall fork with current Nix compatibility fixes and
       # correct namespace/Home Manager argument propagation.
@@ -147,7 +131,6 @@
       systems = {
         modules = {
           darwin = with inputs; [
-            determinate.darwinModules.default
             sops-nix.darwinModules.default
           ];
           nixos = with inputs; [
