@@ -27,6 +27,37 @@ let
   proxy = import ../shared/proxy.nix;
   registry = import ../shared/registry.nix { inherit lib; };
 
+  # Provider configs reference API keys as {env:NAME}, resolved in the env of
+  # the shared `opencode serve` daemon. The keys are exported only by login
+  # fish shells, so a daemon spawned by systemd --user or a desktop launcher
+  # starts with them empty and every gateway answers 401 "Invalid token in
+  # header". Fill each referenced key that is unset/empty from the same
+  # sops-rendered file fish reads — only those keys, never the whole file (it
+  # also holds VPN passwords). Caller env wins; a missing file is a no-op.
+  credentialsFile = "${config.home.homeDirectory}/.ssh/sops-env-credentials";
+  envKeyNames = lib.unique (
+    map builtins.head (
+      lib.filter builtins.isList (
+        builtins.split "[{]env:([A-Za-z_][A-Za-z0-9_]*)[}]" (builtins.toJSON finalSettings)
+      )
+    )
+  );
+  fillEnvKey = name: ''
+    if [ -z "''${${name}:-}" ]; then
+      __oc_val=$(${pkgs.gnused}/bin/sed -n 's/^${name}=//p' "$__oc_creds" | ${pkgs.coreutils}/bin/tail -n 1)
+      if [ -n "$__oc_val" ]; then
+        export ${name}="$__oc_val"
+      fi
+    fi
+  '';
+  loadEnvKeys = ''
+    __oc_creds=${lib.escapeShellArg credentialsFile}
+    __oc_val=
+    if [ -r "$__oc_creds" ]; then
+    ${lib.concatMapStrings fillEnvKey envKeyNames}fi
+    unset __oc_creds __oc_val
+  '';
+
   wrapperFlags =
     # On Linux bake the proxy topology into the binary (same as the Claude
     # wrapper): openai/* API traffic goes via fwdproxy, the LLM gateways
@@ -37,6 +68,9 @@ let
       "--set HTTPS_PROXY '${proxy.httpProxy}'"
       "--set HTTP_PROXY '${proxy.httpProxy}'"
       "--set NO_PROXY '${proxy.noProxy}'"
+    ]
+    ++ lib.optionals (envKeyNames != [ ]) [
+      "--run ${lib.escapeShellArg loadEnvKeys}"
     ];
 
   opencodeWrapped = pkgs.symlinkJoin {
