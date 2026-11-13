@@ -11,12 +11,6 @@ with lib;
 let
   # The router's SOCKS proxy, which reaches what beez's own uplink cannot.
   routerSocks = "192.168.89.207:20170";
-  privoxyAddress = "127.0.0.1:8118";
-  determinateProxyEnv = {
-    http_proxy = "http://${privoxyAddress}";
-    https_proxy = "http://${privoxyAddress}";
-    no_proxy = "127.0.0.1,localhost,::1";
-  };
 in
 {
   imports = [
@@ -188,45 +182,8 @@ in
     MemoryMax = "9G";
   };
 
-  # Direct GETs from beez to install.determinate.systems (CloudFront) stall at
-  # 0 bytes, so every determinate-nixd file input times out and the nightly
-  # cache build fails for all hosts. A loopback privoxy routes only the
-  # Determinate hosts through the router's SOCKS proxy; everything else
-  # (cache.nixos.org, GitHub, ...) still egresses directly. Scoped to
-  # nix-daemon (substituters, fixed-output fetches, determinate-nixd itself)
-  # and the cache builder, whose client-side `nix flake update`/eval fetches
-  # the determinate-nixd inputs.
-  services.privoxy = {
-    enable = true;
-    settings = {
-      listen-address = privoxyAddress;
-      # Trailing `.`: no HTTP parent proxy behind the SOCKS hop.
-      forward-socks5t = [
-        ".determinate.systems ${routerSocks} ."
-        ".flakehub.com ${routerSocks} ."
-      ];
-      # A pure router: no ad-blocking actions or filters.
-      actionsfile = mkForce [ ];
-      filterfile = mkForce [ ];
-    };
-  };
-  # nix fetches depend on it, so never leave it down.
-  systemd.services.privoxy.serviceConfig = {
-    Restart = "always";
-    RestartSec = "5s";
-  };
-  systemd.services.nix-daemon = {
-    serviceConfig.Slice = "nix-builds.slice";
-    environment = determinateProxyEnv;
-    wants = [ "privoxy.service" ];
-    after = [ "privoxy.service" ];
-  };
-  systemd.services.nix-cache-builder = {
-    serviceConfig.Slice = "nix-builds.slice";
-    environment = determinateProxyEnv;
-    wants = [ "privoxy.service" ];
-    after = [ "privoxy.service" ];
-  };
+  systemd.services.nix-daemon.serviceConfig.Slice = "nix-builds.slice";
+  systemd.services.nix-cache-builder.serviceConfig.Slice = "nix-builds.slice";
   systemd.services.prometheus.serviceConfig = {
     CPUWeight = 200;
     IOWeight = 200;

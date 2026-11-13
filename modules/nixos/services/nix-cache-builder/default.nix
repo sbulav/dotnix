@@ -1269,7 +1269,7 @@ in
 
       systemd.services.nix-serve.serviceConfig.DynamicUser = mkForce false;
 
-      # Determinate Nix ignores extra-allowed-users; explicitly allow nix-serve user
+      # system.nix limits allowed-users to root and the user; nix-serve reads the store too
       nix.settings.allowed-users = [ "nix-serve" ];
 
       # Firewall: LAN-only access
