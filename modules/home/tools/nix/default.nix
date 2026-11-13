@@ -2,12 +2,19 @@
   config,
   lib,
   inputs,
+  pkgs,
+  osConfig ? { },
   ...
 }:
 with lib;
 with lib.custom;
 let
   cfg = config.custom.tools.nix;
+
+  # On NixOS the system module owns the list (per-host cache-servers included),
+  # so a copy here would silently drop whatever a host adds. Darwin has no
+  # such list and falls back to the one below.
+  systemSubstituters = osConfig.nix.settings.substituters or [ ];
 in
 {
   options.custom.tools.nix = with types; {
@@ -15,11 +22,16 @@ in
 
     substituters =
       mkOpt (listOf str)
-        [
-          "http://beez.sbulav.ru:5000?priority=10" # local nix-cache-builder (serves shared FODs to darwin too)
-          "https://dotnix.cachix.org?priority=10"
-          "https://cache.nixos.org?priority=20"
-        ]
+        (
+          if pkgs.stdenv.isLinux && systemSubstituters != [ ] then
+            systemSubstituters
+          else
+            [
+              "http://beez.sbulav.ru:5000?priority=10" # local nix-cache-builder (serves shared FODs to darwin too)
+              "https://dotnix.cachix.org?priority=10"
+              "https://cache.nixos.org?priority=20"
+            ]
+        )
         "Substituters for the user nix.conf. Replaces Determinate's resolved list (lower priority = checked first).";
 
     trustedPublicKeys = mkOpt (listOf str) [
