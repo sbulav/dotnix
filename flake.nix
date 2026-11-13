@@ -7,6 +7,7 @@
 
     unstable.url = "github:nixos/nixpkgs/nixos-unstable";
 
+    # Determinate Nix, on mba13 only (NixOS hosts run nixpkgs' Nix).
     # Every flakehub.com URL in Determinate's input tree is replaced with its
     # GitHub equivalent. `nix` must be the nix-src release matching the
     # determinate tag (determinate-nixd takes its version from it), so bump
@@ -151,7 +152,6 @@
           ];
           nixos = with inputs; [
             sops-nix.nixosModules.sops
-            determinate.nixosModules.default
             nix-index-database.nixosModules.nix-index
           ];
         };
