@@ -152,6 +152,9 @@
     };
     flood = {
       enable = true;
+      # completed/ is a separate legacy ZFS dataset. Keep new completions on
+      # tank/torrents so relocation is atomic and cannot copy partial files.
+      completedDirectory = "finished";
       host = "flood.sbulav.ru";
       hostAddress = "172.16.64.10";
       localAddress = "172.16.64.105";
@@ -182,6 +185,10 @@
       # RO view of the arr-stack library (issue #39); add the "Anime"
       # library in the Jellyfin UI pointing at /var/lib/jellyfin/media.
       arrLibraryPath = "/tank/media/library";
+      libraries."TV Shows" = {
+        collectionType = "tvshows";
+        paths = [ "/var/lib/jellyfin/media/tv" ];
+      };
       # sing-box mixed inbound (see sing-box.localAddress below); TMDB is
       # RKN-blocked and DNS-poisoned on this uplink.
       httpProxy = "http://172.16.64.108:20170";
@@ -262,7 +269,11 @@
       userId = "05307840-a7bf-4448-8dc4-6a9ca7375cb9";
       externalMounts = {
         Video = "/tank/video";
-        Downloads = "/tank/torrents/download";
+        # Completed data only; partial downloads remain outside OpenCloud.
+        # Existing torrents keep their old paths until explicitly relocated.
+        Downloads = "/tank/torrents/finished";
+        LegacyDownloads = "/tank/torrents/completed";
+        QBittorrent = "/tank/media/torrents/completed";
       };
     }; # }}}
   };
@@ -291,6 +302,26 @@
       "192.168.89.248" # phillips 58pus (Android TV)
       "192.168.89.1" # WorkNetZ: tv-proxy source-NATs the TV here for symmetric return (homelab mikrotik/work-proxy-symmetric-update.rsc)
       "192.168.92.0/24" # home VLAN 20 (all Wi-Fi; the defconf 192.168.90.0/24 bridge has no clients)
+    ];
+  };
+
+  # These containers prepare the completed-download source directories before
+  # OpenCloud binds and scans them. Never create sources on an unmounted tank.
+  # qBittorrent's source directories are root:media 2775; OpenCloud needs group
+  # access to write POSIX indexing xattrs without changing arr ownership.
+  containers.opencloud.config = {
+    users.groups.media.gid = 2000;
+    users.users.opencloud.extraGroups = [ "media" ];
+  };
+
+  systemd.services."container@opencloud" = {
+    after = [
+      "container@flood.service"
+      "container@qbittorrent.service"
+    ];
+    unitConfig.ConditionPathIsMountPoint = [
+      "/tank/torrents"
+      "/tank/media"
     ];
   };
 

@@ -14,7 +14,8 @@
 #
 # Shared media convention (same in sonarr container):
 #   host /tank/media  →  container /data
-#   downloads: /data/torrents  ·  library: /data/library/{anime,tv}
+#   downloads: /data/torrents/{incomplete,completed}
+#   library: /data/library/{anime,tv,movies}
 # Both services run with group `media` (fixed gid 2000) and UMask 0002,
 # so sonarr can import qbittorrent's files via hardlinks (single dataset).
 {
@@ -82,9 +83,9 @@ in
     systemd.services."container@qbittorrent" = {
       unitConfig.ConditionPathIsMountPoint = cfg.mediaPath;
       preStart = ''
-        mkdir -p ${cfg.mediaPath}/torrents
-        chgrp ${toString mediaGid} ${cfg.mediaPath} ${cfg.mediaPath}/torrents
-        chmod 2775 ${cfg.mediaPath} ${cfg.mediaPath}/torrents
+        mkdir -p ${cfg.mediaPath}/torrents/{incomplete,completed}
+        chgrp ${toString mediaGid} ${cfg.mediaPath} ${cfg.mediaPath}/torrents{,/incomplete,/completed}
+        chmod 2775 ${cfg.mediaPath} ${cfg.mediaPath}/torrents{,/incomplete,/completed}
       '';
     };
 
@@ -134,7 +135,12 @@ in
             serverConfig = {
               LegalNotice.Accepted = true;
               BitTorrent.Session = {
-                DefaultSavePath = "/data/torrents";
+                # Native relocation retains seeding and reports the final path
+                # to Sonarr/Radarr. Both paths stay on the media dataset.
+                # Existing torrents retain their per-torrent save paths.
+                DefaultSavePath = "/data/torrents/completed";
+                TempPathEnabled = true;
+                TempPath = "/data/torrents/incomplete";
                 Port = cfg.torrentingPort;
               };
               Preferences.WebUI = {

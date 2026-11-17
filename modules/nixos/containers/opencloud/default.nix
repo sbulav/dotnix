@@ -60,7 +60,7 @@ in
 
     # NOTE: nixpkgs already bumps fs.inotify.max_user_watches and
     # max_user_instances to half a million each — plenty for the POSIX
-    # watcher on /tank/video + /tank/torrents/download, so we don't override.
+    # watcher on the video and completed torrent trees, so we don't override.
 
     # Pre-create the POSIX storage root *and* the per-user mountpoints on the
     # host. The container's /var/lib/opencloud is bind-mounted from this path,

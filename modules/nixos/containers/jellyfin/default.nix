@@ -22,6 +22,18 @@ in
     enableGPU = mkBoolOpt false "Enable GPU device passthrough for hardware video acceleration";
     # Read-only view of the arr-stack library (issue #39). Empty = no mount.
     arrLibraryPath = mkOpt str "" "Host path of the arr media library to bind read-only";
+    # Additive: ensure these libraries/paths exist without replacing UI-owned
+    # libraries, metadata preferences, or additional paths.
+    libraries = mkOpt (attrsOf (submodule {
+      options = {
+        collectionType = mkOpt (enum [
+          "movies"
+          "tvshows"
+          "homevideos"
+        ]) "tvshows" "Jellyfin library content type";
+        paths = mkOpt (listOf str) [ ] "Library paths inside the Jellyfin container";
+      };
+    })) { } "Libraries to create and paths to add through the Jellyfin interface";
     # zanoza's uplink DNS-poisons RKN-blocked metadata hosts (TMDB). .NET
     # honours HTTP(S)_PROXY, so point Jellyfin at sing-box's mixed inbound.
     httpProxy =
@@ -81,11 +93,78 @@ in
         sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
       };
     }
-    // lib.optionalAttrs (cfg.scheduledScan.libraries != [ ]) {
-      # Host-side only (read by the refresh timer below), not bind-mounted.
+    // lib.optionalAttrs (cfg.scheduledScan.libraries != [ ] || cfg.libraries != { }) {
+      # Host-side only (library setup and refresh), not bind-mounted.
       "jellyfin/api_key" = {
         sopsFile = lib.snowfall.fs.get-file "${cfg.secret_file}";
       };
+    };
+
+    systemd.services.jellyfin-library-setup = mkIf (cfg.libraries != { }) {
+      description = "Ensure configured Jellyfin libraries exist";
+      wantedBy = [ "multi-user.target" ];
+      after = [ "container@jellyfin.service" ];
+      wants = [ "container@jellyfin.service" ];
+      serviceConfig = {
+        Type = "oneshot";
+        DynamicUser = true;
+        LoadCredential = "api_key:${config.sops.secrets."jellyfin/api_key".path}";
+        Restart = "on-failure";
+        RestartSec = 30;
+        TimeoutStartSec = 180;
+      };
+      path = [
+        pkgs.curl
+        pkgs.jq
+      ];
+      script = ''
+        base="http://${cfg.localAddress}:8096/Library/VirtualFolders"
+        auth="Authorization: MediaBrowser Token=$(cat "$CREDENTIALS_DIRECTORY/api_key")"
+        folders=$(curl -sSf --retry 30 --retry-delay 2 --retry-all-errors \
+          --retry-max-time 120 --max-time 10 -H "$auth" "$base")
+        ${lib.concatStringsSep "\n" (
+          lib.mapAttrsToList (name: library: ''
+            name=${lib.escapeShellArg name}
+            existing=$(jq -c --arg name "$name" '.[] | select(.Name == $name)' <<<"$folders")
+            if [ -z "$existing" ]; then
+              encoded=$(jq -nr --arg name "$name" '$name | @uri')
+              body=${
+                lib.escapeShellArg (
+                  builtins.toJSON {
+                    LibraryOptions = {
+                      EnableRealtimeMonitor = true;
+                      PathInfos = map (path: { Path = path; }) library.paths;
+                    };
+                  }
+                )
+              }
+              curl -sSf --max-time 30 -o /dev/null -X POST -H "$auth" \
+                -H 'Content-Type: application/json' --data "$body" \
+                "$base?name=$encoded&collectionType=${library.collectionType}&refreshLibrary=true"
+            else
+              # A same-name library of another type needs a human decision.
+              jq -e --arg type ${lib.escapeShellArg library.collectionType} \
+                '.CollectionType == $type' <<<"$existing" >/dev/null
+              ${lib.concatMapStringsSep "\n" (path: ''
+                if ! jq -e --arg path ${lib.escapeShellArg path} \
+                  '.Locations | index($path) != null' <<<"$existing" >/dev/null; then
+                  body=${
+                    lib.escapeShellArg (
+                      builtins.toJSON {
+                        Name = name;
+                        Path = path;
+                      }
+                    )
+                  }
+                  curl -sSf --max-time 30 -o /dev/null -X POST -H "$auth" \
+                    -H 'Content-Type: application/json' --data "$body" \
+                    "$base/Paths?refreshLibrary=true"
+                fi
+              '') library.paths}
+            fi
+          '') cfg.libraries
+        )}
+      '';
     };
 
     systemd.services.jellyfin-library-refresh = mkIf (cfg.scheduledScan.libraries != [ ]) {
