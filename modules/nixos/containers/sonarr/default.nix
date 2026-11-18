@@ -29,6 +29,9 @@
 # Unlabelled MultiSub/Dual-Audio releases wait instead of falling back. This is
 # declared-language filtering: titles can lie, and Sonarr cannot inspect media
 # tracks until after downloading. Rollback snapshot: NzbDrone/ru-policy-backup.json.
+# preferUhd independently owns quality choices in the active/default Any and
+# HD - 720p/1080p profiles, excluding cinema/SD and preferring clean UHD.
+# Existing files are not searched/deleted; unused profiles/scores are preserved.
 {
   config,
   lib,
@@ -48,6 +51,8 @@ in
     dataPath = mkOpt str "/tank/sonarr" "Sonarr state path on host machine";
     mediaPath = mkOpt str "/tank/media" "Shared arr media path on host machine";
     requireRussian = mkBoolOpt false "Require declared Russian audio or full Russian subtitles in every quality profile";
+    preferUhd = mkBoolOpt false "Require HD/UHD sources and prefer UHD in active/default quality profiles";
+    maxReleaseSizeGB = mkOpt int 0 "Maximum release size in GiB; 0 = unlimited";
     host = mkOpt str "sonarr.sbulav.ru" "The host to serve sonarr on";
     hostAddress = mkOpt str "172.16.64.10" "With private network, which address to use on Host";
     localAddress = mkOpt str "172.16.64.114" "With privateNetwork, which address to use in container";
@@ -125,6 +130,22 @@ in
           };
         in
         {
+          imports = [
+            (import ../shared/shared-arr-api-settings.nix {
+              app = "sonarr";
+              port = 8989;
+              configXml = "/var/lib/sonarr/.config/NzbDrone/config.xml";
+              settings.indexer.maximumSize = cfg.maxReleaseSizeGB * 1024;
+            })
+          ]
+          ++ lib.optional cfg.preferUhd (
+            import ../shared/shared-arr-quality-policy.nix {
+              app = "sonarr";
+              port = 8989;
+              configXml = "/var/lib/sonarr/.config/NzbDrone/config.xml";
+            }
+          );
+
           users.groups.media.gid = mediaGid;
 
           services.sonarr = {

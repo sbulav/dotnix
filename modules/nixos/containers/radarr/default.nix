@@ -49,6 +49,10 @@
 # The cap only gates NEW grabs — use `radarr-requeue` on the host to kick
 # already-running oversized downloads back out for a smaller release.
 # Torrent peer traffic never touches radarr — qbittorrent handles it.
+# preferUhd owns quality choices in the active/default Any and HD - 720p/1080p
+# profiles: only clean 720p/1080p/2160p sources, upgrades up to Blu-ray 2160p.
+# Scores/languages and unused profiles remain UI-owned. Existing files are not
+# searched/deleted; rollback snapshot: Radarr/quality-policy-backup.json.
 {
   config,
   lib,
@@ -71,6 +75,7 @@ in
     maxReleaseSizeGB =
       mkOpt int 0
         "Reject releases larger than this many GiB (Settings → Indexers → Maximum Size); 0 = unlimited";
+    preferUhd = mkBoolOpt false "Require HD/UHD sources and prefer UHD in active/default quality profiles";
     host = mkOpt str "radarr.sbulav.ru" "The host to serve radarr on";
     hostAddress = mkOpt str "172.16.64.10" "With private network, which address to use on Host";
     localAddress = mkOpt str "172.16.64.116" "With privateNetwork, which address to use in container";
@@ -160,7 +165,14 @@ in
               configXml = "/var/lib/radarr/.config/Radarr/config.xml";
               settings.indexer.maximumSize = cfg.maxReleaseSizeGB * 1024;
             })
-          ];
+          ]
+          ++ lib.optional cfg.preferUhd (
+            import ../shared/shared-arr-quality-policy.nix {
+              app = "radarr";
+              port = 7878;
+              configXml = "/var/lib/radarr/.config/Radarr/config.xml";
+            }
+          );
 
           users.groups.media.gid = mediaGid;
 

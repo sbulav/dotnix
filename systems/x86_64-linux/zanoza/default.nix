@@ -223,12 +223,15 @@
     sonarr = {
       enable = true;
       requireRussian = true;
+      preferUhd = true;
+      maxReleaseSizeGB = 10;
       host = "sonarr.sbulav.ru";
       hostAddress = "172.16.64.10";
       localAddress = "172.16.64.114";
     };
     radarr = {
       enable = true;
+      preferUhd = true;
       # Reject releases over 10 GiB (Settings → Indexers → Maximum Size),
       # reapplied over the API on every container start.
       maxReleaseSizeGB = 10;
