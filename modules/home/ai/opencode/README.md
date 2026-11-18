@@ -118,8 +118,8 @@ Skill files are automatically converted to `SKILL.md` format with proper YAML fr
 
 ### Included Skills
 
-- **humanizer**: Remove signs of AI-generated writing from text. Based on Wikipedia's comprehensive "Signs of AI writing" guide, this skill helps agents detect and fix patterns including: inflated symbolism, promotional language, superficial -ing analyses, vague attributions, em dash overuse, rule of three, AI vocabulary words, negative parallelisms, and excessive conjunctive phrases. Use when editing or reviewing text to make it sound more natural and human-written.
-- **technical-writer**: Creates clear documentation, API references, guides, and technical content for developers and users. Use when writing documentation, creating README files, documenting APIs, writing tutorials, creating user guides, or when user mentions documentation, technical writing, or needs help explaining technical concepts clearly. Includes patterns for writing user-centered content with clarity, progressive disclosure, and scannable structure.
+- **humanizer**: Removes signs of AI-generated writing from prose — essays, posts, messages, commit and PR descriptions. Based on Wikipedia's "Signs of AI writing" guide. Technical documentation goes to technical-writer instead.
+- **technical-writer**: Writes, improves and reviews technical documentation in English or Russian — runbooks, READMEs, how-tos, reference, architecture docs, ADRs, postmortems, wiki pages. Works sources-first: every command, number and link in the result is traced to a config, manifest or command output, or listed for the author.
 
 ## MCP Servers
 
