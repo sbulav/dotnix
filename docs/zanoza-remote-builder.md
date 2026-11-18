@@ -1,6 +1,9 @@
 # Constrained zanoza remote builder
 
 This runbook covers the remote builder introduced for GitHub issue #29.
+Both the client on [beez](../systems/x86_64-linux/beez/default.nix) and the
+server on [zanoza](../systems/x86_64-linux/zanoza/default.nix) are currently
+disabled. Use the provisioning steps when bringing the builder back.
 
 `beez` remains the orchestrator, result signer, and binary-cache server.
 `zanoza` only executes derivations selected by the Nix scheduler and returns

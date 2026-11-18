@@ -5,39 +5,36 @@
 [![Snowfall](https://img.shields.io/static/v1?logoColor=d8dee9&label=Built%20With&labelColor=5e81ac&message=Snowfall&color=d8dee9&style=for-the-badge)](https://github.com/snowfallorg/lib)
 [![Check flake inputs](https://github.com/sbulav/dotnix/actions/workflows/cachix.yaml/badge.svg)](https://github.com/sbulav/dotnix/actions/workflows/cachix.yaml)
 
-## Nix
+## Configuration
 
-- MacOS
-  - [Nix Flakes](https://nixos.wiki/wiki/Flakes)
-  - [Nix-Darwin](https://github.com/LnL7/nix-darwin)
-  - [Home-Manager](https://nix-community.github.io/home-manager/)
-- NixOS
-  - [Nix Flakes](https://nixos.wiki/wiki/Flakes)
-  - [Home-Manager](https://nix-community.github.io/home-manager/)
-  - [Hyprland](https://wiki.hyprland.org) + Waybar, Swaylock, Rofi, mako, hyprpaper
+This Snowfall Lib flake manages the NixOS hosts `nz`, `mz`, `zanoza`, and
+`beez`, plus the Apple Silicon Mac `mba13`. NixOS desktops use Hyprland
+with Noctalia. Home Manager provides user configuration on both platforms.
 
-Nix flakes following arbitrary Snowfall lib conventions:
+Edit host configuration in `systems/` and user profiles in `homes/`. Reusable
+modules live in `modules/`, local packages in `packages/`, and flake checks in
+`checks/`. See [AGENTS.md](AGENTS.md) for how to trace a setting and validate
+a change.
 
-```text
-nix/
-│
-│ Nix flake.
-├─ flake.nix
-│
-│ An optional custom library.
-├─ lib/
-│
-│ An optional set of packages to export.
-├─ packages/
-│
-├─ modules/ (optional modules)
-│
-├─ overlays/ (optional overlays)
-│
-├─ systems/ (optional system configurations)
-│
-└─ homes/ (optional homes configurations)
-```
+[CI](.github/workflows/cachix.yaml) checks formatting, runs `statix` and
+`deadnix`, builds the flake checks, evaluates every system and home profile,
+and builds all five systems from the committed lock file.
+
+## Daily use
+
+The [`sys` wrapper](packages/sys/default.nix) uses `SYS_FLAKE` or the nearest
+enclosing `flake.nix`. `sys rebuild [flake]` switches the system.
+On NixOS, `sys test [flake]` activates a configuration for the current boot.
+Use `sys update nixpkgs` to update just the `nixpkgs` input.
+
+## Runbooks
+
+- [Verify YubiKey GPG signing and fallback](docs/yubikey-gpg-setup.md)
+- [Manage SOPS secrets](modules/shared/security/sops/README.md)
+- [Replace a Zanoza disk](docs/zanoza-disk-replacement.md)
+- [Operate monitoring on Beez](docs/monitoring-migration.md)
+
+## Credits
 
 Kudos for config inspiration to:
 
@@ -47,61 +44,3 @@ Kudos for config inspiration to:
 - [Nix configs with snowlake by Jake Hamilton](https://github.com/jakehamilton/config)
 
 You might also want to check out my blog with [#Nix category](https://sbulav.github.io/categories/#nix)
-
-### Validation
-
-CI validates the committed `flake.lock` without updating it. It checks formatting,
-runs `statix`, `deadnix`, and `nix flake check`, and evaluates every active NixOS,
-nix-darwin, and Home Manager configuration. The build matrix intentionally builds
-the `nz` and `zanoza` NixOS systems plus the `mba13` Apple Silicon system; all
-other active outputs are evaluation-only to keep pull request builds bounded.
-
-Run the strict local checks with:
-
-```sh
-nix fmt -- --ci
-nix flake check --no-build --no-write-lock-file
-```
-
-CI also reports the repository's existing static-analysis baseline with:
-
-```sh
-nix develop --no-write-lock-file -c statix check .
-nix develop --no-write-lock-file -c deadnix .
-```
-
-The `sys` wrapper finds the nearest enclosing `flake.nix`. `sys rebuild` and
-`sys test` also accept a flake reference, and `SYS_FLAKE` sets the default. Use
-`sys update nixpkgs` to update only the `nixpkgs` input.
-
-### Useful NIX commands
-
-Quickly try out new package in the shell without installing it:
-
-```sh
-nix shell nixpkgs#glow
-```
-
-List all generations:
-
-```sh
-sudo nix-env --list-generations --profile /nix/var/nix/profiles/system
-```
-
-Rollback to previous generation:
-
-```sh
-sudo nixos-rebuild switch --flake ~/dotnix#nz --rollback
-```
-
-Rollback to previous generation:
-
-```sh
-sudo nixos-rebuild switch --flake ~/dotnix#nz --rollback
-```
-
-Activate specific generation:
-
-```sh
-sudo nix-env --profile /nix/var/nix/profiles/system --switch-generation 210
-```

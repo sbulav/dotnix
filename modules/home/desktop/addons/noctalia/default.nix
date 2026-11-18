@@ -299,6 +299,7 @@ let
   # tables Nix owns on every activation and leave the rest — theme,
   # wallpaper.*, lockscreen_widgets and location are GUI-owned by decision,
   # as is the one key carved out of a Nix-owned table below (KEEP).
+  # wallpaper.last and wallpaper.monitors.* seed the wallpaper-derived palette.
   # `calendar` joins the list only when Nix declares it (calendarSettings),
   # so the stale GUI-entered ICS account cannot shadow the vdir one.
   pruneTables = [

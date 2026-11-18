@@ -19,8 +19,8 @@ The installed binary reports `5.0.0`; the newest upstream *release tag* is
 
 `~/.local/state/noctalia/settings.toml` deep-merges *over* the Nix-written
 `~/.config/noctalia/config.toml`. The split and the activation-time prune are
-documented in `AGENTS.md`; what matters for this note is that **`[theme]` is
-GUI-owned**, and `[theme.templates]` is a subtable of it.
+documented next to `pruneTables` in the [Noctalia module](../modules/home/desktop/addons/noctalia/default.nix).
+The GUI owns `[theme]`, including the `[theme.templates]` subtable.
 
 Today that is survivable: the sidecar's `[theme]` holds five keys
 (`builtin`, `community_palette`, `mode`, `source`, `wallpaper_scheme`) and no

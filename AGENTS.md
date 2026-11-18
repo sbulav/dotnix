@@ -1,162 +1,71 @@
-# AGENTS.md — NixOS / nix-darwin configuration (Snowfall Lib)
+# AGENTS.md — dotnix
 
-Snowfall Lib flake, namespace `custom`. This file carries only what the tree
-does not confess: unwritten conventions, gotchas, and guardrails. Layout facts
-live in the filesystem; input facts live in `flake.nix` — look there, they
-cannot go stale.
+Snowfall Lib flake with namespace `custom`.
 
-## Discovery
+## Start here
 
-Snowfall auto-discovers by path — creating the file wires it up, there are no
-import lists:
+1. For a host change, find its profile with `rg --files systems homes -g default.nix`.
+   Read the matching system or user profile and follow the suite or option it sets.
+2. Find the option in the relevant `modules/nixos/`, `modules/darwin/`, or
+   `modules/home/` subtree. Use `rg -l` to narrow the file list, then
+   `rg -n -C 3` for the relevant definitions and callers. Read the owning
+   module, files it references, and a matching check in `checks/` as needed.
+3. Stop discovery once you know what sets the option, where it is implemented,
+   and which configurations it affects. Use Nix evaluation if suite defaults
+   or overrides make the effective value unclear.
 
-- Modules: `modules/{nixos,darwin,home,shared}/{category}/{name}/default.nix`
-- Systems: `systems/{arch}/{hostname}/default.nix` — hosts: `nz`, `zanoza`, `mz`, `beez` (NixOS), `mba13` (Darwin)
-- Homes: `homes/{arch}/{user}@{hostname}/default.nix`
-- Packages: `packages/{name}/default.nix` → `pkgs.custom.{name}`
-- Overlays: `overlays/{name}/default.nix` → applied to every system
-- Agent docs: `modules/home/ai/shared/skill/{name}.nix` (general) and
-  `modules/home/ai/shared/workflow/skill/{name}.nix` (workflow) → rendered to
-  SKILL.md for both Claude Code and opencode by `shared/registry.nix`; opencode
-  agent prompts live in `modules/home/ai/opencode/agent/`. Editing any of these
-  is a job for the `writing-for-agents` skill.
+Use `flake.nix` for input sources and wiring. Inspect `flake.lock` for input
+pins, `docs/` for a named runbook or research note, `secrets/` for secret
+changes, and `modules/home/ai/` for agent tooling changes.
 
-Reach everything through the namespace: `config.custom.*`, `pkgs.custom.*`,
-`lib.custom.*`. `lib.snowfall.fs.get-file "path"` resolves a path relative to
-the flake root.
+## Discovery and conventions
 
-## Gotchas
-
-- `nixpkgs` is pinned to `nixos-26.05` (stable); `nixos-unstable` is exposed as `pkgs.unstable` via overlay in `flake.nix`.
-- The sops-nix modules are auto-imported into every system and home — never import them by hand.
-- Retired modules and hosts are deleted, not quarantined: git history is the archive (`docs/module-lifecycle.md`). The live Darwin host is `mba13`.
-- CI (`.github/workflows/cachix.yaml`) builds every host and `checks/` on every push, and statix and deadnix are blocking. Renovate automerges its weekly lock file PR once CI is green, so a red build on it stalls every input bump.
+- Snowfall discovers `default.nix` recursively under the NixOS, Darwin, and
+  Home Manager module trees. It also discovers systems, homes, packages,
+  checks, and shells by path. Local packages appear at `pkgs.custom.<name>`.
+- Match nearby module namespaces. System wrappers commonly use `system.*`,
+  `hardware.*`, `services.*`, or `suites.*`. Repo-specific features commonly
+  use `custom.*`. Prefer enabling a suite before selecting individual modules.
+- Follow the local `cfg`, `mkIf cfg.enable`, and `lib.custom` conventions.
+  Helpers live in `lib/module/default.nix`. Use `mkDefault` where profiles
+  should be able to override values.
+- Put Darwin-specific behavior under `modules/darwin/` and portable user
+  behavior under `modules/home/`. Home modules needing OS context take
+  `osConfig ? {}`. Use `lib.snowfall.fs.get-file` for flake-root-relative paths.
+- Agent skills live in `modules/home/ai/shared/skill/` and
+  `modules/home/ai/shared/workflow/skill/`. Claude Code, OpenCode, and Codex
+  render them through `shared/registry.nix`. OpenCode agents live in
+  `modules/home/ai/opencode/agent/`. Use `writing-for-agents` for these edits
+  or changes to `AGENTS.md`.
+- For module or host retirement, follow [the lifecycle policy](docs/module-lifecycle.md).
+  Git history holds retired configurations.
 
 ## Decisions
 
-- **Flake-provided home-manager modules are imported unconditionally, never gated on platform** — `pkgs` in HM `imports` (or shaping config attr names, e.g. `optionalAttrs pkgs.stdenv.isLinux` around a config block) is infinite recursion, so `isLinux`-gating an upstream import cannot work. Inertness on other platforms comes from the module's lazy option defaults instead — verify by evaluating the Darwin host's drvPath. (#37)
+- Import flake-provided Home Manager modules unconditionally. Inspecting
+  `pkgs` in `imports` or using it to choose config attribute names recurses.
+  Use lazy option defaults or `mkIf` for platform-specific behavior. Evaluate
+  the Darwin host's `drvPath` after changes to shared Home Manager imports.
+- When changing Noctalia settings ownership, read `pruneTables` and `KEEP`
+  in [the Noctalia module](modules/home/desktop/addons/noctalia/default.nix).
+  The GUI sidecar takes precedence over the Nix config.
+- For secrets, follow [the SOPS guide](modules/shared/security/sops/README.md)
+  and commit only encrypted material. The flake imports upstream sops-nix for
+  systems and homes, and imports `modules/shared/security/sops` for homes.
+  Use these imports as provided.
+- Preserve every `system.stateVersion` and `home.stateVersion`.
 
-- **noctalia's sidecar outranks the Nix config, so Nix-owned tables are pruned on activation** — `~/.config/noctalia/config.toml` (read-only store symlink) is deep-merged *under* `~/.local/state/noctalia/settings.toml`, which the settings GUI writes and which survives reboots. Editing a table in Nix that has ever been touched in the GUI therefore looks like a no-op. The split: Nix owns `bar` and `widget`, plus `calendar` whenever a vdirsyncer-mirrored `accounts.calendar` account exists (an activation script drops exactly those tables from the sidecar every rebuild); the GUI owns `theme`, `wallpaper.*`, `lockscreen_widgets`, `location` — never prune those, `wallpaper.last`/`wallpaper.monitors.*` are the seed the wallpaper-derived palette is computed from. One key is carved back out of a Nix-owned table by the script's `KEEP` list: `bar.main.background_opacity`, because `BarConfig` has no background *colour* (the fill is always the theme surface role) and there is no light/dark variant of `[bar.main]` — so one Nix value cannot be legible in both theme modes, and only the GUI knows which mode is live. (#37)
+## Validation and activation
 
-## Commands
-
-Daily driver is the `sys` wrapper (`packages/sys/default.nix`):
-
-- `sys r|rebuild [flake]` — `nixos-rebuild switch` (`darwin-rebuild` on macOS)
-- `sys t|test [flake]` — `nixos-rebuild test --fast` (ephemeral, no bootloader update)
-- `sys u|update [input]` — update all flake inputs or one
-- `sys c|clean` — `nix store optimise && nix store gc`
-
-Raw equivalents:
-
-- Build a host: `nix build .#nixosConfigurations.{hostname}.config.system.build.toplevel` (`darwinConfigurations.mba13` for Darwin)
-- Deploy to a remote host: `nix run nixpkgs#deploy-rs -- .#{hostname}` — deploy-rs nodes are auto-derived from `nixosConfigurations` by `lib.custom.mkDeploy` (the flake exposes the raw `deploy` output, not an app)
-- Format: `nix fmt` · Validate all configurations: `nix flake check`
-
-**Guardrail: always ask the user before any switch or test** (`sys rebuild`,
-`sys test`, `nixos-rebuild switch/test`). Building is always safe.
-
-## Definition of done
-
-1. `nix fmt` — clean; `statix check .` and `deadnix --fail --no-lambda-pattern-names -- .` — both exit 0 (CI runs exactly these).
-2. `nix build .#nixosConfigurations.{affected-host}.config.system.build.toplevel` — builds without error, for every host the change touches.
-3. `nix flake check` when the change spans hosts or shared modules.
-4. Activation (`sys test`, then `sys rebuild`) — only with the user's explicit go-ahead; remote hosts build locally first, then `nix run nixpkgs#deploy-rs -- .#{hostname}`.
-
-## Module conventions
-
-Canonical module shape — the convention across `system.*`, `hardware.*`,
-`services.*`, `suites.*`, and most home modules. Match the surrounding files
-rather than fighting it (yes, including the double `with`):
-
-```nix
-{
-  config,
-  lib,
-  pkgs,
-  ...
-}:
-with lib;
-with lib.custom;
-let
-  cfg = config.<namespace>.<module>;
-in {
-  options.<namespace>.<module> = {
-    enable = mkBoolOpt false "Whether to enable <feature>";
-  };
-
-  config = mkIf cfg.enable {
-    # implementation
-  };
-}
-```
-
-`lib.custom` helpers (`lib/module/default.nix`):
-
-- `mkOpt type default description` / `mkOpt' type default`
-- `mkBoolOpt default description` / `mkBoolOpt' default`
-- `enabled` / `disabled` — shorthand for `{ enable = true; }` / `{ enable = false; }`
-- `mkDeploy`, `isDarwin` (`lib/deploy/default.nix`)
-
-### Namespaces — two conventions coexist
-
-Match the surrounding modules in the same directory rather than forcing
-everything under `custom.*`.
-
-**A. Snowfall system-level categories (no `custom` prefix)** — thin wrappers
-over upstream NixOS / home-manager option groups, configuring the host itself:
-
-- `system.*` — `nix`, `fonts`, `locale`, `time`, `xkb`, `security.{doas,sudo,gpg}`
-- `hardware.*` — `audio`, `gpu.*`, `networking`, `printing`, `cpu.*`
-- `services.*` — `ssh`, `logrotate`, `prometheus-exporters`, `nix-cache-builder`
-- `suites.*` — `common`, `desktop`, `develop`, `games`, `server`
-
-**B. `custom.*` categories** — opinionated, repo-specific user features,
-especially in home-manager:
-
-- `custom.tools.*` (CLI tools) · `custom.cli-apps.*` (interactive CLI, e.g. `neovim`) · `custom.apps.*` (GUI) · `custom.games.*`
-- `custom.desktop.*` (incl. nested `addons`) · `custom.theme.*`
-- `custom.security.*` (incl. shared `custom.security.sops`) · `custom.user.*`
-- `custom.virtualisation.*` · `custom.containers.*` · `custom.monitoring.*` · `custom.host.*`
-- `custom.ai.*` — `claude`, `opencode`, `mcp-k8s-go`, `mcp-grafana`, plus `shared`
-
-### Conventions that earn their line
-
-- Enable a suite before hand-picking modules; suites bundle the related set (see `modules/nixos/suites/`).
-- `mkDefault` on values a host should be able to override.
-- Home modules needing OS context take an `osConfig ? {}` parameter.
-- Darwin-specific behaviour lives in `modules/darwin/`; portable user config in `modules/home/`, branching on `pkgs.stdenv.isLinux` / `isDarwin`.
-- For the shape of a host or home file, read an existing one (e.g. `systems/x86_64-linux/mz/default.nix`, `homes/x86_64-linux/sab@mz/default.nix`).
-
-## Secrets (SOPS)
-
-Commit only encrypted files under `secrets/` — keys, tokens, and passwords go
-through SOPS, never plaintext into git.
-
-System secrets (`secrets/{hostname}/default.yaml`):
-
-```nix
-custom.security.sops = {
-  enable = true;
-  sshKeyPaths = [ "/etc/ssh/ssh_host_ed25519_key" ];
-  defaultSopsFile = lib.snowfall.fs.get-file "secrets/{hostname}/default.yaml";
-};
-```
-
-Home Manager secrets (`secrets/{hostname}@{user}/default.yaml`):
-
-```nix
-sops = {
-  age.keyFile = "${config.home.homeDirectory}/.config/sops/age/keys.txt";
-  defaultSopsFile = lib.snowfall.fs.get-file "secrets/{hostname}@{user}/default.yaml";
-};
-```
-
-## stateVersion
-
-`system.stateVersion` / `home.stateVersion` record the install-time state of
-each host and home. Leave them exactly as found, in every file, always.
-
-## References
-
-- [Snowfall Lib](https://snowfall.org/guides/lib/) · [NixOS Manual](https://nixos.org/manual/nixos/stable/) · [Home Manager](https://nix-community.github.io/home-manager/) · [nix-darwin](https://daiderd.com/nix-darwin/manual/index.html) · [sops-nix](https://github.com/Mic92/sops-nix)
+1. Run `nix fmt -- --ci`, `nix develop --no-write-lock-file -c statix check .`,
+   and `nix develop --no-write-lock-file -c deadnix --fail --no-lambda-pattern-names -- .`.
+2. Build each affected host with
+   `nix build --no-link .#nixosConfigurations.<host>.config.system.build.toplevel`.
+   Use `darwinConfigurations.mba13` for Darwin. Run `nix flake check` for
+   cross-host or shared module changes. [CI](.github/workflows/cachix.yaml)
+   runs the checks and builds all live hosts.
+3. **Get explicit user approval before any switch, test activation, or
+   deployment.** Use `sys test` then `sys rebuild` for local NixOS activation.
+   For remote hosts, build locally first and then use
+   `nix run nixpkgs#deploy-rs -- .#<host>`. The flake exposes `deploy` nodes
+   via `lib.custom.mkDeploy`.

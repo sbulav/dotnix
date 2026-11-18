@@ -7,3 +7,6 @@ result-*
 
 # python bytecode from local test runs
 __pycache__/
+
+# macOS Finder metadata
+.DS_Store
