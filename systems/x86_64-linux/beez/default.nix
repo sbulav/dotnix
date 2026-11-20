@@ -292,10 +292,9 @@ in
 
   # Home-site YouTube chain, independent of the work site: the home router
   # (HNetZ, homelab mikrotik/home-youtube-proxy.rsc) policy-routes new
-  # TCP 80/443 connections from the Wi-Fi VLAN to Google prefixes here;
-  # redsocks hands them to the local sing-box "transparent" inbound, which
-  # sends only the DPI-blocked YouTube names to the VLESS exit and the
-  # rest direct. Same module as zanoza, own subscription device.
+  # TCP 80/443 connections to Google prefixes and all TCP to Telegram's
+  # published ranges here. The transparent inbound sends YouTube, Gemini,
+  # and Telegram through the exit; other intercepted Google traffic is direct.
   custom.containers.sing-box = {
     enable = true;
     host = "sing-box-beez.sbulav.ru";
@@ -316,6 +315,34 @@ in
       "socks5h://${routerSocks}"
     ];
     notify.telegram.proxyUrl = "socks5h://172.16.65.108:20170";
+    transparent = {
+      # Merge with the option default so YouTube remains proxied.
+      proxyDomains = lib.mkOptionDefault [
+        "gemini.google.com"
+        "bard.google.com"
+        "aistudio.google.com"
+        "generativelanguage.googleapis.com"
+        "alkalimakersuite-pa.googleapis.com"
+        "alkalimakersuite-pa.clients6.google.com"
+        "aida.googleapis.com"
+        "telegram.org"
+        "telegram.me"
+        "t.me"
+      ];
+      # https://core.telegram.org/resources/cidr.txt (IPv4, 2026-11-18).
+      # Keep in sync with homelab/mikrotik/home-gemini-telegram.rsc.
+      proxyCidrs = [
+        "91.108.56.0/22"
+        "91.108.4.0/22"
+        "91.108.8.0/22"
+        "91.108.16.0/22"
+        "91.108.12.0/22"
+        "149.154.160.0/20"
+        "91.105.192.0/23"
+        "91.108.20.0/22"
+        "185.76.151.0/24"
+      ];
+    };
   };
   custom.services.linuxTransparentProxy = {
     enable = true;
@@ -325,10 +352,10 @@ in
     socksPort = 20171;
     # 12345 is Grafana Alloy's HTTP listener here too.
     listenPort = 12346;
-    tcpPorts = [
-      80
-      443
-    ];
+    # HNetZ selects the destinations: Google web + Telegram TCP on any
+    # port (MTProto can advertise ports beyond 80/443/5222). Private
+    # destinations still bypass interception on beez.
+    tcpPorts = [ ];
     # Only the home Wi-Fi VLAN; beez itself (192.168.92.194) is excluded on
     # the router side (yt-proxy-bypass) and never matches a PREROUTING rule.
     sourceIps = [ "192.168.92.0/24" ];

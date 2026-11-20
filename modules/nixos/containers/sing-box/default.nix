@@ -453,6 +453,9 @@ in
     # flapped. The main inbound (20170) keeps the old everything-via-exit
     # behaviour for the arr apps and Telegram.
     transparent = {
+      proxyCidrs =
+        mkOpt (listOf str) [ ]
+          "Destination CIDRs from the transparent inbound that go to the exit without a sniffed hostname";
       port = mkOpt port 20171 "SOCKS5 port for the transparent-proxy chain (redsocks upstream)";
       proxyDomains =
         mkOpt (listOf str)
@@ -791,9 +794,16 @@ in
                   ip_is_private = true;
                   action = "reject";
                 }
-                # Only the blocked YouTube names need the exit; every other
-                # Google service (and anything the sniffer could not name)
-                # goes direct from here.
+              ]
+              ++ optional (cfg.transparent.proxyCidrs != [ ]) {
+                # Native clients such as Telegram dial IPs without TLS SNI.
+                inbound = [ "transparent" ];
+                ip_cidr = cfg.transparent.proxyCidrs;
+                outbound = "exit";
+              }
+              ++ [
+                # Selected service names use the exit; other intercepted
+                # destinations keep their direct route.
                 {
                   inbound = [ "transparent" ];
                   domain_suffix = cfg.transparent.proxyDomains;
