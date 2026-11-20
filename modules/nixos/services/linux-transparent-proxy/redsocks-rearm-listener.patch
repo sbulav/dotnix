@@ -1,0 +1,23 @@
+--- a/redsocks.c
++++ b/redsocks.c
+@@ -1020,6 +1020,8 @@
+ 	return false;
+ }
+ 
++static void accept_enable();
++
+ static void conn_pressure()
+ {
+ 	struct timeval next;
+@@ -1029,7 +1031,10 @@
+ 		next = drop_idle_connections();
+ 		if (!timerisset(&next)) {
+ 			log_error(LOG_WARNING, "dropped connections idle for %d+ seconds", connpres_idle_timeout());
+-			return; // pressure solved
++			if (!conn_pressure_ongoing()) {
++				accept_enable();
++				return;
++			}
+ 		}
+ 	}
+ 

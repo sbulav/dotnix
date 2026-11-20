@@ -21,6 +21,15 @@ let
   ip = "${pkgs.iproute2}/bin/ip";
   ipsetBin = "${pkgs.ipset}/bin/ipset";
 
+  redsocks = pkgs.redsocks.overrideAttrs (old: {
+    patches = (old.patches or [ ]) ++ [ ./redsocks-rearm-listener.patch ];
+  });
+
+  probeEnabled = cfg.healthCheckUrl != null;
+  probeUser = "redsocks-health";
+  # Redirect only the probe user. Forwarded client traffic uses PREROUTING.
+  probeRule = "OUTPUT -p tcp --dport 443 -m owner --uid-owner ${probeUser} -j REDIRECT --to-ports ${toString cfg.listenPort}";
+
   # user chains
   natChain = "TPROXY_REDSOCKS";
   mangleChain = "TPROXY_REDSOCKS_MANGLE";
@@ -274,6 +283,10 @@ let
 in
 {
   options.${namespace}.services.linuxTransparentProxy = {
+    healthCheckUrl =
+      mkOpt (types.nullOr types.str) null
+        "HTTPS endpoint expected to return 204 through the REDIRECT proxy. Null disables the probe.";
+
     enable = mkBoolOpt false "Enable Linux transparent proxy helper using redsocks.";
     mode = mkOpt (types.enum [
       "redirect"
@@ -332,7 +345,7 @@ in
 
       # Packages
       environment.systemPackages = [
-        pkgs.redsocks
+        redsocks
         pkgs.iptables
         pkgs.iproute2
       ]
@@ -352,7 +365,10 @@ in
         after = [ "network.target" ];
         serviceConfig = {
           Type = "simple";
-          ExecStart = "${pkgs.redsocks}/bin/redsocks -c ${redsocksConf cfg.mode}";
+          ExecStart = "${redsocks}/bin/redsocks -c ${redsocksConf cfg.mode}";
+          # On Linux with splice, redsocks reserves 25% of descriptors and
+          # budgets six per connection. 8192 raises its cap to 1024.
+          LimitNOFILE = 8192;
           Restart = "always";
           User = "redsocks";
           Group = "redsocks";
@@ -395,11 +411,18 @@ in
             ${mkIpSetSetup}
             ${mkNatAttachJump cfg.interface}
             ${mkNatRules}
+            ${optionalString probeEnabled ''
+              ${iptables} -w -t nat -C ${probeRule} 2>/dev/null || \
+                ${iptables} -w -t nat -I ${probeRule}
+            ''}
             ${mkMasqueradeSetup}
           '';
           ExecStop = pkgs.writeShellScript "tp-redirect-teardown" ''
             set -euo pipefail
             ${mkMasqueradeTeardown}
+            ${optionalString probeEnabled ''
+              ${iptables} -w -t nat -D ${probeRule} 2>/dev/null || true
+            ''}
             ${mkNatDetach cfg.interface}
           '';
         };
@@ -435,6 +458,53 @@ in
             ${mkMasqueradeTeardown}
             ${mkMangleDetach cfg.interface}
             ${optionalString cfg.ipv6.enable (mkMangle6Detach cfg.interface)}
+          '';
+        };
+      };
+
+      assertions = [
+        {
+          assertion = !probeEnabled || !usingTPROXY;
+          message = "linuxTransparentProxy.healthCheckUrl requires redirect mode";
+        }
+      ];
+
+      users.groups.${probeUser} = mkIf probeEnabled { };
+      users.users.${probeUser} = mkIf probeEnabled {
+        isSystemUser = true;
+        group = probeUser;
+      };
+
+      systemd.timers.redsocks-health = mkIf probeEnabled {
+        description = "Probe HTTPS through redsocks";
+        wantedBy = [ "timers.target" ];
+        timerConfig = {
+          OnBootSec = "2min";
+          OnUnitInactiveSec = "2min";
+        };
+      };
+
+      systemd.services.redsocks-health = mkIf probeEnabled {
+        description = "Probe HTTPS through redsocks";
+        after = [ "linux-transparent-proxy-redirect.service" ];
+        wants = [ "linux-transparent-proxy-redirect.service" ];
+        serviceConfig = {
+          Type = "oneshot";
+          User = probeUser;
+          NoNewPrivileges = true;
+          ProtectSystem = "strict";
+          ProtectHome = true;
+          # Avoid reporting a direct request as a successful proxy check.
+          ExecStartPre = "+${iptables} -w -t nat -C ${probeRule}";
+          ExecStart = pkgs.writeShellScript "redsocks-health" ''
+            set -eu
+            status=$(${lib.getExe pkgs.curl} -q --ipv4 --noproxy '*' --proto '=https' \
+              --connect-timeout 5 --max-time 15 --silent --show-error \
+              --output /dev/null --write-out '%{http_code}' ${
+                lib.escapeShellArg (if probeEnabled then cfg.healthCheckUrl else "")
+              })
+            echo "HTTPS through redsocks returned $status"
+            test "$status" = 204
           '';
         };
       };

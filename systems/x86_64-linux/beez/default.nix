@@ -346,6 +346,7 @@ in
   };
   custom.services.linuxTransparentProxy = {
     enable = true;
+    healthCheckUrl = "https://www.youtube.com/generate_204";
     mode = "redirect";
     interface = "enp1s0";
     socksHost = "172.16.65.108";

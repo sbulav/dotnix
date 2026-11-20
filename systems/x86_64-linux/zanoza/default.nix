@@ -291,6 +291,7 @@
   # affected; the routers decide which home connections arrive at all.
   custom.services.linuxTransparentProxy = {
     enable = true;
+    healthCheckUrl = "https://www.youtube.com/generate_204";
     mode = "redirect";
     interface = "enp3s0";
     socksHost = "172.16.64.108";
