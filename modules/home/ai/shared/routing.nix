@@ -2,7 +2,7 @@
 # workload defaults, not benchmark scores or guarantees of gateway access.
 {
   policy = ''
-    ## Routing and effort (2026-11-13)
+    ## Routing and effort (2026-11-21)
 
     Choose by task risk, available tools, quota, and total time to a verified
     result. Subscription calls consume quota; self-hosted calls consume time.
@@ -14,15 +14,15 @@
     | Work | Preferred lane | Escalation / alternative |
     |---|---|---|
     | Bulk extraction, summaries, text drafts | self-hosted Gemma | GPT-6 Luna / Haiku 5.5 |
-    | Mechanical code edits with explicit checks | self-hosted GLM | GPT-6.1 Sol / Sonnet 5.5 |
-    | Focused low-risk implementation | GPT-6 Luna with clear acceptance checks | GPT-6.1 Sol / Sonnet 5.5 |
-    | General coding, refactoring, substantive review | GPT-6.1 Sol / Sonnet 5.5 | GPT-6 Astra / Opus 5.5 |
+    | Mechanical code edits with explicit checks | self-hosted GLM | GPT-6.2 Sol / Sonnet 5.5 |
+    | Focused low-risk implementation | GPT-6 Luna with clear acceptance checks | GPT-6.2 Sol / Sonnet 5.5 |
+    | General coding, refactoring, substantive review | GPT-6.2 Sol / Sonnet 5.5 | GPT-6.2 Astra / Opus 5.5 |
     | Ambiguous debugging, architecture, security, contested findings | parent if capable; otherwise Astra / Opus | Fable for unresolved long-horizon work |
     | Independent-family review | cost-ordered review lanes in `delegate-review` | Sonnet/Opus after OpenAI; Sol/Astra after Anthropic |
     | Large input | retrieve relevant files first; partition by subsystem | supported large-context lane, including Gemini |
 
     OpenCode IDs (check the active model catalog before first use):
-    - Personal OpenAI: `openai/gpt-6-luna`, `openai/gpt-6.1-sol`, `openai/gpt-6-astra`.
+    - Personal OpenAI: `openai/gpt-6-luna`, `openai/gpt-6.2-sol`, `openai/gpt-6.2-astra`.
       Optional visual/computer-use/writing lane: `openai/gpt-6.1-terra`.
     - Work gateway: `hhdev-anthropic/claude-sonnet-5-5`,
       `hhdev-anthropic/claude-opus-5-5`, `hhdev-anthropic/claude-fable-5-2`;
@@ -43,10 +43,10 @@
     - Antigravity (`agy`, subscription, not OpenCode): bare IDs such as
       `gemini-3.8-flash-high`,
       `claude-opus-4-6-thinking`, `claude-sonnet-4-6`; list with `agy models`.
-    - Gateway OpenAI fallback: `hhdev-openai/gpt-6.1-sol` (Responses tool
-      calls confirmed 2026-11-13) or `hhdev-openai/gpt-6-astra`.
-      Existing `openai/gpt-6-sol`, `openai/gpt-5.6-sol`, and
-      `openai/gpt-5.6-terra` remain compatibility fallbacks when available.
+    - Gateway OpenAI fallback: `hhdev-openai/gpt-6.2-sol` or
+      `hhdev-openai/gpt-6.2-astra`.
+      Existing `openai/gpt-6.1-sol`, `openai/gpt-6-sol`, `openai/gpt-5.6-sol`,
+      and `openai/gpt-5.6-terra` remain compatibility fallbacks when available.
 
     Catalog presence proves configuration, not access or working tool calls.
     Use the first scoped task to check tool execution and a usable final result.
@@ -57,7 +57,7 @@
     Effort is per model and adapter: inspect supported variants; omit
     `#variant` when unknown. For GPT-6 start low for extraction, medium for
     coding, high for difficult reasoning; raise further only for a specific
-    unresolved problem. Astra and 6.1 Sol cannot use `none`; use Responses
+    unresolved problem. 6.2 Astra and 6.2 Sol cannot use `none`; use Responses
     for reasoning with tools across GPT-6. Claude: start with the harness default (Sonnet
     5.5 high, Opus 5.5 medium); increase only after checking missing context.
     Do not apply fixed thinking budgets or sampling knobs blindly to new
@@ -129,7 +129,7 @@
 
     ```bash
     cd /absolute/worktree
-    opencode run -m 'openai/gpt-6.1-sol#medium' \
+    opencode run -m 'openai/gpt-6.2-sol#medium' \
       --title "bounded task" --format json \
       --file /absolute/worktree/.scratch/task-unique/brief.md \
       -- "Read the attached brief and complete only the assigned task."

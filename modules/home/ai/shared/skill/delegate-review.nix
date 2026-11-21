@@ -67,7 +67,7 @@ in
 
     ${routing}
 
-    ## Review lanes (2026-11-03)
+    ## Review lanes (2026-11-21)
 
     Fill each reviewer slot from the cheapest tier that has a reachable lane
     in a family other than the author's; descend a tier when the upper one
@@ -85,7 +85,7 @@ in
        low-risk evidence gathering when the author is not Anthropic. Public
        input/output rates are $0.10/$0.50 per Mtok up to 100k prompt tokens,
        $0.50/$2.50 above that. Verify findings; this is not a security verdict.
-    4. Metered strong: Grok 4.7 for another family, GPT-6.1 Sol/Sonnet 5.5,
+    4. Metered strong: Grok 4.7 for another family, GPT-6.2 Sol/Sonnet 5.5,
        then Astra/Opus 5.5. Grok's public input/output rates are $2/$6 per Mtok
        below 200k prompt tokens and $4/$12 at or above it; no hhdev discount
        is verified. Security lenses and tie-breaks use Sol/Sonnet or stronger.

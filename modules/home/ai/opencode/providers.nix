@@ -15,8 +15,8 @@ in
       apiKey = "{env:OPENAI_API_KEY}";
       transport = "http";
     };
-    # gpt-6.1-sol Responses calls with function tools verified through the
-    # gateway on 2026-11-13, so the legacy GPT-5.x extras are dropped.
+    # Routed IDs are GPT-6.2. Gateway Responses tool calls were last verified
+    # for gpt-6.1-sol on 2026-11-13; legacy GPT-5.x extras stay dropped.
     models = models.openai;
   };
 

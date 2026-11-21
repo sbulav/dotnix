@@ -1,9 +1,15 @@
-# Verified against official docs and hhdev inventories on 2026-11-13.
+# GPT-6.2 Sol/Astra added from official docs on 2026-11-21.
 # Catalog entries are not proof of access; probe a new ID before routing to it.
 let
   openai = {
+    "gpt-6.2-astra" = {
+      name = "GPT-6.2 Astra";
+    };
     "gpt-6-astra" = {
       name = "GPT-6 Astra";
+    };
+    "gpt-6.2-sol" = {
+      name = "GPT-6.2 Sol";
     };
     "gpt-6-sol" = {
       name = "GPT-6 Sol";
