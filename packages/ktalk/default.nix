@@ -11,18 +11,18 @@ let
   #   https://st.ktalk.host/ktalk-app/linux/latest-linux.yml
   #   https://st.ktalk.host/ktalk-app/mac/latest-mac.yml
   linux = rec {
-    version = "3.7.1";
+    version = "3.8.0";
     src = pkgs.fetchurl {
       url = "https://st.ktalk.host/ktalk-app/linux/${pname}${version}x86_64.AppImage";
-      hash = "sha512-essHaFr6nJCcKD2l154pQpCFsvB+7+sbUv95FP55/bagXGgiMDQ8KgI/oTFD+2H3O46lMZdcujznG1T0eZnD8w==";
+      hash = "sha512-gJby6B4Fg8/vqwLXQU449Hzoiq6pYDb+cq0pS+1E1ebfyCPsPwcK377pXNcgsv1hPaeEexkmPmajw1/RD49bdQ==";
     };
   };
 
   darwin = rec {
-    version = "3.7.0";
+    version = "3.8.0";
     src = pkgs.fetchurl {
       url = "https://st.ktalk.host/ktalk-app/mac/ktalk.${version}-mac.dmg";
-      hash = "sha512-ss03taae/Mz1Fjv9k441krLzGm4PW7fs3i75DHoiRDgiElFtYwA81Eu8jhACRdZomSEJI7OiPSFdJ18nKVGwoQ==";
+      hash = "sha512-mO9RaSWvuMt1I97b/CdbmnnKZnf4zPJxr6RrVBS+yH4imDCiJsa81eDbd0mkSmaXiW+K9rsuH1JGWdTWpNbq/w==";
     };
   };
 

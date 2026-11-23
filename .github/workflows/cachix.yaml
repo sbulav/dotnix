@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@v32.0.0
 
       - name: Check Nix flake inputs
         uses: DeterminateSystems/flake-checker-action@v14
@@ -63,7 +63,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@v32.0.0
 
       - name: Evaluate derivation
         run: nix eval --json --no-write-lock-file '${{ matrix.target }}' --apply '${{ matrix.apply }}'
@@ -71,8 +71,8 @@ jobs:
       - name: Verify the committed lock file is unchanged
         run: git diff --exit-code -- flake.lock
 
-  # Every live host is built, so a green run (including Renovate's automerged
-  # lock file maintenance) means each closure actually builds.
+  # Every live host is built, so a green run means each closure actually
+  # builds. Lock file maintenance still needs manual rollout review.
   build:
     name: Build ${{ matrix.name }}
     needs: [quality, evaluate]
@@ -113,7 +113,7 @@ jobs:
           remove_folders: "/usr/share/swift /usr/share/miniconda /usr/share/az* /usr/share/glade* /usr/local/lib/node_modules /usr/local/share/chromium /usr/local/share/powershell"
           testing: false
 
-      - uses: cachix/install-nix-action@v31
+      - uses: cachix/install-nix-action@v32.0.0
 
       - uses: cachix/cachix-action@v17
         with:

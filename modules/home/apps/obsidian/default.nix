@@ -14,20 +14,20 @@ let
 
   cfg = config.custom.apps.obsidian;
 
-  syncEngineVersion = "3.1.0";
+  syncEngineVersion = "3.4.3";
   syncEngineBaseUrl = "https://github.com/hesprs/sync-engine/releases/download/${syncEngineVersion}";
   syncEnginePlugin = {
     manifest = pkgs.fetchurl {
       url = "${syncEngineBaseUrl}/manifest.json";
-      hash = "sha256-/aJoX22+xQ34+j56NpyEyalWIGtE53YazBZYMSfh8N8=";
+      hash = "sha256-f/SoMtKWLacNrIPe9ZThkBQ2d9AmWFmPiHcvMkiRaMM=";
     };
     main = pkgs.fetchurl {
       url = "${syncEngineBaseUrl}/main.js";
-      hash = "sha256-tMhn6N++7mKGXE5cfUPxRUqNxsSG79luoYyVZghPAvo=";
+      hash = "sha256-7f+BP4TVbnEd8UA8nU1YTEQ0JNjoRpemKNj/Tla3EDg=";
     };
     styles = pkgs.fetchurl {
       url = "${syncEngineBaseUrl}/styles.css";
-      hash = "sha256-c9FwSmJZfrmWWGL+VbjguOVVla1y4r2zaWMN3KrVGLo=";
+      hash = "sha256-uzMnTnVICT7Zg3XP6Z1QGSLI7tSHO84GMDLA464zA20=";
     };
   };
 in

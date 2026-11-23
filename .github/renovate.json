@@ -9,9 +9,7 @@
     "extends": [
       "schedule:weekly"
     ],
-    "automerge": true,
-    "automergeType": "pr",
-    "platformAutomerge": false
+    "automerge": false
   },
   "nix": {
     "enabled": true
