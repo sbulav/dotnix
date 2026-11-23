@@ -98,6 +98,17 @@ in
       default = if pkgs.stdenv.isLinux then wrapper else raw;
       description = "The herdr command every client should run (the stale-server wrapper on Linux).";
     };
+    integrations =
+      mkOpt
+        (types.listOf (
+          types.enum [
+            "claude"
+            "codex"
+            "opencode"
+          ]
+        ))
+        [ "claude" "codex" "opencode" ]
+        "Built-in herdr agent integrations to install (session resume; OpenCode also reports state).";
   };
 
   config = mkIf cfg.enable {
@@ -131,6 +142,31 @@ in
           done
         }
         herdrStaleServer || true
+      ''
+    );
+
+    # herdr's own installer writes its hook scripts and merges entries into
+    # the agents' mutable configs: Claude settings.json (which claudeSettings
+    # rebuilds first; its jq merge keeps SessionStart), Codex hooks.json and
+    # config.toml, OpenCode plugins/ plus tui.jsonc and cli.json. Rerunning it
+    # each activation keeps the scripts in step with the pinned herdr. Agents
+    # whose config directory is absent on this host are skipped.
+    home.activation.herdrIntegrations = mkIf (cfg.integrations != [ ]) (
+      config.lib.dag.entryAfter [ "writeBoundary" "claudeSettings" ] ''
+        herdrIntegrations() {
+          local agent dir
+          for agent in ${escapeShellArgs cfg.integrations}; do
+            case "$agent" in
+              claude) dir="$HOME/.claude" ;;
+              codex) dir="$HOME/.codex" ;;
+              opencode) dir="$HOME/.config/opencode" ;;
+            esac
+            [ -d "$dir" ] || continue
+            run --silence ${escapeShellArg real} integration install "$agent" \
+              || echo "herdr: installing the $agent integration failed" >&2
+          done
+        }
+        herdrIntegrations || true
       ''
     );
 
