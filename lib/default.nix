@@ -267,10 +267,12 @@ in
 
         telegramBot = {
           uid = 196;
+          restartUnits = [ "container@grafana.service" ];
         };
 
         emailPassword = {
           uid = 196;
+          restartUnits = [ "container@grafana.service" ];
         };
 
         secretKey = {

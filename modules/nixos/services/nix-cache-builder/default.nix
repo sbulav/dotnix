@@ -1087,6 +1087,7 @@ in
         mode = "0400";
         owner = "root";
         group = "root";
+        restartUnits = lib.optional cfg.cacheServer.enable "nix-serve.service";
       };
 
       # Define SOPS secret for telegram notifications
