@@ -57,7 +57,7 @@ in
     ];
 
     hardware = {
-      nvidia = mkIf (!config.hardware.gpu.amd.enable) {
+      nvidia = {
         package = mkDefault nvidiaPackage;
         modesetting.enable = mkDefault true;
 
