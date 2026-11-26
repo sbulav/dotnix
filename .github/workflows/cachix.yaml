@@ -19,7 +19,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: cachix/install-nix-action@v32.0.0
+      - uses: cachix/install-nix-action@v32.1.0
 
       - name: Check Nix flake inputs
         uses: DeterminateSystems/flake-checker-action@v14
@@ -63,7 +63,7 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - uses: cachix/install-nix-action@v32.0.0
+      - uses: cachix/install-nix-action@v32.1.0
 
       - name: Evaluate derivation
         run: nix eval --json --no-write-lock-file '${{ matrix.target }}' --apply '${{ matrix.apply }}'
@@ -113,7 +113,7 @@ jobs:
           remove_folders: "/usr/share/swift /usr/share/miniconda /usr/share/az* /usr/share/glade* /usr/local/lib/node_modules /usr/local/share/chromium /usr/local/share/powershell"
           testing: false
 
-      - uses: cachix/install-nix-action@v32.0.0
+      - uses: cachix/install-nix-action@v32.1.0
 
       - uses: cachix/cachix-action@v17
         with:
