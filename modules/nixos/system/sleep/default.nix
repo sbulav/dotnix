@@ -8,9 +8,17 @@ with lib;
 with lib.custom;
 let
   cfg = config.system.sleep;
+  recoverOnResume = cfg.gvfsUnmountFix.enable || cfg.audioResumeFix.enable;
+  recoveryUnit = "custom-resume-recovery";
+  userServices =
+    optional cfg.gvfsUnmountFix.enable "gvfs-daemon.service"
+    ++ optionals cfg.audioResumeFix.enable [
+      "wireplumber.service"
+      "pipewire.service"
+      "pipewire-pulse.service"
+    ];
 
   sleepHooks = pkgs.writeShellScript "system-sleep-hooks" ''
-    #!${pkgs.bash}/bin/bash
     set -eu
 
     if [[ "${boolToString cfg.gvfsUnmountFix.enable}" == "true" && "$1" == "pre" ]]; then
@@ -22,34 +30,10 @@ let
       done < /proc/mounts
     fi
 
-    if [[ "$1" == "post" ]] && [[ "${
-      boolToString (cfg.gvfsUnmountFix.enable || cfg.audioResumeFix.enable)
-    }" == "true" ]]; then
-      (
-        sleep ${toString cfg.resumeDelaySeconds}
-
-        for uid_dir in /run/user/*; do
-          if [[ ! -d "$uid_dir" || ! -S "$uid_dir/bus" ]]; then
-            continue
-          fi
-
-          uid=$(basename "$uid_dir")
-          gid=$(${pkgs.coreutils}/bin/stat -c %g "$uid_dir")
-
-          ${pkgs.util-linux}/bin/setpriv \
-            --reuid "$uid" \
-            --regid "$gid" \
-            --clear-groups \
-            ${pkgs.coreutils}/bin/env \
-            DBUS_SESSION_BUS_ADDRESS="unix:path=$uid_dir/bus" \
-            XDG_RUNTIME_DIR="$uid_dir" \
-            ${pkgs.systemd}/bin/systemctl --user \
-            restart \
-            ${optionalString cfg.gvfsUnmountFix.enable "gvfs-daemon.service"} \
-            ${optionalString cfg.audioResumeFix.enable "wireplumber.service pipewire.service pipewire-pulse.service"} \
-            2>/dev/null || true
-        done
-      ) &
+    if [[ "$1" == "post" && "${boolToString recoverOnResume}" == "true" ]]; then
+      # The system manager owns the timer; a child of this hook can be killed
+      # when the sleep service exits. Never wait on the frozen user.slice here.
+      ${pkgs.systemd}/bin/systemctl --no-block restart ${recoveryUnit}.timer
     fi
   '';
 in
@@ -68,6 +52,46 @@ in
     environment.etc."systemd/system-sleep/custom-sleep-hooks" = {
       source = sleepHooks;
       mode = "0755";
+    };
+
+    systemd.timers.${recoveryUnit} = mkIf recoverOnResume {
+      description = "Schedule user service recovery after system sleep";
+      timerConfig = {
+        OnActiveSec = "${toString cfg.resumeDelaySeconds}s";
+        AccuracySec = "1s";
+        RemainAfterElapse = false;
+      };
+    };
+
+    systemd.services.${recoveryUnit} = mkIf recoverOnResume {
+      description = "Restart selected user services after system sleep";
+      # Even with a short delay, wait for the sleep helper to thaw user.slice.
+      after = [
+        "systemd-suspend.service"
+        "systemd-hibernate.service"
+        "systemd-hybrid-sleep.service"
+        "systemd-suspend-then-hibernate.service"
+      ];
+      serviceConfig.Type = "oneshot";
+      script = ''
+        status=0
+        for uid_dir in /run/user/*; do
+          [[ -S "$uid_dir/bus" ]] || continue
+          uid="''${uid_dir##*/}"
+          gid=$(${pkgs.coreutils}/bin/stat -c %g "$uid_dir") || { status=1; continue; }
+
+          ${pkgs.util-linux}/bin/setpriv \
+            --reuid "$uid" \
+            --regid "$gid" \
+            --clear-groups \
+            ${pkgs.coreutils}/bin/env \
+            DBUS_SESSION_BUS_ADDRESS="unix:path=$uid_dir/bus" \
+            XDG_RUNTIME_DIR="$uid_dir" \
+            ${pkgs.systemd}/bin/systemctl --user restart ${escapeShellArgs userServices} \
+            || status=1
+        done
+        exit "$status"
+      '';
     };
   };
 }
