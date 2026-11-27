@@ -159,7 +159,7 @@ in
   };
   custom = {
     virtualisation = {
-      virt-manager.enable = true;
+      virt-manager.enable = false;
       kvm.enable = false;
       podman.enable = false;
     };
