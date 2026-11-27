@@ -260,7 +260,13 @@ def main():
             assert labelled_target.exists(), "Completed torrent must use its Flood label as the folder"
             assert labelled_target.read_bytes() == payload
             assert rtorrent.rpc("d.custom1", labelled_hash) == "switch"
-            assert Path(rtorrent.rpc("d.base_path", labelled_hash)) == labelled_target
+            # d.start schedules a reopen. d.base_path can still report the old
+            # path after the completion hook has already moved the file.
+            wait_for(
+                "rTorrent reopens at the labelled path",
+                lambda: Path(rtorrent.rpc("d.base_path", labelled_hash)) == labelled_target,
+                15,
+            )
             for name, encoded_label, folder in (
                 ("encoded label.nsp", "Games%2C%20Switch", "Games, Switch"),
                 ("unicode label.nsp", "%D0%98%D0%B3%D1%80%D1%8B", "Игры"),
@@ -273,12 +279,20 @@ def main():
                 rtorrent.rpc("event.download.finished", encoded_hash)
                 destination = rtorrent.completed / folder / name
                 assert destination.read_bytes() == payload
-                assert Path(rtorrent.rpc("d.base_path", encoded_hash)) == destination
+                wait_for(
+                    f"rTorrent reopens at {destination}",
+                    lambda: Path(rtorrent.rpc("d.base_path", encoded_hash)) == destination,
+                    15,
+                )
                 assert rtorrent.rpc("d.custom1", encoded_hash) == encoded_label
         with rtorrent.running():
             wait_for("rTorrent seed after restart", lambda: rtorrent.rpc("d.is_active", info_hash))
             assert Path(rtorrent.rpc("d.base_path", info_hash)) == target
-            assert Path(rtorrent.rpc("d.base_path", labelled_hash)) == labelled_target
+            wait_for(
+                "rTorrent reopens at the labelled path after restart",
+                lambda: Path(rtorrent.rpc("d.base_path", labelled_hash)) == labelled_target,
+                15,
+            )
             # Rechecks / repeated completion events must not move seeds again.
             rtorrent.rpc("event.download.finished", info_hash)
             assert data_file.read_bytes() == payload
