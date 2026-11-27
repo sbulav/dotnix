@@ -27,10 +27,8 @@ in
       "git remote *" = "allow";
       "git add *" = "ask";
       "git commit *" = "ask";
-      "tea issues *" = "allow";
-      "tea pulls *" = "allow";
-      "tea comment *" = "allow";
-      "tea pr create *" = "allow";
+      "fj issue *" = "allow";
+      "fj pr *" = "allow";
     };
   };
 

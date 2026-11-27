@@ -168,7 +168,8 @@ in
       };
       k9s = enabled;
       opentofu = disabled;
-      tea = enabled;
+      fj = enabled;
+      fj-ex = enabled;
       disktree = enabled;
       record-screen = enabled;
       sqlite-jira = enabled;

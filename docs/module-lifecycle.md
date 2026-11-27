@@ -27,6 +27,7 @@ host are removed by hand, as a separate decision.
 | 2026-09 | All quarantine trees (`modules/_darwin-disabled`, `modules/_nixos-disabled`, `.disabled`) | Deleted. |
 | 2026-09 | Nextcloud | Deleted with its Authelia client, Traefik middleware and homepage entry; OpenCloud replaced it. `/tank/nextcloud` on `zanoza` removed by hand afterwards. |
 | 2026-11 | AMD GPU wrapper | Deleted: no host used it, and pinned nixpkgs removed AMDVLK. Use upstream `hardware.amdgpu` options where needed; Mesa provides RADV by default. |
+| 2026-11 | tea | Deleted: replaced by `fj` (forgejo-cli) for issues, pull requests, labels and milestones, and `fj-ex` for Actions. |
 
 The active Nix language server is `nixd`. Development suites install it through
 `custom.tools.lsp`; server profiles that need it list it explicitly. `nil` is not

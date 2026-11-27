@@ -1,5 +1,5 @@
 let
-  tea = (import ../templates.nix).teaConventions;
+  forgejo = (import ../templates.nix).forgejoConventions;
 in
 {
   name = "brainstorm";
@@ -28,7 +28,7 @@ in
      - Ask before switching branches.
      - If a Jira key appears, enrich with a narrow query only. Never run a broad Jira search.
 
-    ${tea}
+    ${forgejo}
 
     ═══════════════════════════════════════
     PHASE 1 — GRILL (interview & challenge)
@@ -59,7 +59,7 @@ in
        - State the problem, the proposed approach, key decisions made, and what's explicitly out of scope.
     8. Fog check — before asking for confirmation, name any material unknowns that questioning could not burn down: unmapped code areas, unverified external behaviour, missing measurements, assumptions nobody can confirm.
        - Clear enough → ask: "Does this shared understanding capture what we want? Confirm to proceed to planning."
-       - Foggy → say plainly that planning now would fake certainty, and offer investigation issues instead: one issue per unknown, each stating the question to answer and a "done when we know X" criterion. These are **decision tickets** — each resolves a decision, not a deliverable. On approval create them via `tea`, post no plan, and stop — suggest `/workon` on an investigation issue to burn down the fog first.
+       - Foggy → say plainly that planning now would fake certainty, and offer investigation issues instead: one issue per unknown, each stating the question to answer and a "done when we know X" criterion. These are **decision tickets** — each resolves a decision, not a deliverable. On approval create them via `fj issue create`, post no plan, and stop — suggest `/workon` on an investigation issue to burn down the fog first.
        - Fog or ticket? The test is whether you can state the question **precisely now** — not whether you can answer it now. Sharp question → investigation issue, even if blocked by another. Too dim to phrase → do NOT pre-slice it into fake tickets: record it in a `## Ещё не специфицировано` section of the parent issue body, as loosely or fully as the view allows. It graduates into a real issue when a resolved ticket sharpens it — one fog patch may become several issues, or none.
        - Out of scope is not fog. Work ruled beyond the destination goes to `## Вне scope` with one line of why, and never graduates — it returns only if the destination is redrawn, and then as a fresh effort.
     9. Do NOT proceed to Phase 2 until the user explicitly confirms the shared understanding.
@@ -119,7 +119,7 @@ in
      - Post `AI-HANDOFF` only when stopping, blocked, before commit approval, or before PR approval.
      - Use append-only comments; latest handoff wins.
      - Post a short tracker handoff directly with explicit repo scope when authorized; a separate worker is unnecessary. The portable `handoff` skill is for transferring sessions, not posting comments.
-     - Planning mode alone is no reason to avoid `tea comment` — skip it only when the runtime explicitly blocks that command.
+     - Planning mode alone is no reason to avoid `fj issue comment` — skip it only when the runtime explicitly blocks that command.
      - Include a **Decision log** in handoffs summarizing key decisions and their rationale from the grill phase. Mark entries that pass the `domain-modeling` bar (hard to reverse, surprising, real trade-off) with `[promote]` — `/ship` reads these to update AGENTS.md.
 
      If the user supplied initial context, treat it as the starting idea:

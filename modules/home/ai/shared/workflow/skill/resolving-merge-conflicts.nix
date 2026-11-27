@@ -2,7 +2,7 @@
 # `delegate` step 5 relies on it) — intent archaeology plus the never-abort rule, extended with the AI-HANDOFF
 # decision log as a primary source and with `delegate` worktree swarms in mind.
 let
-  tea = (import ../templates.nix).teaConventions;
+  forgejo = (import ../templates.nix).forgejoConventions;
 in
 {
   name = "resolving-merge-conflicts";
@@ -22,7 +22,7 @@ in
 
     Hard rule: always resolve; never `--abort`. Aborting discards the reconciliation work and hands the same conflict to the next session. If the merge itself turns out to be wrong, stop and say so — that is the user's call, not an abort you take alone.
 
-    ${tea}
+    ${forgejo}
 
     ## 1 — See the state
 
@@ -37,8 +37,8 @@ in
 
     For each conflicting hunk, learn why each side changed that line, in order of authority:
     - The commit that introduced it — read its message, not just its diff.
-    - The PR that carried it (`tea pulls`).
-    - The issue and its latest AI-HANDOFF (`tea issues --comments`). The handoff **Decision log** is the highest-value source here: it records the decision behind the code, which the diff never shows.
+    - The PR that carried it (`fj pr -R <forgejo-remote> search -s all`, then `view <pr-number>`).
+    - The issue and its latest AI-HANDOFF (`fj issue -R <forgejo-remote> view <issue-number> comments`). The handoff **Decision log** is the highest-value source here: it records the decision behind the code, which the diff never shows.
 
     Resolving a hunk whose intent you have not read is guessing. When both sides are opaque, ask rather than invent.
 

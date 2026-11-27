@@ -25,9 +25,8 @@ in
       "git branch --show-current" = "allow";
       "git remote *" = "allow";
       "git log *" = "allow";
-      "tea issues *" = "allow";
-      "tea comment *" = "allow";
-      "tea issues create *" = "allow";
+      "fj issue *" = "allow";
+      "fj repo labels *" = "allow";
     };
   };
 

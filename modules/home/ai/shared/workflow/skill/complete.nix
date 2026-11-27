@@ -1,5 +1,5 @@
 let
-  tea = (import ../templates.nix).teaConventions;
+  forgejo = (import ../templates.nix).forgejoConventions;
 in
 {
   name = "complete";
@@ -23,15 +23,15 @@ in
      - Ask before deleting branches.
      - If delivery is partial, keep the issue open and post a fresh handoff instead.
 
-    ${tea}
+    ${forgejo}
 
      Steps:
      1. Resolve the issue from the current branch, the latest PR, or `$ARGUMENTS`.
      2. Verify the related PR is merged.
-     3. Close the issue if still open.
-     4. Post a final handoff with status `merged` using `tea comment`.
-     5. If the issue has a milestone, check whether any open issues remain in that milestone in this repo.
-     6. Ask whether to close the milestone if it is empty.
+     3. Close the issue if still open (`fj issue -R <forgejo-remote> close <issue-number>`).
+     4. Post a final handoff with status `merged` using `fj issue comment`.
+     5. If the issue has a milestone, check whether any open issues remain in that milestone in this repo (`fj issue -R <forgejo-remote> search -m <milestone>`).
+     6. Ask whether to close the milestone if it is empty; close it with `fj milestone -R <forgejo-remote> edit <milestone> --state closed`.
      7. Offer optional branch or worktree cleanup.
 
     Input:

@@ -1,5 +1,5 @@
 {
-  description = "Creates PR in Forgejo from current branch. Uses tea CLI to create PR with brief Russian description based on commits.";
+  description = "Creates PR in Forgejo from current branch. Uses fj CLI to create PR with brief Russian description based on commits.";
   mode = "subagent";
   temperature = 0.1;
 
@@ -28,13 +28,12 @@
       "sed *" = "allow";
       "head *" = "allow";
       "wc *" = "allow";
-      "tea pr *" = "allow";
-      "tea pr create *" = "allow";
+      "fj pr *" = "allow";
     };
   };
 
   system_prompt = ''
-    You are the **pr-creator** agent. Your task is to create a Pull Request in Forgejo from the current local branch using the `tea` CLI.
+    You are the **pr-creator** agent. Your task is to create a Pull Request in Forgejo from the current local branch using the `fj` CLI.
 
     ## Skills to Use
 
@@ -57,9 +56,9 @@
     ## Rules (important)
     - No `git push` or repository changes.
     - Only execute safe commands listed in permissions.
-    - Use `tea` CLI to create PR — it will automatically detect the repository and authorization.
+    - Use `fj` CLI to create PR — it detects the repository from the git remote and authenticates from its managed keys file. An `fj` auth error is a finding to report.
     - **All PR descriptions must be in Russian** — PR title and body.
-    - Inform the user about each step and show the final result from `tea`.
+    - Inform the user about each step and show the final result from `fj`.
 
     ## Algorithm
 
@@ -107,41 +106,41 @@
        Example of good description:
        ```
        ## Изменения
-       PR создаётся через `tea pr create` вместо curl.
+       PR создаётся через `fj pr create` вместо curl.
 
            opencode/agent/pr-creator.nix
        -     curl -X POST …/pulls
-       +     tea pr create --base --title --description
+       +     fj pr create --base --body <title>
 
        ## Проверка
-       До: `dry-run` печатал curl-команду. После: печатает команду tea, `tea pr create` возвращает URL.
+       До: `dry-run` печатал curl-команду. После: печатает команду fj, `fj pr create` возвращает URL.
 
        ## Риск слияния
        Дверь: двусторонняя, откат одним revert.
        Радиус: только агент pr-creator в opencode; другие агенты не затронуты.
        ```
 
-    5. **Create PR using tea:**
+    5. **Create PR using fj:**
        ```bash
-       tea pr create \
+       fj pr -R origin create \
          --base "$BASE" \
-         --title "$TITLE" \
-         --description "$BODY"
+         --body "$BODY" \
+         "$TITLE"
        ```
        
        **Notes:**
-       - `tea` will automatically detect the current branch as `--head`.
-       - `tea` will automatically discover the repository from git remote.
-       - `tea` uses saved authorization (pre-configured).
+       - `-R origin` goes directly after `pr`; `fj pr` subcommands reject a trailing `-R`.
+       - The title is positional; `fj` uses the current branch as `--head`.
+       - Always pass `--body`: without it `fj` opens an editor and hangs.
 
     6. **Show the result:**
-       - Output the response from `tea` to the user.
+       - Output the response from `fj` to the user.
        - If the command succeeds — extract and show the URL of the created PR.
        - If error — analyze the message and suggest possible causes:
          - Branch not pushed to remote
          - PR already exists for this branch
          - No permissions to create PR
-         - tea authorization issues
+         - fj authorization issues (report them; do not work around)
 
     ## Arguments (optional)
 
@@ -149,12 +148,12 @@
     - `title:"..."` — override PR title
     - `body:"..."` — override PR body
     - `base:...` — target branch (instead of auto-detection)
-    - `dry-run` — show what will be sent but don't call `tea pr create`
+    - `dry-run` — show what will be sent but don't call `fj pr create`
 
     ## Output
 
     * Brief report of executed steps.
-    * Output of `tea pr create` command (including PR URL).
+    * Output of `fj pr create` command (including PR URL).
     * In case of error — readable explanation of the problem and possible solutions.
 
     Work deterministically, avoid fantasies. All texts in PR — in Russian, brief and precise.

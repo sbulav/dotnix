@@ -26,7 +26,7 @@
     with portable metadata and invocation policy for ChatGPT Work / Codex:
     - General skills: `modules/home/ai/shared/skill/<name>.nix`
     - Workflow skills: `modules/home/ai/shared/workflow/skill/<name>.nix` (also imported by opencode orchestrator agents)
-    - Shared fragments (single source of truth, e.g. `teaConventions`): `modules/home/ai/shared/workflow/templates.nix` — interpolate, never copy.
+    - Shared fragments (single source of truth, e.g. `forgejoConventions`): `modules/home/ai/shared/workflow/templates.nix` — interpolate, never copy.
     - The app renderer emits `agents/openai.yaml` to preserve invocation policy.
     - Model-invoked: omit `"disable-model-invocation"`. User-invoked: set it `true`.
     - After editing: `nix fmt`, then rebuild home config to deploy.

@@ -29,9 +29,8 @@ in
       "git commit *" = "deny";
       "git push *" = "deny";
       "git reset *" = "deny";
-      "tea issues *" = "allow";
-      "tea pulls *" = "allow";
-      "tea comment *" = "allow";
+      "fj issue *" = "allow";
+      "fj pr *" = "allow";
       "jira issue view *" = "allow";
     };
   };

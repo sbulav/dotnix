@@ -68,7 +68,8 @@ with lib.custom;
       };
       k9s = enabled;
       sqlite-jira = enabled;
-      tea = enabled;
+      fj = enabled;
+      fj-ex = enabled;
     };
 
     security = {

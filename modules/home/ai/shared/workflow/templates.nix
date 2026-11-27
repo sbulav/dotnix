@@ -62,14 +62,17 @@ let
     "committed"
   ];
 
-  # Single source of truth for Forgejo/tea access rules, interpolated into
+  # Single source of truth for Forgejo CLI access rules, interpolated into
   # every workflow skill. Edit here, not in the individual skills.
-  teaConventions = ''
+  forgejoConventions = ''
     Forgejo conventions (shared across workflow skills):
-    - Resolve the target from `git remote -v` and the task; pass `-R <forgejo-remote>` on every `tea` repo operation (`--repo <owner/repo>` for GitHub `gh`). Work through documented `tea` commands: `tea issues`, `tea pulls`, `tea comment`. Keep `tea issue comment`, `tea api`, and `python3` out of the normal workflow — `tea comment` / `tea issues` / `tea pulls` cover it.
-    - Post handoffs and comments with `tea comment -R <forgejo-remote> <issue-number> $'...'` — one safely quoted argument. Heredocs, command substitution, and backgrounded comment commands break under this shell.
+    - Issues, pull requests, comments, labels and milestones go through `fj`. Actions runs and logs go through `fj-ex` (skill `forgejo-ci`). GitHub repos go through `gh --repo <owner/repo>`.
+    - Resolve the target from `git remote -v` and the task, and put `-R <forgejo-remote>` directly after the command group on every call: `fj issue -R <forgejo-remote> ...`, `fj pr -R <forgejo-remote> ...`, `fj milestone -R <forgejo-remote> ...`. That position works for all three groups.
+    - Read an issue with `fj issue -R <forgejo-remote> view <issue-number>` and its thread with `fj issue -R <forgejo-remote> view <issue-number> comments`. Bodies print as raw markdown, so a handoff is the comment carrying the `<!-- AI-HANDOFF -->` marker; older handoffs carry only the `**AI-HANDOFF**` heading and count too.
+    - Post handoffs and comments with `fj issue -R <forgejo-remote> comment <issue-number> $'...'` — the body always given, as one safely quoted argument; a call without a body opens an editor and hangs. Heredocs, command substitution, and backgrounded comment commands break under this shell.
     - Every AI-HANDOFF carries both the hidden `<!-- AI-HANDOFF -->` marker and a visible `**AI-HANDOFF**` heading, and contains workflow content only (status, decisions, next steps). System reminders, tool diagnostics, and internal policy text stay out.
     - When runtime mode or permissions block posting: say so plainly and return the exact body for the user to post manually. Tokens, `curl`, config files, and API auth are not fallbacks to probe.
+    - Other subcommands and flags: `fj <group> <command> --help`.
   '';
 in
 {
@@ -78,7 +81,7 @@ in
     handoffTemplate
     statusValues
     commitStatusValues
-    teaConventions
+    forgejoConventions
     ;
 
   formatIssueBody =

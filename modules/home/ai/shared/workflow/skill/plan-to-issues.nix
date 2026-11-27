@@ -1,5 +1,5 @@
 let
-  tea = (import ../templates.nix).teaConventions;
+  forgejo = (import ../templates.nix).forgejoConventions;
 in
 {
   name = "plan-to-issues";
@@ -23,11 +23,11 @@ in
      - Propose all slices at once before creating any.
      - Each slice needs: goal, in-scope, acceptance criteria, a `**Blocked by:**` line, parent reference.
      - Ask one confirmation before creating all sub-issues.
-     - Create issues only after user confirmation, via `tea`.
+     - Create issues only after user confirmation, via `fj issue create`.
      - Only slice what you can specify sharply now — never pre-slice fog (see the fog rule below).
      - In everything the user reads, refer to slices by **title** — the number rides inside (`#12 api layer`), never a bare wall of `#12, #13, #14`.
 
-    ${tea}
+    ${forgejo}
 
     Slicing modes — pick per parent issue, and say which you picked and why:
 
@@ -56,8 +56,8 @@ in
 
     Workflow:
     1. Resolve parent issue from `$ARGUMENTS` or current branch.
-    2. Fetch parent issue with `tea issues -R <forgejo-remote> <issue-number>`.
-    3. Fetch comments with `tea issues -R <forgejo-remote> --comments -o json <issue-number>`.
+    2. Fetch parent issue with `fj issue -R <forgejo-remote> view <issue-number>`.
+    3. Fetch comments with `fj issue -R <forgejo-remote> view <issue-number> comments`.
     4. Extract the latest AI-HANDOFF and read the parent issue body.
     5. Explore the codebase to find existing patterns, validate assumptions, and identify integration points.
        - If a read-only explorer subagent is available, delegate this exploration to it and work from its summary; otherwise explore directly with the read-only tools.
@@ -78,7 +78,7 @@ in
     8. Ask one confirmation: "Create all N sub-issues? (y/n)"
     9. Create sub-issues **in dependency order** (blockers first), title format: `#<parent> slice: <title>`, so each `**Blocked by:**` line can reference the real issue numbers already created. Every cross-reference in a posted body carries a real id: a placeholder such as `#<n>` auto-links to an unrelated issue. If a reference cannot be known yet, create the issue without it and edit it in once the id exists.
        - Apply the `hitl` or `afk` label matching each slice's execution mode.
-       - Apply the `ready-for-agent` label to every slice whose blockers are all closed or empty — these are safe targets for `/workon` or `/delegate` swarms. Check `tea labels` first and create missing labels before use.
+       - Apply the `ready-for-agent` label to every slice whose blockers are all closed or empty — these are safe targets for `/workon` or `/delegate` swarms. Apply labels with `fj issue -R <forgejo-remote> edit <issue-number> labels -a <label>`; `fj issue create` takes no labels. Check `fj repo labels <host>/<owner>/<repo> view` first and create missing ones with `fj repo labels <host>/<owner>/<repo> create <name> <color>`; `fj repo labels` takes the repo as that argument in place of `-R`.
     10. Post AI-HANDOFF on parent issue with status `planned`, listing all created sub-issues and their blocking edges. Keep the parent as a **low-res index**: one line per sub-issue — title plus a one-line gist — with detail living in exactly one place, the sub-issue itself. Never restate a slice's body in the parent.
 
     Sub-issue body shape:

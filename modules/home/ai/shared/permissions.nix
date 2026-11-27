@@ -40,6 +40,23 @@ let
     "nixos-rebuild *"
     "rm *"
   ];
+  # Forgejo Actions mutations: rerunning, cancelling or triggering CI acts on
+  # shared infrastructure under the user's token.
+  forgejoActionsAsk = [
+    "fj-ex actions rerun *"
+    "fj-ex actions cancel *"
+    "fj-ex actions trigger *"
+  ];
+  # fj mutations that are hard to undo. `-R <remote>` sits between the group
+  # and the subcommand, hence the second pattern of each pair.
+  forgejoMutationAsk = [
+    "fj pr merge *"
+    "fj pr * merge *"
+    "fj milestone delete *"
+    "fj milestone * delete *"
+    "fj repo labels delete *"
+    "fj repo labels * delete *"
+  ];
 
   # --- claude-only extras ---
   # Git: everything allowed, fork work is the exception. `git push *` is
@@ -120,12 +137,18 @@ in
       "Bash(git show *)"
       "Bash(git branch *)"
       "Bash(git remote *)"
-      # Forgejo via tea
-      "Bash(tea issues *)"
-      "Bash(tea pulls *)"
-      "Bash(tea comment *)"
-      "Bash(tea issues create *)"
-      "Bash(tea pr create *)"
+      # Forgejo via fj — merges and deletes ask (forgejoMutationAsk)
+      "Bash(fj issue *)"
+      "Bash(fj pr *)"
+      "Bash(fj milestone *)"
+      "Bash(fj repo labels *)"
+      "Bash(fj whoami*)"
+      # Forgejo Actions via fj-ex — read-only; mutations ask (forgejoActionsAsk)
+      "Bash(fj-ex actions runs *)"
+      "Bash(fj-ex actions jobs *)"
+      "Bash(fj-ex actions logs *)"
+      "Bash(fj-ex actions wait *)"
+      "Bash(fj-ex actions workflows *)"
       # Basic filesystem
       "Bash(ls *)"
       "Bash(mkdir *)"
@@ -141,7 +164,7 @@ in
       "WebFetch(domain:raw.githubusercontent.com)"
     ]
     ++ bashify (claudeGitAllow ++ claudeFileAllow);
-    ask = bashify (claudeGitForkAsk ++ claudeAsk);
+    ask = bashify (claudeGitForkAsk ++ claudeAsk ++ forgejoActionsAsk ++ forgejoMutationAsk);
     deny = bashify (destructiveDeny ++ envExposureDeny ++ claudeEnvDeny ++ claudeMutationDeny);
   };
 
@@ -150,7 +173,9 @@ in
     bash = {
       "*" = "allow";
     }
-    // toPermissionMap "ask" (gitDangerousAsk ++ systemMutationAsk ++ opencodeAsk)
+    // toPermissionMap "ask" (
+      gitDangerousAsk ++ systemMutationAsk ++ forgejoActionsAsk ++ forgejoMutationAsk ++ opencodeAsk
+    )
     // toPermissionMap "deny" (destructiveDeny ++ envExposureDeny);
     webfetch = "allow";
     external_directory = {

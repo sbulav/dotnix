@@ -1,5 +1,5 @@
 let
-  tea = (import ../templates.nix).teaConventions;
+  forgejo = (import ../templates.nix).forgejoConventions;
 in
 {
   name = "workon";
@@ -32,18 +32,16 @@ in
      - In a delegated worker session, return the handoff to the parent; post it
        only when posting was explicitly assigned. The parent owns integration
        and shipping. A short handoff does not need its own helper session.
-     - Planning mode alone is no reason to avoid `tea comment` — skip it only when the runtime explicitly blocks that command.
+     - Planning mode alone is no reason to avoid `fj issue comment` — skip it only when the runtime explicitly blocks that command.
 
-    ${tea}
+    ${forgejo}
 
      Steps:
      1. Resolve the issue number from `$ARGUMENTS`, or infer it from the current branch if unambiguous.
-     2. Fetch the issue for this repo only with `tea issues -R <forgejo-remote> <issue-number>`.
-     3. Try to fetch comments with `tea issues -R <forgejo-remote> --comments -o json <issue-number>`.
+     2. Fetch the issue for this repo only with `fj issue -R <forgejo-remote> view <issue-number>`.
+     3. Fetch comments with `fj issue -R <forgejo-remote> view <issue-number> comments`.
      4. Extract the latest handoff comment if present.
-        - Prefer the exact `<!-- AI-HANDOFF -->` marker when available.
-        - If JSON comments are unavailable, fall back to rendered `tea issues --comments` output and use the visible `**AI-HANDOFF**` heading plus the adjacent status block.
-     5. If local `tea` does not return usable comment text, say that clearly and continue from issue body + PR state + branch state.
+     5. If `fj` does not return usable comment text, say that clearly and continue from issue body + PR state + branch state.
      6. Check for an open or merged PR related to the issue branch.
      7. Check the current branch and working tree state. A merge or rebase left in flight — unmerged paths, conflict markers, a `REBASE_HEAD` — is the first thing to finish: call the Skill tool with `resolving-merge-conflicts` before any implementation work.
      8. Summarize:

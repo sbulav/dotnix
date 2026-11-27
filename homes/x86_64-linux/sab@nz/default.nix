@@ -107,7 +107,8 @@ in
       k9s = enabled;
       opentofu = enabled;
       yandex-cloud = enabled;
-      tea = enabled;
+      fj = enabled;
+      fj-ex = enabled;
       disktree = enabled;
       sqlite-jira = enabled;
     };

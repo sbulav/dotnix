@@ -84,7 +84,7 @@ let
 
   # Shell used by the bash tool (and TUI terminal). The proxy env above is for
   # the opencode process's API traffic only — shell commands (kubectl, nix,
-  # tea, git) must run direct, so strip the vars before handing over to the
+  # fj, git) must run direct, so strip the vars before handing over to the
   # user's shell. A command can still opt back in with an inline
   # `HTTPS_PROXY=... cmd` since the unset happens at shell startup.
   proxyFreeShell = pkgs.writeShellScript "opencode-shell" ''

@@ -107,7 +107,7 @@
     Worker confidence and reviewer agreement are not evidence.
 
     Pin external targets: derive owner/repo from `git remote -v` and the
-    task, pass `gh --repo` or tea's `-R <remote>` explicitly, and specify
+    task, pass `gh --repo` or fj's `-R <remote>` explicitly, and specify
     cluster/context on every Kubernetes/Helm command. Read-only tasks stay
     read-only. Match exact identifiers and tracked paths before reporting
     findings (`git ls-files` distinguishes repo code from local leftovers).

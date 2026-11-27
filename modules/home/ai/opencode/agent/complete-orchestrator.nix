@@ -22,10 +22,9 @@ in
       "*" = "allow";
       "git status" = "allow";
       "git branch --show-current" = "allow";
-      "tea issues *" = "allow";
-      "tea pulls *" = "allow";
-      "tea milestones *" = "allow";
-      "tea comment *" = "allow";
+      "fj issue *" = "allow";
+      "fj pr *" = "allow";
+      "fj milestone *" = "allow";
       "git branch -d *" = "ask";
       "git push origin --delete *" = "ask";
     };
