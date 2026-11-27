@@ -426,6 +426,7 @@ in
           "org.wezfurlong.wezterm"
         ];
         "2" = [ "firefox" ];
+        "3" = [ "initialClass:chatgpt" ];
         "4" = [
           "org.telegram.desktop"
           "zoom"
@@ -437,7 +438,7 @@ in
         "6" = [ "virt-manager" ];
         "7" = [
           "Slack"
-          "initialTitle:obsidian - Obsidian"
+          "initialClass:md[.]obsidian[.]Obsidian"
           "ktalk"
         ];
         "9" = [ "thunderbird" ];
